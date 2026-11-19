@@ -36,7 +36,7 @@ node client/probe-client.mjs
 1. `get_context`，确认助手从核心生成；
 2. `move_to` 到核心附近，轮询 `get_action_result`；
 3. 在核心附近找一个合法 tile，`build` 一块 conveyor；
-4. `get_tile` 读回（会看到 `build1`，即 ConstructBlock）。
+4. `get_tile` 读回（构建中是 `build1`，完成后是 `conveyor`）。
 
 ## 已验证 / 已知限制
 
@@ -44,6 +44,6 @@ node client/probe-client.mjs
   `spawnedByCore=true` 单位会被引擎每帧 despawn。
 - `UnitController` 自定义控制器能控制真实单位。
 - `Unit.moveAt(Vec2)` 收的是**期望速度向量**，不是目标点；要自己算方向/速度。
-- `Build.beginPlace` 只创建 ConstructBlock（`build1`），不会自动完成；建造进度
-  需要本地控制器/建造 AI 调 `ConstructBlock.construct` 推进。
+- `build` 走 `BuildPlan` + `BuilderComp`，会真实扣资源并完成；客户端用
+  `get_tile`/MCP `query_area` 读回。
 - 本 probe 没有战斗、取物、配置、附身、重生；这些在真实 adapter 里做。

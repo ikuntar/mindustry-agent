@@ -12,6 +12,22 @@ npm test
 npm run harness
 ```
 
+## Real game adapter (probe)
+
+`ProbeGameAdapter` connects to `probe-mod` over localhost and maps the subset of
+game actions that probe implements. Start the Mindustry server with the probe
+mod, then:
+
+```bash
+MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
+```
+
+Implemented: `get_context`, `get_capabilities`, `get_content` (static registry),
+`query_area`, `move_to`, `build_plan` (single placement). Everything else returns
+`not_implemented` — do not treat tool presence as real-game support.
+
+`get_events` is an empty page for probe; event logging is a Milestone 1 task.
+
 ## Tools
 
 24 tools: 7 read + 17 action. See `../docs/MCP-PROTOCOL.md` for the contract.

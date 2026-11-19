@@ -257,6 +257,13 @@ MCP server（Node/TypeScript）
 
 ## 8. 真实 adapter 待实现清单
 
+当前进度：
+
+- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `query_area` / `move_to` / 单块 `build_plan`；`get_content` 为静态注册表；`get_events` 为空页。
+- 其余动作在 probe adapter 返回 `not_implemented`，不是假成功。
+- 已验证 `query_area` 能读回真实 `conveyor`；`move_to` 的 `get_action_result` 为 done。
+
+待实现：
 - 本地 socket 协议、发现文件、token、版本握手、重连。
 - 游戏线程动作队列 + 每帧预算；LLM 调用离线程。
 - `get_context` 的真实数据（单位/建筑/核心/资源/波次）。

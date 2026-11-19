@@ -7,6 +7,7 @@ import arc.util.Log;
 import arc.util.Time;
 import arc.util.serialization.Jval;
 import mindustry.Vars;
+import mindustry.entities.units.BuildPlan;
 import mindustry.entities.units.UnitController;
 import mindustry.game.EventType;
 import mindustry.game.Team;
@@ -174,6 +175,101 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("get_capabilities".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            UnitType type = assistant.type;
+            Jval weapons = Jval.newArray();
+            for (var weapon : type.weapons) {
+                weapons.add(Jval.newObject()
+                        .put("name", weapon.name)
+                        .put("range", weapon.range())
+                        .put("damage", 0));
+            }
+            Jval commands = Jval.newArray();
+            for (var unitCommand : type.commands) {
+                commands.add(unitCommand.name);
+            }
+            Jval data = Jval.newObject()
+                    .put("unitId", assistant.id)
+                    .put("type", type.name)
+                    .put("health", assistant.health)
+                    .put("maxHealth", assistant.maxHealth)
+                    .put("speed", type.speed)
+                    .put("flying", type.flying)
+                    .put("buildSpeed", type.buildSpeed)
+                    .put("buildRange", type.buildRange)
+                    .put("mineSpeed", type.mineSpeed)
+                    .put("mineTier", type.mineTier)
+                    .put("mineRange", type.mineRange)
+                    .put("itemCapacity", type.itemCapacity)
+                    .put("payloadCapacity", type.payloadCapacity)
+                    .put("canBoost", type.canBoost)
+                    .put("weapons", weapons)
+                    .put("commands", commands)
+                    .put("canBuild", type.buildSpeed > 0)
+                    .put("canMine", type.mineTier >= 0)
+                    .put("canAttack", type.weapons.size > 0)
+                    .put("canPossess", !assistant.dead);
+            reply(command, data);
+            return;
+        }
+
+        if ("query_area".equals(op)) {
+            float x = request.getFloat("x", 0f);
+            float y = request.getFloat("y", 0f);
+            float radius = request.getFloat("radius", 20f);
+            boolean includeUnits = request.getBool("includeUnits", true);
+            boolean includeBuildings = request.getBool("includeBuildings", true);
+            Team team = Vars.state.rules.defaultTeam;
+
+            Jval units = Jval.newArray();
+            if (includeUnits) {
+                for (Unit unit : mindustry.gen.Groups.unit) {
+                    if (unit.team != team) continue;
+                    if (Math.hypot(unit.x - x, unit.y - y) > radius) continue;
+                    units.add(Jval.newObject()
+                            .put("id", unit.id)
+                            .put("type", unit.type.name)
+                            .put("team", unit.team.id)
+                            .put("x", unit.x)
+                            .put("y", unit.y)
+                            .put("health", unit.health)
+                            .put("maxHealth", unit.maxHealth)
+                            .put("dead", unit.dead));
+                }
+            }
+
+            Jval buildings = Jval.newArray();
+            if (includeBuildings) {
+                for (Building building : mindustry.gen.Groups.build) {
+                    if (building.team != team) continue;
+                    if (Math.hypot(building.x - x, building.y - y) > radius) continue;
+                    buildings.add(Jval.newObject()
+                            .put("id", building.id)
+                            .put("block", building.block.name)
+                            .put("team", building.team.id)
+                            .put("x", building.x)
+                            .put("y", building.y)
+                            .put("tileX", building.tile.x)
+                            .put("tileY", building.tile.y)
+                            .put("health", building.health)
+                            .put("maxHealth", building.block.health)
+                            .put("rotation", building.rotation));
+                }
+            }
+
+            reply(command, Jval.newObject()
+                    .put("x", x)
+                    .put("y", y)
+                    .put("radius", radius)
+                    .put("units", units)
+                    .put("buildings", buildings));
+            return;
+        }
+
         if ("move_to".equals(op)) {
             float x = request.getFloat("x", Float.NaN);
             float y = request.getFloat("y", Float.NaN);
@@ -220,16 +316,23 @@ public class ProbeMod extends Mod {
                 replyError(command, "invalid_placement", "Build.validPlace returned false");
                 return;
             }
+            if (!assistant.canBuild()) {
+                replyError(command, "cannot_build", "Assistant body has buildSpeed <= 0");
+                return;
+            }
 
-            Build.beginPlace(assistant, block, team, x, y, rotation, null);
+            // Queue a real BuildPlan; BuilderComp will call Build.beginPlace and
+            // ConstructBuild.construct on the game thread when in range.
+            assistant.updateBuilding(true);
+            assistant.addBuild(new BuildPlan(x, y, rotation, block));
             Op result = newOp("build");
             result.status = "done";
-            result.progress = 1f;
+            result.progress = 0f;
             result.data = Jval.newObject()
                     .put("block", blockName)
                     .put("x", x)
                     .put("y", y)
-                    .put("tileBlock", Vars.world.tile(x, y).block().name);
+                    .put("queued", true);
             reply(command, result.toJson());
             return;
         }

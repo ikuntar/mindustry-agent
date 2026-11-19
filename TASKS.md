@@ -20,9 +20,12 @@
 
 ## M1：真实 Mindustry mod adapter
 
-- [x] Probe mod：v160.8 服务端加载、`get_context`/`get_tile`/`move_to`/`build` 验证
+- [x] Probe mod：v160.8 服务端加载、`get_context`/`get_tile`/`get_capabilities`/`query_area`/`move_to`/`build` 验证
 - [x] Probe mod 发现：`spawnedByCore=true` 的非 Player 会被每帧 despawn；助手用 `isHome`
-- [ ] Probe 建造完成：本地控制器调 `ConstructBlock.construct` 推进施工
+- [x] Probe 建造完成：`BuildPlan` + `BuilderComp`，MCP `query_area` 读回 conveyor
+- [x] `ProbeGameAdapter`：MCP 的 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build` 接真实游戏
+- [ ] Probe/真实 adapter 剩余动作：attack、mine、withdraw/deposit、configure、command_units、possess/release/respawn
+- [ ] 真实 adapter 事件日志（当前 `get_events` 空页）
 - [ ] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
 - [ ] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手
 - [ ] 游戏线程动作队列 + 每帧预算；LLM 调用离线程
