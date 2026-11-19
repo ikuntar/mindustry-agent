@@ -20,6 +20,9 @@
 
 ## M1：真实 Mindustry mod adapter
 
+- [x] Probe mod：v160.8 服务端加载、`get_context`/`get_tile`/`move_to`/`build` 验证
+- [x] Probe mod 发现：`spawnedByCore=true` 的非 Player 会被每帧 despawn；助手用 `isHome`
+- [ ] Probe 建造完成：本地控制器调 `ConstructBlock.construct` 推进施工
 - [ ] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
 - [ ] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手
 - [ ] 游戏线程动作队列 + 每帧预算；LLM 调用离线程
@@ -33,7 +36,7 @@
 - [ ] `command_units` / `set_stance`：直接操作 `CommandAI`
 - [ ] `possess` / `release` / `respawn` 状态机
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
-- [ ] 助手身体从核心生成；`spawnedByCore` / `isHome`
+- [ ] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [ ] 死亡/重生：`Player.deathDelay`、任意核心、无核心、核心被拆
 - [ ] 借体解控：`resetController()`，不消失；命令恢复
 - [ ] 人口绕过只限重生/默认身体

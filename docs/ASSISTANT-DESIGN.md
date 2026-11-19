@@ -31,7 +31,7 @@
 
 | 事项 | 决定 |
 |---|---|
-| 助手身体来源 | 从核心生成，标记 `spawnedByCore`，和玩家核心身体一致 |
+| 助手身体来源 | 从核心生成；不设 `spawnedByCore`（非 Player 会被引擎每帧 despawn），用 `isHome` 跟踪 |
 | 身体参数 | 使用所从属核心的 `CoreBlock.unitType`；不同核心可能是不同身体 |
 | 附身 | 要做；可附身同队、AI 控制、`playerControllable` 的单位 |
 | 助手身体可否被附身 | 不可；控制器不是 `AIController`，原版 `unitControl` 天然拒绝 |
@@ -86,10 +86,14 @@ LLM
 ### 状态
 
 ```
-HOME         助手默认身体，从核心生成，isHome=true，spawnedByCore=true
+HOME         助手默认身体，从核心生成，isHome=true，spawnedByCore=false
 POSSESSING   当前控制的是借体，isHome=false
 DEAD         没有身体，等待重生
 ```
+
+> 真实引擎核对（v160.8）：`spawnedByCore=true` 的非 Player 单位会被
+> `UnitComp.update()` 每帧 `Call.unitDespawn`。助手身体不能设这个标记；
+> 用 `isHome` 自己跟踪，附身时显式 despawn。详见 `docs/REALITY-CHECK.md`。
 
 ### 附身
 
@@ -139,8 +143,10 @@ respawn(core = null):
 
   u = type.create(assistant.team)
   u.set(core.x, core.y)
+  u.health = type.health
+  u.maxHealth = type.health
+  u.spawnedByCore(false)      // 不要设 true：非 Player 会被引擎每帧 despawn
   u.controller(assistantController)
-  u.spawnedByCore(true)
   u.isHome = true
   u.add()                     // 直接 add，绕开 Units.getCap
   Fx.spawn.at(core)

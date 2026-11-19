@@ -48,6 +48,25 @@ defaultTeam = sharded
 
 `Build.beginPlace` 的第一次快速探测没有形成有效结论：选点落在核心占用区/地形上，`validPlace=false`，`beginPlace` 没有放置。这说明真实放置必须由场景测试先找合法 tile，并断言 `validPlace`，不能像 mock 一样随意选点。后续由 probe mod + 固定地图场景验证。
 
+## Probe mod 现实测试（2026-11-19）
+
+写了 `probe-mod/`：Java mod + 本地 socket + Node 客户端，服务端 `config/mods` 加载，`host` 后自动从核心生成助手。
+
+已验证：
+
+- mod 能加载（`1 mods loaded`），socket `127.0.0.1:46500` 可用。
+- `get_context` 返回真实地图/队伍/核心/资源/助手。
+- 自定义 `UnitController` 能控制真实单位移动；`moveAt` 接收的是**期望速度向量**，不是目标点；直接传目标会冲到地图边界。
+- `Build.validPlace` + `Build.beginPlace(assistant, ...)` 能生成 `build1`（ConstructBlock），但不会自动完成：真实建造进度要由本地控制器/建造 AI 调 `ConstructBlock.construct` 推进；这是本地反射层的职责。
+- 关键发现：`spawnedByCore=true` 的非 `Player` 单位会被 `UnitComp.update()` 每帧 `Call.unitDespawn`。助手身体必须 `spawnedByCore=false`，用自己的 `isHome` 标记；附身时显式 despawn home body。
+- 助手身体从核心类型生成（例如 `gamma`/`alpha`），`isAI=false`、`isPlayer=false`，因此不可被原版 `unitControl` 附身，符合设计。
+
+限制：
+
+- probe 只实现 `get_context`/`get_tile`/`move_to`/`build`/`get_action_result`；没有 MCP adapter，也没有本地建造/战斗反射。
+- `build1` 未完成是预期结果：当前 probe 控制器只移动，不推进施工。
+
+
 ## 结论
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。

@@ -1,5 +1,6 @@
 # build output
 mcp-server/dist/
+probe-mod/build/
 
 # dependencies
 mcp-server/node_modules/
