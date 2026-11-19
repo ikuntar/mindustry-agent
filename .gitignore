@@ -1,0 +1,13 @@
+# build output
+mcp-server/dist/
+
+# dependencies
+mcp-server/node_modules/
+
+# local reference clone; not part of this project's source
+refs/
+
+# logs and local artifacts
+*.log
+artifacts/
+.DS_Store
