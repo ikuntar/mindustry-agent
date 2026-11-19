@@ -12,7 +12,8 @@ mindustry-ai/
 │   ├── bek-mindustryx-ai-bridge.md   ← BEK-Group/MindustryX 的 AI 通道拆解（参考实现）
 │   ├── ASSISTANT-DESIGN.md           ← 助手总体设计：身体/附身/权限/团队/验收
 │   ├── MCP-PROTOCOL.md               ← MCP 工具、动作生命周期、事件、权限矩阵
-│   └── OPEN-QUESTIONS.md             ← 待拍板项与默认建议
+│   ├── OPEN-QUESTIONS.md             ← 待拍板项与默认建议
+│   └── REALITY-CHECK.md              ← v160.8 真实 jar 的 API/启动核对
 ├── mcp-server/                       ← MCP 工具接口（当前 MockGameAdapter）
 └── refs/
     └── MindustryX-Ai/                ← 参考实现，浅克隆 main @89e3d71 (2026-05-23)

@@ -20,7 +20,7 @@
 
 ## M1：真实 Mindustry mod adapter
 
-- [ ] 选定基线：官方 Mindustry（pin v154 系列）+ mod；不用 BEK 作为主干
+- [ ] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
 - [ ] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手
 - [ ] 游戏线程动作队列 + 每帧预算；LLM 调用离线程
 - [ ] `get_context` / `get_capabilities` / `get_content` / `query_area` 真实数据
