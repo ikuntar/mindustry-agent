@@ -10,5 +10,8 @@ refs/
 
 # logs and local artifacts
 *.log
+*.err
+probe-seed.json
+probe-seed.err
 artifacts/
 .DS_Store

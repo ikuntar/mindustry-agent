@@ -1,23 +1,31 @@
 package ai.probe;
 
 import arc.Events;
+import arc.math.geom.Point2;
+import arc.math.geom.Position;
 import arc.math.geom.Vec2;
 import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Time;
 import arc.util.serialization.Jval;
 import mindustry.Vars;
+import mindustry.ai.UnitCommand;
+import mindustry.ai.UnitStance;
+import mindustry.ai.types.CommandAI;
 import mindustry.entities.units.BuildPlan;
 import mindustry.entities.units.UnitController;
 import mindustry.game.EventType;
 import mindustry.game.Team;
 import mindustry.gen.Building;
+import mindustry.gen.Groups;
+import mindustry.gen.Teamc;
 import mindustry.gen.Unit;
 import mindustry.mod.Mod;
 import mindustry.type.Item;
 import mindustry.type.UnitType;
 import mindustry.world.Block;
 import mindustry.world.Build;
+import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.CoreBlock.CoreBuild;
 import mindustry.world.modules.ItemModule;
@@ -87,6 +95,35 @@ public class ProbeMod extends Mod {
         }
 
         updateMoveOps();
+        updateActionOps();
+    }
+
+    private void updateActionOps() {
+        if (assistant == null) return;
+        for (Op op : ops.values()) {
+            if (!"running".equals(op.status)) continue;
+            if ("attack".equals(op.kind)) {
+                float health = -1f;
+                if (op.targetUnit != null) health = op.targetUnit.health;
+                else if (op.targetBuilding != null) health = op.targetBuilding.health;
+                if (health <= 0f) {
+                    op.status = "done";
+                    op.progress = 1f;
+                    op.data = Jval.newObject().put("targetHealth", 0f);
+                } else if (health > 0f) {
+                    op.data = Jval.newObject().put("targetHealth", health);
+                }
+            } else if ("mine".equals(op.kind)) {
+                if (assistant.stack != null && assistant.stack.amount > 0) {
+                    op.status = "done";
+                    op.progress = 1f;
+                    op.data = Jval.newObject()
+                            .put("item", assistant.stack.item.name)
+                            .put("amount", assistant.stack.amount);
+                    assistant.mineTile = null;
+                }
+            }
+        }
     }
 
     private void ensureAssistant() {
@@ -165,7 +202,8 @@ public class ProbeMod extends Mod {
                     .put("x", x)
                     .put("y", y)
                     .put("block", tile.block().name)
-                    .put("team", tile.team().id);
+                    .put("team", tile.team().id)
+                    .put("drop", tile.drop() == null ? "" : tile.drop().name);
             if (tile.build != null) {
                 data.put("health", tile.build.health);
                 data.put("maxHealth", tile.build.block.health);
@@ -223,7 +261,7 @@ public class ProbeMod extends Mod {
             float radius = request.getFloat("radius", 20f);
             boolean includeUnits = request.getBool("includeUnits", true);
             boolean includeBuildings = request.getBool("includeBuildings", true);
-            Team team = Vars.state.rules.defaultTeam;
+            Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
 
             Jval units = Jval.newArray();
             if (includeUnits) {
@@ -244,20 +282,28 @@ public class ProbeMod extends Mod {
 
             Jval buildings = Jval.newArray();
             if (includeBuildings) {
-                for (Building building : mindustry.gen.Groups.build) {
-                    if (building.team != team) continue;
-                    if (Math.hypot(building.x - x, building.y - y) > radius) continue;
-                    buildings.add(Jval.newObject()
-                            .put("id", building.id)
-                            .put("block", building.block.name)
-                            .put("team", building.team.id)
-                            .put("x", building.x)
-                            .put("y", building.y)
-                            .put("tileX", building.tile.x)
-                            .put("tileY", building.tile.y)
-                            .put("health", building.health)
-                            .put("maxHealth", building.block.health)
-                            .put("rotation", building.rotation));
+                int tileX = Vars.world.toTile(x);
+                int tileY = Vars.world.toTile(y);
+                int tileRadius = (int) Math.ceil(radius / 8f);
+                for (int dx = -tileRadius; dx <= tileRadius; dx++) {
+                    for (int dy = -tileRadius; dy <= tileRadius; dy++) {
+                        Tile tile = Vars.world.tile(tileX + dx, tileY + dy);
+                        Building building = tile == null ? null : tile.build;
+                        if (building == null || building.team != team) continue;
+                        if (tile.x != building.tile.x || tile.y != building.tile.y) continue;
+                        if (Math.hypot(building.x - x, building.y - y) > radius) continue;
+                        buildings.add(Jval.newObject()
+                                .put("id", building.id)
+                                .put("block", building.block.name)
+                                .put("team", building.team.id)
+                                .put("x", building.x)
+                                .put("y", building.y)
+                                .put("tileX", building.tile.x)
+                                .put("tileY", building.tile.y)
+                                .put("health", building.health)
+                                .put("maxHealth", building.block.health)
+                                .put("rotation", building.rotation));
+                    }
                 }
             }
 
@@ -267,6 +313,388 @@ public class ProbeMod extends Mod {
                     .put("radius", radius)
                     .put("units", units)
                     .put("buildings", buildings));
+            return;
+        }
+
+        if ("withdraw".equals(op) || "deposit".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Building building = findBuilding(request.get("target"));
+            if (building == null) {
+                replyError(command, "building_not_found", "No target building");
+                return;
+            }
+            if (building.team != assistant.team) {
+                replyError(command, "wrong_team", "Target building is not on the assistant's team");
+                return;
+            }
+            if (Math.hypot(building.x - assistant.x, building.y - assistant.y) > Vars.itemTransferRange) {
+                replyError(command, "out_of_range", "Target building is outside itemTransferRange");
+                return;
+            }
+            Item item = Vars.content.item(request.getString("item", ""));
+            if (item == null) {
+                replyError(command, "not_found", "Unknown item");
+                return;
+            }
+            int amount = request.getInt("amount", 0);
+            if ("withdraw".equals(op)) {
+                int available = building.items == null ? 0 : building.items.get(item);
+                int capacity = assistant.maxAccepted(item) - (assistant.stack == null ? 0 : assistant.stack.amount);
+                int taken = Math.min(Math.min(amount, available), Math.max(0, capacity));
+                if (taken <= 0) {
+                    replyError(command, "not_found", "No item or no capacity");
+                    return;
+                }
+                building.removeStack(item, taken);
+                assistant.addItem(item, taken);
+                reply(command, Jval.newObject().put("item", item.name).put("amount", taken));
+            } else {
+                if (assistant.stack == null || assistant.stack.amount <= 0 || assistant.stack.item != item) {
+                    replyError(command, "not_found", "Assistant is not carrying that item");
+                    return;
+                }
+                int accepted = building.acceptStack(item, Math.min(amount, assistant.stack.amount), assistant);
+                int moved = Math.min(accepted, assistant.stack.amount);
+                if (moved <= 0) {
+                    replyError(command, "not_found", "Building does not accept the item");
+                    return;
+                }
+                building.handleStack(item, moved, assistant);
+                assistant.stack.amount -= moved;
+                if (assistant.stack.amount <= 0) assistant.clearItem();
+                reply(command, Jval.newObject().put("item", item.name).put("amount", moved));
+            }
+            return;
+        }
+
+        if ("configure".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Building building = findBuilding(request);
+            if (building == null) {
+                replyError(command, "building_not_found", "No target building");
+                return;
+            }
+            if (building.team != assistant.team) {
+                replyError(command, "wrong_team", "Target building is not on the assistant's team");
+                return;
+            }
+            if (!building.block.configurable) {
+                replyError(command, "not_configurable", "Target block is not configurable");
+                return;
+            }
+            Object value = configValue(request.get("value"));
+            building.configured(assistant, value);
+            reply(command, Jval.newObject()
+                    .put("block", building.block.name)
+                    .put("x", building.tileX())
+                    .put("y", building.tileY()));
+            return;
+        }
+
+        if ("command_units".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            UnitCommand unitCommand = Vars.content.unitCommand(request.getString("command", ""));
+            if (unitCommand == null) {
+                replyError(command, "bad_request", "Unknown unit command");
+                return;
+            }
+            Jval ids = request.get("unitIds");
+            if (ids == null || !ids.isArray()) {
+                replyError(command, "bad_request", "Missing unitIds");
+                return;
+            }
+            Jval target = request.get("target");
+            boolean queue = request.getBool("queue", false);
+            Jval commanded = Jval.newArray();
+            for (Jval idValue : ids.asArray()) {
+                Unit unit = Groups.unit.getByID(idValue.asInt());
+                if (unit == null || unit.dead) {
+                    replyError(command, "unit_not_found", "Unit " + idValue.asInt() + " not found");
+                    return;
+                }
+                if (unit.team != assistant.team) {
+                    replyError(command, "wrong_team", "Unit " + unit.id + " is not on the assistant's team");
+                    return;
+                }
+                if (!(unit.controller() instanceof CommandAI commandAI)) {
+                    replyError(command, "not_commandable", "Unit " + unit.id + " is not CommandAI");
+                    return;
+                }
+                if (!unit.type.allowCommand(unit, unitCommand)) {
+                    replyError(command, "not_commandable", "Unit type does not allow command " + unitCommand.name);
+                    return;
+                }
+                commandAI.command(unitCommand);
+                if (target != null && target.get("x") != null && target.get("y") != null) {
+                    Vec2 position = new Vec2(target.get("x").asFloat(), target.get("y").asFloat());
+                    if (queue) {
+                        commandAI.commandQueue(position);
+                    } else {
+                        commandAI.commandPosition(position);
+                    }
+                } else if (target != null && target.get("unitId") != null) {
+                    Unit targetUnit = Groups.unit.getByID(target.get("unitId").asInt());
+                    if (targetUnit != null) commandAI.commandTarget(targetUnit);
+                } else if (target != null && target.get("buildingId") != null) {
+                    Building targetBuilding = findBuilding(target);
+                    if (targetBuilding != null) commandAI.commandTarget(targetBuilding);
+                }
+                commanded.add(unit.id);
+            }
+            reply(command, Jval.newObject().put("commanded", commanded));
+            return;
+        }
+
+        if ("set_stance".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            UnitStance stance = findStance(request.getString("stance", ""));
+            if (stance == null) {
+                replyError(command, "bad_request", "Unknown stance");
+                return;
+            }
+            Jval ids = request.get("unitIds");
+            if (ids == null || !ids.isArray()) {
+                replyError(command, "bad_request", "Missing unitIds");
+                return;
+            }
+            Jval changed = Jval.newArray();
+            for (Jval idValue : ids.asArray()) {
+                Unit unit = Groups.unit.getByID(idValue.asInt());
+                if (unit == null || unit.dead) {
+                    replyError(command, "unit_not_found", "Unit " + idValue.asInt() + " not found");
+                    return;
+                }
+                if (unit.team != assistant.team) {
+                    replyError(command, "wrong_team", "Unit " + unit.id + " is not on the assistant's team");
+                    return;
+                }
+                if (!(unit.controller() instanceof CommandAI commandAI)) {
+                    replyError(command, "not_commandable", "Unit " + unit.id + " is not CommandAI");
+                    return;
+                }
+                commandAI.setStance(stance);
+                changed.add(unit.id);
+            }
+            reply(command, Jval.newObject().put("units", changed).put("stance", stance.name));
+            return;
+        }
+
+        if ("stop".equals(op)) {
+            if (controller != null) controller.target = null;
+            if (assistant != null) {
+                assistant.clearBuilding();
+            }
+            reply(command, Jval.newObject().put("stopped", true));
+            return;
+        }
+
+        if ("spawn_ally".equals(op)) {
+            // Probe/debug helper for command tests; not part of the MCP surface.
+            UnitType type = Vars.content.unit(request.getString("type", "dagger"));
+            if (type == null) {
+                replyError(command, "not_found", "Unknown unit type");
+                return;
+            }
+            Team team = assistant == null ? Vars.state.rules.defaultTeam : assistant.team;
+            float x = request.getFloat("x", assistant == null ? 0f : assistant.x + 24f);
+            float y = request.getFloat("y", assistant == null ? 0f : assistant.y);
+            Unit unit = type.create(team);
+            unit.x = x;
+            unit.y = y;
+            unit.health = type.health;
+            unit.maxHealth = type.health;
+            unit.add();
+            reply(command, Jval.newObject()
+                    .put("id", unit.id)
+                    .put("type", type.name)
+                    .put("controller", unit.controller().getClass().getSimpleName()));
+            return;
+        }
+
+        if ("give".equals(op)) {
+            // Probe/debug helper for configuring/building tests; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            CoreBuild core = assistant.closestCore();
+            if (core == null) {
+                replyError(command, "not_found", "No core for assistant");
+                return;
+            }
+            Item item = Vars.content.item(request.getString("item", ""));
+            if (item == null) {
+                replyError(command, "not_found", "Unknown item");
+                return;
+            }
+            int amount = request.getInt("amount", 0);
+            core.items.add(item, amount);
+            reply(command, Jval.newObject().put("item", item.name).put("amount", amount));
+            return;
+        }
+
+        if ("attack".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            if (assistant.type.weapons.isEmpty()) {
+                replyError(command, "cannot_attack", "Assistant body has no weapons");
+                return;
+            }
+            Jval target = request.get("target");
+            Unit targetUnit = target == null ? null : findUnit(target);
+            Building targetBuilding = target == null ? null : findBuilding(target);
+            Position position = null;
+            Teamc entity = null;
+            if (targetUnit != null) {
+                if (targetUnit.team == assistant.team) {
+                    replyError(command, "wrong_team", "Refusing to attack a unit on the assistant's team");
+                    return;
+                }
+                position = targetUnit;
+                entity = targetUnit;
+            } else if (target != null && target.get("unitId") != null) {
+                replyError(command, "unit_not_found", "Target unit not found");
+                return;
+            } else if (targetBuilding != null) {
+                if (targetBuilding.team == assistant.team) {
+                    replyError(command, "wrong_team", "Refusing to attack a building on the assistant's team");
+                    return;
+                }
+                position = targetBuilding;
+                entity = targetBuilding;
+            } else if (target != null && target.get("x") != null && target.get("y") != null) {
+                position = new Vec2(target.get("x").asFloat(), target.get("y").asFloat());
+            } else {
+                replyError(command, "bad_request", "Missing target unit/building/position");
+                return;
+            }
+            controller.target = null;
+            controller.followTarget = null;
+            controller.attackEntity = entity;
+            controller.attackPosition = new Vec2(position.getX(), position.getY());
+            Op result = newOp("attack");
+            result.status = "running";
+            result.targetUnit = targetUnit;
+            result.targetBuilding = targetBuilding;
+            result.data = Jval.newObject()
+                    .put("unitId", targetUnit == null ? -1 : targetUnit.id)
+                    .put("buildingId", targetBuilding == null ? -1 : targetBuilding.id)
+                    .put("x", position.getX())
+                    .put("y", position.getY());
+            reply(command, result.toJson());
+            return;
+        }
+
+        if ("follow".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Unit targetUnit = findUnit(request);
+            if (targetUnit == null || targetUnit.dead) {
+                replyError(command, "unit_not_found", "Target unit not found");
+                return;
+            }
+            controller.attackEntity = null;
+            controller.attackPosition = null;
+            controller.followTarget = targetUnit;
+            controller.followDistance = request.getFloat("distance", 48f);
+            Op result = newOp("follow");
+            result.status = "running";
+            result.data = Jval.newObject().put("unitId", targetUnit.id);
+            reply(command, result.toJson());
+            return;
+        }
+
+        if ("mine".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            int x = request.getInt("x", Integer.MIN_VALUE);
+            int y = request.getInt("y", Integer.MIN_VALUE);
+            Tile tile = Vars.world.tiles.in(x, y) ? Vars.world.tile(x, y) : null;
+            if (tile == null) {
+                replyError(command, "out_of_bounds", "Tile is outside the map");
+                return;
+            }
+            Item drop = tile.drop();
+            if (drop == null || !assistant.canMine(drop)) {
+                replyError(command, "not_mineable", "Tile has no mineable item for this body");
+                return;
+            }
+            if (Math.hypot(tile.worldx() - assistant.x, tile.worldy() - assistant.y) > assistant.type.mineRange) {
+                replyError(command, "out_of_range", "Tile is outside mineRange");
+                return;
+            }
+            controller.target = null;
+            controller.attackEntity = null;
+            controller.attackPosition = null;
+            controller.followTarget = null;
+            assistant.mineTile = tile;
+            assistant.mineTimer = 0f;
+            Op result = newOp("mine");
+            result.status = "running";
+            result.data = Jval.newObject()
+                    .put("x", x)
+                    .put("y", y)
+                    .put("item", drop.name);
+            reply(command, result.toJson());
+            return;
+        }
+
+        if ("get_unit".equals(op)) {
+            Unit unit = findUnit(request);
+            if (unit == null) {
+                replyError(command, "unit_not_found", "Unit not found");
+                return;
+            }
+            reply(command, Jval.newObject()
+                    .put("id", unit.id)
+                    .put("type", unit.type.name)
+                    .put("team", unit.team.id)
+                    .put("x", unit.x)
+                    .put("y", unit.y)
+                    .put("health", unit.health)
+                    .put("maxHealth", unit.maxHealth)
+                    .put("dead", unit.dead)
+                    .put("item", unit.item() == null ? "" : unit.item().name)
+                    .put("itemAmount", unit.stack == null ? 0 : unit.stack.amount));
+            return;
+        }
+
+        if ("spawn_enemy".equals(op)) {
+            UnitType type = Vars.content.unit(request.getString("type", "dagger"));
+            if (type == null) {
+                replyError(command, "not_found", "Unknown unit type");
+                return;
+            }
+            Team team = assistant != null && assistant.team == Team.crux ? Team.sharded : Team.crux;
+            float x = request.getFloat("x", assistant == null ? 0f : assistant.x + 80f);
+            float y = request.getFloat("y", assistant == null ? 0f : assistant.y);
+            Unit unit = type.create(team);
+            unit.x = x;
+            unit.y = y;
+            unit.health = type.health;
+            unit.maxHealth = type.health;
+            unit.spawnedByCore(false);
+            unit.controller(new IdleController());
+            unit.add();
+            reply(command, Jval.newObject().put("id", unit.id).put("type", type.name).put("team", team.id));
             return;
         }
 
@@ -340,6 +768,71 @@ public class ProbeMod extends Mod {
         replyError(command, "bad_request", "Unknown op " + op);
     }
 
+    private Unit findUnit(Jval target) {
+        if (target == null) return null;
+        Jval unitId = target.get("unitId");
+        if (unitId == null) unitId = target.get("id");
+        if (unitId == null) return null;
+        int id = unitId.asInt();
+        for (Unit unit : Groups.unit) {
+            if (unit.id == id) return unit;
+        }
+        return null;
+    }
+
+    private UnitStance findStance(String name) {
+        UnitStance stance = Vars.content.unitStance(name);
+        if (stance != null) return stance;
+        if ("stop".equals(name)) return UnitStance.stop;
+        if ("holdFire".equals(name)) return UnitStance.holdFire;
+        if ("pursueTarget".equals(name)) return UnitStance.pursueTarget;
+        if ("patrol".equals(name)) return UnitStance.patrol;
+        if ("ram".equals(name)) return UnitStance.ram;
+        if ("boost".equals(name)) return UnitStance.boost;
+        if ("holdPosition".equals(name)) return UnitStance.holdPosition;
+        if ("mineAuto".equals(name)) return UnitStance.mineAuto;
+        return null;
+    }
+
+    private Building findBuilding(Jval target) {
+        if (target == null) return null;
+        Jval buildingId = target.get("buildingId");
+        if (buildingId != null) {
+            int id = buildingId.asInt();
+            for (Building building : Groups.build) {
+                if (building.id == id) return building;
+            }
+        }
+        Jval x = target.get("x");
+        Jval y = target.get("y");
+        if (x != null && y != null) {
+            Tile tile = Vars.world.tile(x.asInt(), y.asInt());
+            return tile == null ? null : tile.build;
+        }
+        return null;
+    }
+
+    private Object configValue(Jval value) {
+        if (value == null || value.isNull()) return null;
+        if (value.isString()) return value.asString();
+        if (value.isBoolean()) return value.asInt() != 0;
+        if (value.isNumber()) return value.asInt();
+        if (value.isObject()) {
+            Jval item = value.get("item");
+            if (item != null) return Vars.content.item(item.asString());
+            Jval liquid = value.get("liquid");
+            if (liquid != null) return Vars.content.liquid(liquid.asString());
+            Jval block = value.get("block");
+            if (block != null) return Vars.content.block(block.asString());
+            Jval unit = value.get("unit");
+            if (unit != null) return Vars.content.unit(unit.asString());
+            Jval x = value.get("x");
+            Jval y = value.get("y");
+            if (x != null && y != null) return new Point2(x.asInt(), y.asInt());
+        }
+        return null;
+    }
+
     private Op newOp(String kind) {
         Op op = new Op();
         op.id = "op-" + (++opSeq);
@@ -377,7 +870,9 @@ public class ProbeMod extends Mod {
                     .put("dead", assistant.dead)
                     .put("isAI", assistant.isAI())
                     .put("isPlayer", assistant.isPlayer())
-                    .put("spawnedByCore", assistant.spawnedByCore());
+                    .put("spawnedByCore", assistant.spawnedByCore())
+                    .put("item", assistant.item() == null ? "" : assistant.item().name)
+                    .put("itemAmount", assistant.stack == null ? 0 : assistant.stack.amount);
         }
         data.put("assistant", assistantJson);
 
@@ -409,9 +904,14 @@ public class ProbeMod extends Mod {
             units.add(Jval.newObject()
                     .put("id", unit.id)
                     .put("type", unit.type.name)
+                    .put("team", unit.team.id)
                     .put("x", unit.x)
                     .put("y", unit.y)
                     .put("health", unit.health)
+                    .put("maxHealth", unit.maxHealth)
+                    .put("dead", unit.dead)
+                    .put("item", unit.item() == null ? "" : unit.item().name)
+                    .put("itemAmount", unit.stack == null ? 0 : unit.stack.amount)
                     .put("isAI", unit.isAI()));
         }
         data.put("units", units);
@@ -514,6 +1014,8 @@ public class ProbeMod extends Mod {
         float startDistance;
         double createdTick;
         Jval data;
+        Unit targetUnit;
+        Building targetBuilding;
 
         Jval toJson() {
             Jval json = Jval.newObject()
@@ -526,9 +1028,8 @@ public class ProbeMod extends Mod {
         }
     }
 
-    private static final class ProbeController implements UnitController {
+    private static final class IdleController implements UnitController {
         private Unit unit;
-        volatile Vec2 target;
 
         @Override
         public void unit(Unit unit) {
@@ -542,7 +1043,74 @@ public class ProbeMod extends Mod {
 
         @Override
         public void updateUnit() {
-            if (unit == null || target == null) return;
+        }
+
+        @Override
+        public void removed(Unit unit) {
+            this.unit = null;
+        }
+    }
+
+    private static final class ProbeController implements UnitController {
+        private Unit unit;
+        volatile Vec2 target;
+        volatile Unit followTarget;
+        volatile float followDistance = 48f;
+        volatile Teamc attackEntity;
+        volatile Vec2 attackPosition;
+
+        @Override
+        public void unit(Unit unit) {
+            this.unit = unit;
+        }
+
+        @Override
+        public Unit unit() {
+            return unit;
+        }
+
+        @Override
+        public void updateUnit() {
+            if (unit == null) return;
+
+            if (followTarget != null) {
+                if (followTarget.dead || followTarget.health <= 0) {
+                    followTarget = null;
+                } else {
+                    float distance = (float) Math.hypot(followTarget.x - unit.x, followTarget.y - unit.y);
+                    if (distance > followDistance) {
+                        Vec2 desired = new Vec2(followTarget.x - unit.x, followTarget.y - unit.y).limit(unit.speed());
+                        unit.moveAt(desired);
+                    }
+                    return;
+                }
+            }
+
+            if (attackPosition != null) {
+                if (attackEntity instanceof Unit targetUnit && (targetUnit.dead || targetUnit.health <= 0)) {
+                    attackEntity = null;
+                    attackPosition = null;
+                } else if (attackEntity instanceof Building targetBuilding && targetBuilding.health <= 0) {
+                    attackEntity = null;
+                    attackPosition = null;
+                } else {
+                    float range = 0f;
+                    for (var weapon : unit.type.weapons) {
+                        range = Math.max(range, weapon.range());
+                    }
+                    float distance = (float) Math.hypot(attackPosition.x - unit.x, attackPosition.y - unit.y);
+                    unit.aimX = attackPosition.x;
+                    unit.aimY = attackPosition.y;
+                    unit.isShooting = distance <= range;
+                    if (distance > Math.max(8f, range * 0.8f)) {
+                        Vec2 desired = new Vec2(attackPosition.x - unit.x, attackPosition.y - unit.y).limit(unit.speed());
+                        unit.moveAt(desired);
+                    }
+                    return;
+                }
+            }
+
+            if (target == null) return;
             float dx = target.x - unit.x;
             float dy = target.y - unit.y;
             if (Math.hypot(dx, dy) < 1f) {
@@ -557,6 +1125,9 @@ public class ProbeMod extends Mod {
         public void removed(Unit unit) {
             this.unit = null;
             this.target = null;
+            this.attackEntity = null;
+            this.attackPosition = null;
+            this.followTarget = null;
         }
     }
 }

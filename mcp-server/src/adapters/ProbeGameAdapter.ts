@@ -61,6 +61,7 @@ export class ProbeGameAdapter implements GameAdapter {
   private socket?: net.Socket;
   private buffer = "";
   private nextId = 1;
+  private actionSeq = 0;
   private pending = new Map<number, Pending>();
 
   constructor(options: ProbeAdapterOptions = {}) {
@@ -333,20 +334,20 @@ export class ProbeGameAdapter implements GameAdapter {
     return this.mapResult(await this.call("move_to", { x, y, arriveRadius }));
   }
 
-  async attack(_target: CommandTarget): Promise<ActionResult> {
-    throw this.notImplemented("attack");
+  async attack(target: CommandTarget): Promise<ActionResult> {
+    return this.immediate(await this.call("attack", { target }));
   }
 
-  async follow(_unitId: EntityId, _distance?: number): Promise<ActionResult> {
-    throw this.notImplemented("follow");
+  async follow(unitId: EntityId, distance?: number): Promise<ActionResult> {
+    return this.immediate(await this.call("follow", { unitId, distance }));
   }
 
-  async mine(_x: number, _y: number): Promise<ActionResult> {
-    throw this.notImplemented("mine");
+  async mine(x: number, y: number): Promise<ActionResult> {
+    return this.immediate(await this.call("mine", { x, y }));
   }
 
   async stop(): Promise<ActionResult> {
-    throw this.notImplemented("stop");
+    return this.immediate(await this.call("stop"));
   }
 
   async buildPlan(request: BuildPlanRequest): Promise<ActionResult> {
@@ -373,31 +374,31 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async withdraw(
-    _target: { buildingId?: EntityId; x?: number; y?: number },
-    _item: string,
-    _amount: number,
+    target: { buildingId?: EntityId; x?: number; y?: number },
+    item: string,
+    amount: number,
   ): Promise<ActionResult> {
-    throw this.notImplemented("withdraw");
+    return this.immediate(await this.call("withdraw", { target, item, amount }));
   }
 
   async deposit(
-    _target: { buildingId?: EntityId; x?: number; y?: number },
-    _item: string,
-    _amount: number,
+    target: { buildingId?: EntityId; x?: number; y?: number },
+    item: string,
+    amount: number,
   ): Promise<ActionResult> {
-    throw this.notImplemented("deposit");
+    return this.immediate(await this.call("deposit", { target, item, amount }));
   }
 
-  async configure(_x: number, _y: number, _value: ConfigValue): Promise<ActionResult> {
-    throw this.notImplemented("configure");
+  async configure(x: number, y: number, value: ConfigValue): Promise<ActionResult> {
+    return this.immediate(await this.call("configure", { x, y, value }));
   }
 
-  async commandUnits(_request: CommandUnitsRequest): Promise<ActionResult> {
-    throw this.notImplemented("command_units");
+  async commandUnits(request: CommandUnitsRequest): Promise<ActionResult> {
+    return this.immediate(await this.call("command_units", request as unknown as Record<string, unknown>));
   }
 
-  async setStance(_unitIds: EntityId[], _stance: UnitStanceName): Promise<ActionResult> {
-    throw this.notImplemented("set_stance");
+  async setStance(unitIds: EntityId[], stance: UnitStanceName): Promise<ActionResult> {
+    return this.immediate(await this.call("set_stance", { unitIds, stance }));
   }
 
   async possess(_unitId: EntityId): Promise<ActionResult> {
@@ -434,6 +435,8 @@ export class ProbeGameAdapter implements GameAdapter {
       health: Number(raw.health ?? 0),
       maxHealth: Number(raw.maxHealth ?? 0),
       dead: !!raw.dead,
+      item: raw.item ? String(raw.item) : undefined,
+      itemAmount: raw.itemAmount == null ? undefined : Number(raw.itemAmount),
     };
   }
 
@@ -452,6 +455,16 @@ export class ProbeGameAdapter implements GameAdapter {
       } satisfies ActionError;
     }
     return result;
+  }
+
+  private immediate(raw: unknown): ActionResult {
+    const value = raw as { opId?: string; status?: OpStatus; progress?: number; data?: unknown } | undefined;
+    return {
+      opId: value?.opId ?? `probe-${++this.actionSeq}`,
+      status: value?.status ?? "done",
+      progress: value?.progress ?? 1,
+      data: value?.data ?? value,
+    };
   }
 
   private notImplemented(method: string): GameError {

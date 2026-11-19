@@ -23,8 +23,12 @@
 - [x] Probe mod：v160.8 服务端加载、`get_context`/`get_tile`/`get_capabilities`/`query_area`/`move_to`/`build` 验证
 - [x] Probe mod 发现：`spawnedByCore=true` 的非 Player 会被每帧 despawn；助手用 `isHome`
 - [x] Probe 建造完成：`BuildPlan` + `BuilderComp`，MCP `query_area` 读回 conveyor
-- [x] `ProbeGameAdapter`：MCP 的 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build` 接真实游戏
-- [ ] Probe/真实 adapter 剩余动作：attack、mine、withdraw/deposit、configure、command_units、possess/release/respawn
+- [x] `ProbeGameAdapter`：MCP 的 `get_context`/`get_capabilities`/`query_area`/`move_to`/`build`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop` 接真实游戏
+- [x] 真实物流/配置/指挥验证：核心取放 5 copper、sorter 配置、dagger `move` 命令、`holdPosition` stance、`stop`
+- [x] `query_area` 建筑读取改为按世界 tile 扫描；`Groups.build.getByID` 在服务端不可用
+- [ ] attack：probe op + adapter 已接，但测试目标会在探针场景中消失；尚未完成端到端伤害验证
+- [ ] mine：probe op + adapter 已接；当前测试只验证到 accepted/running，未验证产出（受身体 mineRange/地形影响）
+- [ ] Probe/真实 adapter 剩余动作：possess/release/respawn
 - [ ] 真实 adapter 事件日志（当前 `get_events` 空页）
 - [ ] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
 - [ ] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手

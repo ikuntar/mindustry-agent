@@ -37,8 +37,10 @@ mindustry-ai/
 - [x] MCP 接口脚手架 + MockGameAdapter（`mcp-server/`）
 - [x] MCP server 24 个工具、stdio 入口、Mock/MCP 测试、stdio harness（`npm test` 15/15）
 - [x] Probe mod：真实 v160.8 服务端加载、get_context/move_to/build/get_tile 跑通
-- [x] ProbeGameAdapter：MCP 24 工具中的 context/capabilities/query_area/move/build 接真实游戏
+- [x] ProbeGameAdapter：MCP 24 工具中的 context/capabilities/query_area/move/build/withdraw/deposit/configure/command_units/set_stance/stop 接真实游戏
+- [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance
 - [ ] 真实 Mindustry mod adapter（本地 socket + 游戏线程动作队列）
+- [ ] attack/mine 端到端产出验证；possess/release/respawn；真实事件日志
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
 - [ ] 固定地图端到端验收
 

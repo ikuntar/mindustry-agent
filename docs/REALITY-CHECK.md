@@ -76,18 +76,23 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `move_to` 返回 opId，`get_action_result` 为 `done`。
 - `build_plan`（单块）返回 opId，随后 `query_area` 读回真实 `conveyor`。
 - `get_capabilities` 来自真实 `UnitType`（buildSpeed/buildRange/mineTier 等）。
-- 其余动作（attack/withdraw/config/command/possess/respawn）在 probe adapter 返回 `not_implemented`，不是假成功。
+- 物流：`withdraw` 从核心取 5 copper，`get_context` 读回助手携带 copper 5；`deposit` 放回成功。
+- 配置：在核心附近建 `sorter`，`configure {item:"copper"}` 成功；`query_area` 读回 sorter。
+- 指挥：probe 生成同队 dagger；`command_units {command:"move"}` 后其位置变化；`set_stance {stance:"holdPosition"}` 成功。
+- `stop` 清理移动/攻击目标。
+- `attack`/`follow`/`mine` 已接 probe op；`attack` 的测试目标在探针场景会消失/不可定位，`mine` 只验证到 accepted/running，尚未完成产出验证。它们在真实 adapter 中不是假成功：失败会返回错误或保持 running。
 
 限制：
 
-- probe adapter 仍未实现战斗/物流/配置/附身/重生；这些是下一步。
+- probe adapter 的 `possess/release/respawn` 仍未实现；`get_events` 为空页。
+- `attack`/`mine` 的本地反射控制仍不完整，不能作为可交付能力。
 - headless 服务端没有本地 `Player`，所以 `get_context.player.dead=true`；桌面客户端会不同。
 
 
 ## 结论
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。
-- Probe mod + `ProbeGameAdapter` 已把 MCP 的 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build` 接到真实游戏；`query_area` 能读回真实 conveyor，不再是 mock 自嗨。
-- 还没接的真实动作：attack、mine、withdraw/deposit、configure、command_units、possess/release/respawn、events。下一步逐个补，并给每个动作加负例。
+- Probe mod + `ProbeGameAdapter` 已把 MCP 的 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop` 接到真实游戏；物流、sorter 配置、指挥和 stance 已实测。
+- `attack`/`follow`/`mine` 已接 probe op，但攻击目标在探针场景不稳定、挖矿只到 running，尚未达到可交付标准；`possess/release/respawn`、真实事件日志还没做。
 - 版本基线默认 v160.8；BEK/MindustryX 的 v154 代码只作参考，不作为主干。
 - 不要直接用服务端 `js` 当生产接口；probe 只是过渡验证。

@@ -259,9 +259,10 @@ MCP server（Node/TypeScript）
 
 当前进度：
 
-- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `query_area` / `move_to` / 单块 `build_plan`；`get_content` 为静态注册表；`get_events` 为空页。
+- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `query_area` / `move_to` / 单块 `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop`；`get_content` 为静态注册表；`get_events` 为空页。
+- `attack` / `follow` / `mine` 已接入口，但 attack 目标测试不稳定、mine 未验证产出；不要把它们当完整能力。
 - 其余动作在 probe adapter 返回 `not_implemented`，不是假成功。
-- 已验证 `query_area` 能读回真实 `conveyor`；`move_to` 的 `get_action_result` 为 done。
+- 已验证 `query_area` 能读回真实 `conveyor`/`sorter`；`withdraw`/`deposit` 的 copper 5 与 `get_context` 携带量一致；`configure` sorter 成功；`command_units` 的 dagger 位移；`set_stance` holdPosition 成功。
 
 待实现：
 - 本地 socket 协议、发现文件、token、版本握手、重连。
