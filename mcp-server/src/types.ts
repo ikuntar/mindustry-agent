@@ -147,6 +147,7 @@ export interface AreaQuery {
   radius: number;
   includeUnits?: boolean;
   includeBuildings?: boolean;
+  includeEnemies?: boolean;
 }
 
 export interface AreaSnapshot {

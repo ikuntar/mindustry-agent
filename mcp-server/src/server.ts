@@ -161,13 +161,14 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   server.registerTool(
     "query_area",
     {
-      description: "Read units and buildings in a circular area around a point.",
+      description: "Read units and buildings in a circular area around a point. Set includeEnemies to include non-assistant-team units.",
       inputSchema: {
         x: z.number(),
         y: z.number(),
         radius: z.number().positive(),
         includeUnits: z.boolean().optional(),
         includeBuildings: z.boolean().optional(),
+        includeEnemies: z.boolean().optional(),
       },
       annotations: readOnly,
     },

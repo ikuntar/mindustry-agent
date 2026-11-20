@@ -678,6 +678,15 @@ async function main(): Promise<void> {
     waveHistory[1].waveAfter > waveHistory[0].waveAfter,
     JSON.stringify(waveHistory),
   );
+  const enemyArea = await tool("query_area", {
+    x: core.x,
+    y: core.y,
+    radius: 1000,
+    includeBuildings: false,
+    includeEnemies: true,
+  });
+  const enemyUnits = (enemyArea.units ?? []).filter((unit: { team: number }) => unit.team !== context.team);
+  check("enemy area query includes wave enemies", enemyUnits.length > 0, JSON.stringify(enemyUnits.slice(0, 3)));
 
   console.log(
     JSON.stringify({

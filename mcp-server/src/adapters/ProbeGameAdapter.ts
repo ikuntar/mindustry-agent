@@ -402,6 +402,7 @@ export class ProbeGameAdapter implements GameAdapter {
       radius: query.radius,
       includeUnits: query.includeUnits ?? true,
       includeBuildings: query.includeBuildings ?? true,
+      includeEnemies: query.includeEnemies ?? false,
     });
     const units: UnitSnapshot[] = (raw.units ?? []).map((unit: any) => this.mapUnit(unit));
     const buildings: BuildingSnapshot[] = (raw.buildings ?? []).map((building: any) => ({

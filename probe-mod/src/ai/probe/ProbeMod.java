@@ -578,11 +578,12 @@ public class ProbeMod extends Mod {
             float radius = request.getFloat("radius", 20f);
             boolean includeUnits = request.getBool("includeUnits", true);
             boolean includeBuildings = request.getBool("includeBuildings", true);
+            boolean includeEnemies = request.getBool("includeEnemies", false);
             Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
             Jval units = Jval.newArray();
             if (includeUnits) {
                 for (Unit unit : mindustry.gen.Groups.unit) {
-                    if (unit.team != team) continue;
+                    if (!includeEnemies && unit.team != team) continue;
                     if (Math.hypot(unit.x - x, unit.y - y) > radius) continue;
                     units.add(Jval.newObject()
                             .put("id", unit.id)
