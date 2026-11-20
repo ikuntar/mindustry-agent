@@ -355,7 +355,7 @@ export interface GameAdapter {
   stop(): Promise<ActionResult>;
   buildPlan(request: BuildPlanRequest): Promise<ActionResult>;
   deconstruct(targets: Vec2[], timeoutTicks?: number): Promise<ActionResult>;
-  repair(target: Vec2): Promise<ActionResult>;
+  repair(target: Vec2, timeoutTicks?: number): Promise<ActionResult>;
   withdraw(target: { buildingId?: EntityId; x?: number; y?: number }, item: string, amount: number): Promise<ActionResult>;
   deposit(target: { buildingId?: EntityId; x?: number; y?: number }, item: string, amount: number): Promise<ActionResult>;
   configure(x: number, y: number, value: ConfigValue): Promise<ActionResult>;

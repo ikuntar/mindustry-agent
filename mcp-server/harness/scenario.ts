@@ -472,6 +472,25 @@ async function main(): Promise<void> {
       timeoutDeconstructResult.status === "failed" && timeoutDeconstructResult.data?.code === "timeout",
       JSON.stringify(timeoutDeconstructResult),
     );
+    const damagedSwitch = await rawProbe("damage_building", {
+      x: sorter.tileX,
+      y: sorter.tileY,
+      amount: 10,
+    });
+    if (damagedSwitch.health > 0 && damagedSwitch.health < damagedSwitch.maxHealth) {
+      const timeoutRepair = await tool("repair", {
+        x: sorter.tileX,
+        y: sorter.tileY,
+        timeoutTicks: 1,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const timeoutRepairResult = await tool("get_action_result", { opId: timeoutRepair.opId });
+      check(
+        "repair timeout fails action",
+        timeoutRepairResult.status === "failed" && timeoutRepairResult.data?.code === "timeout",
+        JSON.stringify(timeoutRepairResult),
+      );
+    }
   }
 
   let feeder: any;

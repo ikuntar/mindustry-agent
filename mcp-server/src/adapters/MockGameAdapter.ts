@@ -664,7 +664,7 @@ export class MockGameAdapter implements GameAdapter {
     return this.opResult(op);
   }
 
-  async repair(target: Vec2): Promise<ActionResult> {
+  async repair(target: Vec2, _timeoutTicks?: number): Promise<ActionResult> {
     const a = this.requireAlive();
     const b = this.buildingAt(target.x, target.y);
     if (!b) throw new GameError("not_found", `No building at ${target.x},${target.y}`);

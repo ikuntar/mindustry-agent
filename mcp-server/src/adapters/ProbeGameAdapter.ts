@@ -573,8 +573,8 @@ export class ProbeGameAdapter implements GameAdapter {
     );
   }
 
-  async repair(target: Vec2): Promise<ActionResult> {
-    return this.immediate(await this.call("repair", { x: target.x, y: target.y }));
+  async repair(target: Vec2, timeoutTicks?: number): Promise<ActionResult> {
+    return this.immediate(await this.call("repair", { x: target.x, y: target.y, timeoutTicks }));
   }
 
   async withdraw(

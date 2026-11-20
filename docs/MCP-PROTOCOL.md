@@ -250,7 +250,7 @@ MCP server（Node/TypeScript）
   - 逐块校验、扣费、建造；`allowPartial=false` 时任一失败整单拒绝。
   - 最大 256 个 placement。
 - `deconstruct { targets[], timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
-- `repair { x, y }`
+- `repair { x, y, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 
 ### 物流
 

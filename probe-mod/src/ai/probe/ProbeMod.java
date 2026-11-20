@@ -1536,6 +1536,8 @@ public class ProbeMod extends Mod {
             }
             Op result = newOp("repair");
             result.status = "running";
+            int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
+            if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.targetBuilding = building;
             result.targetPosition = new Vec2(building.x, building.y);
             result.data = Jval.newObject()
