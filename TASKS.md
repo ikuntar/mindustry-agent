@@ -27,8 +27,10 @@
 - [x] 真实物流/配置/指挥验证：核心取放 5 copper、sorter 配置、dagger `move` 命令、`holdPosition` stance、`stop`
 - [x] `query_area` 建筑读取改为按世界 tile 扫描；`Groups.build.getByID` 在服务端不可用
 - [ ] attack：probe op + adapter 已接，但测试目标会在探针场景中消失；尚未完成端到端伤害验证
-- [ ] mine：probe op + adapter 已接；当前测试只验证到 accepted/running，未验证产出（受身体 mineRange/地形影响）
-- [ ] Probe/真实 adapter 剩余动作：possess/release/respawn
+- [x] mine：probe op + adapter 已接；在挖矿可达的 sand tile 上实测 `get_action_result` done，助手获得 sand 1
+- [x] possess / release：同队 dagger 附身、原 home body despawn、release 后在核心生成新 alpha；`isHome/possessing` 读回正确
+- [x] respawn：kill 后 `assistant.dead=true`，`respawn` 在核心生成新 alpha（id 变化、health 150）
+- [ ] Probe/真实 adapter 剩余动作：attack 伤害
 - [ ] 真实 adapter 事件日志（当前 `get_events` 空页）
 - [ ] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
 - [ ] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手

@@ -164,6 +164,25 @@ async function main(): Promise<void> {
         }),
       );
       console.log("set_stance:", stance);
+
+      const possessed = parse(
+        await client.callTool({ name: "possess", arguments: { unitId: ally.id } }),
+      );
+      console.log("possess:", possessed);
+      const afterPossess = parse(
+        await client.callTool({ name: "get_context", arguments: { detail: "summary" } }),
+      );
+      console.log("after possess:", afterPossess.data.assistant);
+
+      const released = parse(await client.callTool({ name: "release", arguments: {} }));
+      console.log("release:", released);
+      const afterRelease = parse(
+        await client.callTool({ name: "get_context", arguments: { detail: "summary" } }),
+      );
+      console.log("after release:", afterRelease.data.assistant);
+
+      const respawnAlive = parse(await client.callTool({ name: "respawn", arguments: {} }));
+      console.log("respawn while alive (expected error):", respawnAlive);
     } else {
       console.log("no ally found for command test");
     }

@@ -158,8 +158,8 @@ export class ProbeGameAdapter implements GameAdapter {
     const units: UnitSnapshot[] = (raw.units ?? []).map((unit: any) => this.mapUnit(unit));
     const assistant: AssistantSnapshot = {
       ...this.mapUnit(assistantRaw),
-      isHome: true,
-      possessing: false,
+      isHome: assistantRaw.isHome !== false,
+      possessing: !!assistantRaw.possessing,
     };
     const cores: CoreSnapshot[] = (raw.cores ?? []).map((core: any) => ({
       id: core.id,
@@ -401,16 +401,16 @@ export class ProbeGameAdapter implements GameAdapter {
     return this.immediate(await this.call("set_stance", { unitIds, stance }));
   }
 
-  async possess(_unitId: EntityId): Promise<ActionResult> {
-    throw this.notImplemented("possess");
+  async possess(unitId: EntityId): Promise<ActionResult> {
+    return this.immediate(await this.call("possess", { unitId }));
   }
 
   async release(): Promise<ActionResult> {
-    throw this.notImplemented("release");
+    return this.immediate(await this.call("release"));
   }
 
-  async respawn(_coreId?: EntityId): Promise<ActionResult> {
-    throw this.notImplemented("respawn");
+  async respawn(coreId?: EntityId): Promise<ActionResult> {
+    return this.immediate(await this.call("respawn", { coreId }));
   }
 
   async cancel(_opId?: string): Promise<ActionResult> {

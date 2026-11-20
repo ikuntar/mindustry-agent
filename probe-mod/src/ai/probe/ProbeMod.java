@@ -17,6 +17,7 @@ import mindustry.entities.units.UnitController;
 import mindustry.game.EventType;
 import mindustry.game.Team;
 import mindustry.gen.Building;
+import mindustry.gen.Call;
 import mindustry.gen.Groups;
 import mindustry.gen.Teamc;
 import mindustry.gen.Unit;
@@ -58,6 +59,10 @@ public class ProbeMod extends Mod {
     private final ConcurrentLinkedQueue<Command> queue = new ConcurrentLinkedQueue<>();
     private final Map<String, Op> ops = new HashMap<>();
     private Unit assistant;
+    private Unit homeBody;
+    private UnitController savedController;
+    private boolean possessing;
+    private boolean autoRespawn = true;
     private ProbeController controller;
     private long opSeq = 0;
 
@@ -71,6 +76,10 @@ public class ProbeMod extends Mod {
 
     private void reset() {
         assistant = null;
+        homeBody = null;
+        savedController = null;
+        possessing = false;
+        autoRespawn = true;
         controller = null;
         ops.clear();
         Log.info("[ai-probe] world loaded, waiting for requests");
@@ -127,6 +136,8 @@ public class ProbeMod extends Mod {
     }
 
     private void ensureAssistant() {
+        if (possessing) return;
+        if (!autoRespawn && assistant != null && assistant.dead) return;
         if (assistant != null && assistant.isValid() && !assistant.dead) return;
 
         Team team = Vars.state.rules.defaultTeam;
@@ -146,6 +157,7 @@ public class ProbeMod extends Mod {
         unit.controller(controller);
         unit.add();
         assistant = unit;
+        homeBody = unit;
         Log.info("[ai-probe] assistant spawned: id=" + unit.id + " type=" + type.name + " team=" + team.name
                 + " valid=" + unit.isValid() + " added=" + unit.isAdded() + " dead=" + unit.dead + " health=" + unit.health);
     }
@@ -545,6 +557,122 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("kill_assistant".equals(op)) {
+            // Probe/debug helper for death/respawn tests; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            autoRespawn = false;
+            int id = assistant.id;
+            assistant.kill();
+            reply(command, Jval.newObject().put("unitId", id).put("dead", assistant.dead));
+            return;
+        }
+
+        if ("possess".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            if (possessing) {
+                replyError(command, "already_possessing", "Assistant is already possessing a body");
+                return;
+            }
+            Unit target = findUnit(request);
+            if (target == null || target.dead) {
+                replyError(command, "unit_not_found", "Target unit not found");
+                return;
+            }
+            if (target == assistant) {
+                replyError(command, "bad_target", "Cannot possess the assistant's own body");
+                return;
+            }
+            if (target.team != assistant.team) {
+                replyError(command, "wrong_team", "Target unit is not on the assistant's team");
+                return;
+            }
+            if (target.isPlayer() || !target.isAI()) {
+                replyError(command, "not_possessable", "Target unit is not an AI body");
+                return;
+            }
+            if (!target.type.playerControllable) {
+                replyError(command, "not_possessable", "Target unit type is not player-controllable");
+                return;
+            }
+
+            Unit oldHome = homeBody;
+            savedController = target.controller();
+            target.controller(controller);
+            controller.unit(target);
+            controller.target = null;
+            controller.attackEntity = null;
+            controller.attackPosition = null;
+            controller.followTarget = null;
+            assistant = target;
+            homeBody = null;
+            possessing = true;
+            if (oldHome != null) {
+                Call.unitDespawn(oldHome);
+            }
+            reply(command, Jval.newObject()
+                    .put("unitId", target.id)
+                    .put("type", target.type.name)
+                    .put("homeBodyRemoved", oldHome == null ? -1 : oldHome.id));
+            return;
+        }
+
+        if ("release".equals(op)) {
+            if (!possessing || assistant == null) {
+                replyError(command, "not_possessing", "Assistant is not possessing a body");
+                return;
+            }
+            Unit target = assistant;
+            if (savedController != null) {
+                target.controller(savedController);
+            }
+            possessing = false;
+            assistant = null;
+            homeBody = null;
+            controller = null;
+            savedController = null;
+            ensureAssistant();
+            if (assistant == null) {
+                replyError(command, "no_core", "Released body but no core is available for a home body");
+                return;
+            }
+            reply(command, Jval.newObject()
+                    .put("releasedUnitId", target.id)
+                    .put("homeUnitId", assistant.id)
+                    .put("homeType", assistant.type.name));
+            return;
+        }
+
+        if ("respawn".equals(op)) {
+            autoRespawn = true;
+            if (!possessing && assistant != null && !assistant.dead) {
+                replyError(command, "assistant_alive", "Assistant body is alive");
+                return;
+            }
+            if (possessing) {
+                possessing = false;
+                savedController = null;
+                assistant = null;
+                homeBody = null;
+                controller = null;
+            }
+            ensureAssistant();
+            if (assistant == null) {
+                replyError(command, "no_core", "No core is available for respawn");
+                return;
+            }
+            reply(command, Jval.newObject()
+                    .put("unitId", assistant.id)
+                    .put("type", assistant.type.name)
+                    .put("health", assistant.health));
+            return;
+        }
+
         if ("attack".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -871,6 +999,9 @@ public class ProbeMod extends Mod {
                     .put("isAI", assistant.isAI())
                     .put("isPlayer", assistant.isPlayer())
                     .put("spawnedByCore", assistant.spawnedByCore())
+                    .put("isHome", !possessing && assistant == homeBody)
+                    .put("possessing", possessing)
+                    .put("homeBodyId", homeBody == null ? -1 : homeBody.id)
                     .put("item", assistant.item() == null ? "" : assistant.item().name)
                     .put("itemAmount", assistant.stack == null ? 0 : assistant.stack.amount);
         }
