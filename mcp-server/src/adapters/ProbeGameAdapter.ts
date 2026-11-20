@@ -445,6 +445,11 @@ export class ProbeGameAdapter implements GameAdapter {
       maxHealth: Number(building.maxHealth ?? 0),
       rotation: Number(building.rotation ?? 0),
       core: String(building.block ?? "").startsWith("core-"),
+      itemList: (building.itemList ?? building.items ?? []).map((item: { item: string; amount: number }) => ({
+        item: String(item.item),
+        amount: Number(item.amount ?? 0),
+      })),
+      ammoTotal: building.ammoTotal == null ? undefined : Number(building.ammoTotal),
     }));
     return {
       x: query.x,

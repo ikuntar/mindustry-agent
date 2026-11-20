@@ -772,7 +772,7 @@ public class ProbeMod extends Mod {
                         if (building == null || building.team != team) continue;
                         if (tile.x != building.tile.x || tile.y != building.tile.y) continue;
                         if (Math.hypot(building.x - x, building.y - y) > radius) continue;
-                        buildings.add(Jval.newObject()
+                        Jval entry = Jval.newObject()
                                 .put("id", building.id)
                                 .put("block", building.block.name)
                                 .put("team", building.team.id)
@@ -782,7 +782,21 @@ public class ProbeMod extends Mod {
                                 .put("tileY", building.tile.y)
                                 .put("health", building.health)
                                 .put("maxHealth", building.block.health)
-                                .put("rotation", building.rotation));
+                                .put("rotation", building.rotation);
+                        if (building.items != null) {
+                            Jval items = Jval.newArray();
+                            for (Item item : Vars.content.items()) {
+                                int amount = building.items.get(item);
+                                if (amount > 0) {
+                                    items.add(Jval.newObject().put("item", item.name).put("amount", amount));
+                                }
+                            }
+                            entry.put("itemList", items);
+                        }
+                        if (building instanceof Turret.TurretBuild turret) {
+                            entry.put("ammoTotal", turret.totalAmmo);
+                        }
+                        buildings.add(entry);
                     }
                 }
             }

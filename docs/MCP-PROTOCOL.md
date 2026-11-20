@@ -211,7 +211,7 @@ MCP server（Node/TypeScript）
 ### `query_area`
 
 参数：`{ "x": 20, "y": 20, "radius": 10, "includeUnits": true, "includeBuildings": true, "includeEnemies": false }`。
-返回局部 `units` / `buildings`；`includeEnemies=true` 时包含非助手队伍单位。
+返回局部 `units` / `buildings`；`includeEnemies=true` 时包含非助手队伍单位。建筑可带 `itemList` 和炮塔 `ammoTotal`。
 
 ### `get_config_schema`
 

@@ -30,6 +30,8 @@ export interface BuildingSnapshot {
   rotation?: number;
   enabled?: boolean;
   efficiency?: number;
+  itemList?: { item: string; amount: number }[];
+  ammoTotal?: number;
   items?: Record<string, number>;
   config?: unknown;
   core?: boolean;

@@ -350,6 +350,16 @@ async function main(): Promise<void> {
     Number(turretDirectItems.ammoTotal ?? 0) > 0,
     JSON.stringify(turretDirectItems),
   );
+  const turretAmmoArea = await tool("query_area", { x: turret.x, y: turret.y, radius: 16 });
+  const queriedTurret = turretAmmoArea.buildings?.find(
+    (building: { buildingId?: number; id?: number }) =>
+      (building.buildingId ?? building.id) === (turret.buildingId ?? turret.id),
+  );
+  check(
+    "query_area exposes turret ammo",
+    Number(queriedTurret?.ammoTotal ?? 0) > 0,
+    JSON.stringify(queriedTurret),
+  );
 
   const defenseWaves: { before: number; after: number; dead: boolean }[] = [];
   for (const [dx, dy] of [[64, 0], [64, 24], [64, 48], [64, 72]]) {
