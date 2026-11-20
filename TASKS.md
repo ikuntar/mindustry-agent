@@ -103,6 +103,7 @@
 - [x] harness：4 波 survival 后核心存活（health `920`）、助手存活（health `20`），说明波次真实伤害到核心且防守未崩溃；仍有远处敌人未解决
 - [x] harness：核心连续受击：3+2 个启用真实 AI 的敌方 dagger 两波进攻，核心 health `1100→1082→128` 仍存活
 - [x] harness：4 波官方 survival 连续触发：核心存活（health `920`）、助手存活；远处敌人未全部清理，作为已知限制
+- [x] harness：两段 conveyor 链路：上游 `(111,75)` 指向 feeder，deposit 1 copper 后炮塔 `ammoTotal 10→12`；长距离/多拐弯仍未验证
 - [ ] harness：完整清理 survival 敌人、长距离/多拐弯传送带
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
 - [x] LLM harness 多步 mock：`LLM_TASK` 含 withdraw/deposit 时 mock planner 依次调用 context/withdraw/deposit；`LLM_REQUIRE_TOOLS` 验收通过

@@ -91,7 +91,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 均可选 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，并清除对应控制器目标。
 - 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景用 `spawn_enemy ai=true` 生成会还击的 dagger，轮询 2s 内 health `150→141`。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。
-- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 `ammoTotal=6`；4 个启用真实 AI 的敌方 dagger 连续进攻，均被命中（150→141），炮塔弹药实际消耗到 0。完整 survival wave 未做；3 段链路验收因时序不稳定已移除。
+- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 `ammoTotal=6`；再建上游 conveyor，deposit 1 copper 后炮塔 `ammoTotal 10→12`，两段链路可用。4 个启用真实 AI 的敌方 dagger 连续进攻，均被命中（150→141），炮塔弹药实际消耗到 0；长距离/多拐弯链路未验证。
 - 数据 token 轮换：probe 新增 `rotate_data_token`；旧 token 访问返回 401，新 token 访问 manifest 返回 200。
 - 数据面速率限制：`PROBE_DATA_RATE_LIMIT_PER_SEC`（默认 120）；固定场景 limit=10 时 11 个并发请求得到 9 个 200、2 个 429。
 - 多客户端写互斥：probe writer lease 实测 `claim_writer` 第二客户端返回 `writer_held`，无 token 的 `move_to` 返回 `writer_required`，带 token 的 `move_to` 可执行，release 后第二客户端可 claim；`PROBE_REQUIRE_WRITER=1` 下 MCP adapter 自动 claim 并完成 `move_to=done`；1s TTL 过期后新客户端可 claim；默认未开启时保持原有行为。

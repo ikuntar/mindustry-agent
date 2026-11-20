@@ -610,6 +610,36 @@ async function main(): Promise<void> {
     Number(queriedTurret?.ammoTotal ?? 0) > 0,
     JSON.stringify(queriedTurret),
   );
+  if (feederTile) {
+    const toTurret = { x: turret.tileX - feederTile.x, y: turret.tileY - feederTile.y };
+    const upstream = { x: feederTile.x - toTurret.x, y: feederTile.y - toTurret.y };
+    const upstreamBuild = parse(
+      await client.callTool({
+        name: "build_plan",
+        arguments: { placements: [{ block: "conveyor", ...upstream, rotation: feeder.rotation }] },
+      }),
+    );
+    if (upstreamBuild.ok) {
+      await waitAction(upstreamBuild.data.opId);
+      const upstreamArea = await tool("query_area", { x: turret.x, y: turret.y, radius: 16 });
+      const upstreamConveyor = upstreamArea.buildings?.find(
+        (building: { block: string; tileX: number; tileY: number }) =>
+          building.block === "conveyor" && building.tileX === upstream.x && building.tileY === upstream.y,
+      );
+      if (upstreamConveyor) {
+        const beforeChain = Number((await rawProbe("get_tile", { x: turret.tileX, y: turret.tileY })).ammoTotal ?? 0);
+        await tool("withdraw", { target: { buildingId: core.id }, item: "copper", amount: 1 });
+        await tool("deposit", { target: { buildingId: upstreamConveyor.buildingId ?? upstreamConveyor.id }, item: "copper", amount: 1 });
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        const afterChain = Number((await rawProbe("get_tile", { x: turret.tileX, y: turret.tileY })).ammoTotal ?? 0);
+        check(
+          "two-segment conveyor delivers copper",
+          afterChain > beforeChain,
+          JSON.stringify({ beforeChain, afterChain, upstream }),
+        );
+      }
+    }
+  }
 
   const defenseWaves: { before: number; after: number; dead: boolean }[] = [];
   for (const [dx, dy] of [[64, 0], [64, 24], [64, 48], [64, 72]]) {
