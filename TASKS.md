@@ -95,6 +95,7 @@
 - [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
 - [x] harness：固定场景建 `duo` 炮塔 + feeder conveyor，从核心取 30 copper，传送带接收 19，连续 4 个敌人均被命中（150→123、141、141、141）；完整 survival wave 仍待补
 - [x] harness：真实 survival wave fixture：`start_wave` 连续触发 wave 1→2→3，分别生成 3/5 个敌人、27 个 spawn group；`query_area includeEnemies=true` 读到 wave dagger（health 114，已被炮塔打伤）
+- [x] harness：核心受击：助手撤离后生成 3 个启用真实 AI 的敌方 dagger，核心 health `1100→1082`
 - [ ] harness：完整 survival 多波防守、长线铺带
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
 - [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、27 tools、1 次工具调用、24/12 tokens

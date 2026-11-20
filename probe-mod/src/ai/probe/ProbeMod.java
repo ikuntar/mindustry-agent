@@ -1569,7 +1569,9 @@ public class ProbeMod extends Mod {
             unit.health = type.health;
             unit.maxHealth = type.health;
             unit.spawnedByCore(false);
-            unit.controller(new IdleController());
+            // Default fixtures are inert; opt into the engine's normal AI for
+            // combat tests (raiders, core damage).
+            if (!request.getBool("ai", false)) unit.controller(new IdleController());
             unit.add();
             reply(command, Jval.newObject().put("id", unit.id).put("type", type.name).put("team", team.id));
             return;

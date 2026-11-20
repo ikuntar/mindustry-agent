@@ -725,6 +725,27 @@ async function main(): Promise<void> {
     JSON.stringify(threatContext.threats?.slice(0, 3)),
   );
 
+  const homeCore = threatContext.cores?.[0];
+  if (homeCore) {
+    await tool("move_to", { x: homeCore.x - 260, y: homeCore.y - 160, arriveRadius: 24 });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    for (let i = 0; i < 3; i++) {
+      await rawProbe("spawn_enemy", { type: "dagger", x: homeCore.x + 40, y: homeCore.y + i * 8, ai: true });
+    }
+    let coreAfter = homeCore;
+    for (let i = 0; i < 50; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const snapshot = await tool("get_context", { detail: "full" });
+      coreAfter = snapshot.cores?.[0] ?? coreAfter;
+      if (coreAfter.health < homeCore.health) break;
+    }
+    check(
+      "core takes damage from raiders",
+      coreAfter.health < homeCore.health,
+      JSON.stringify({ before: homeCore.health, after: coreAfter.health }),
+    );
+  }
+
   console.log(
     JSON.stringify({
       ok: true,
