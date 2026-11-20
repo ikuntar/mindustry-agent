@@ -215,6 +215,16 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
     async (args) => run(() => adapter.getActionResult(args.opId, args.waitMs ?? 0)),
   );
 
+  server.registerTool(
+    "get_action_log",
+    {
+      description: "Read recent assistant actions and their status. Useful for auditing what was attempted.",
+      inputSchema: { limit: z.number().int().positive().max(128).optional() },
+      annotations: readOnly,
+    },
+    async (args) => run(() => adapter.getActionLog(args.limit ?? 50)),
+  );
+
   // ---------------------------------------------------------------- unit actions
 
   server.registerTool(

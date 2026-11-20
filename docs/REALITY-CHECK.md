@@ -101,7 +101,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 真实 survival wave：末尾连续两次 `start_wave`，wave `1→2→3`，分别生成 3/5 个敌人、每次 27 个 spawn group；`query_area includeEnemies=true` 找到 wave dagger，最近坐标 `1104.9,580.1`、health 114（炮塔已造成伤害）；`get_context includeEnemies=true` 的 `threats` 返回同一敌军；未验证完整多波防守/核心受击。
 - LLM 超时：`LLM_REQUEST_TIMEOUT_MS=150` 配合延迟 mock endpoint 实测退出码 1，错误为 `LLM request timed out after 150ms`；重试未做。
 - LLM 重试：`LLM_MAX_RETRIES=1` + mock endpoint 首次 503，实测第二次成功，`llmRetries=1`；重试耗尽时退出码 1、错误 `LLM request failed: 503 mock transient failure`。
-- LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 26 tools、1 次 `get_context`、token/latency 记录。`harness/mock-openai-server.mjs` 已真实验证 HTTP 路径（`mock=false`、24/12 tokens）；真实本地 Ollama `lfm3:latest` 在 mock 和 Fortress probe 上都调用了 `get_context`，真实 probe 6237/426 tokens、2.4s。固定动作任务 `get_context → move_to(952,584) → get_action_result` 返回 done，最终 `x=944.95`；自算 `core.x+24` 任务最终 `x=944.92`，`LLM_EXPECT_NEAR` 验收通过。外部供应商 endpoint 未验收。
+- LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 27 tools、1 次 `get_context`、token/latency 记录。`harness/mock-openai-server.mjs` 已真实验证 HTTP 路径（`mock=false`、24/12 tokens）；真实本地 Ollama `lfm3:latest` 在 mock 和 Fortress probe 上都调用了 `get_context`，真实 probe 6237/426 tokens、2.4s。固定动作任务 `get_context → move_to(952,584) → get_action_result` 返回 done，最终 `x=944.95`；自算 `core.x+24` 任务最终 `x=944.92`，`LLM_EXPECT_NEAR` 验收通过。外部供应商 endpoint 未验收。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
 - `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。
 - `follow`：MCP follow 后助手位置变化；固定场景实测 ally 移动后助手追到 30.38px 内并 `cancel`；目标死亡/复杂避障仍简化。

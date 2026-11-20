@@ -273,6 +273,16 @@ export interface ActionResult {
   error?: ActionError;
 }
 
+export interface ActionLogEntry extends ActionResult {
+  kind: string;
+  createdTick?: number;
+}
+
+export interface ActionLog {
+  actions: ActionLogEntry[];
+  count: number;
+}
+
 export interface ContextOptions {
   detail?: Detail;
   radius?: number;
@@ -317,6 +327,7 @@ export interface GameAdapter {
   getContent(type?: ContentType): Promise<ContentSnapshot>;
   getMapSummary(): Promise<MapSummary>;
   getEvents(since: number, limit: number, summary?: boolean, types?: string[]): Promise<EventPage>;
+  getActionLog(limit?: number): Promise<ActionLog>;
   queryArea(query: AreaQuery): Promise<AreaSnapshot>;
   getArea(query: AreaTileQuery): Promise<AreaTileSnapshot>;
   getConfigSchema(block: string): Promise<ConfigSchema>;

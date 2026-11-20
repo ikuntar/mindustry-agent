@@ -218,6 +218,10 @@ MCP server（Node/TypeScript）
 
 参数：`{ "opId": "op-12", "waitMs": 0 }`。返回 `ActionResult`。
 
+### `get_action_log`
+
+参数：`{ "limit": 50 }`（最大 128）。返回最近动作的 `opId`、`kind`、`status`、`progress`、`createdTick` 和 data，用于出错后审计尝试过的动作。
+
 ---
 
 ## 5. 写工具

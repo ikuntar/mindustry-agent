@@ -662,7 +662,7 @@ async function main(): Promise<void> {
     cancelResult.data?.cancelled >= 1 && cancelledOp.status === "cancelled",
     JSON.stringify({ cancelResult, cancelledOp }),
   );
-  const actionLog = await rawProbe("get_action_log", { limit: 128 });
+  const actionLog = await tool("get_action_log", { limit: 128 });
   check(
     "action log contains cancelled action",
     actionLog?.actions?.some((action: { opId: string; status: string }) => action.opId === cancelMove.opId && action.status === "cancelled"),

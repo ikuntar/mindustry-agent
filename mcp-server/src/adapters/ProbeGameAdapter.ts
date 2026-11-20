@@ -5,6 +5,7 @@ import path from "node:path";
 
 import {
   ActionError,
+  ActionLog,
   ActionResult,
   AreaQuery,
   AreaSnapshot,
@@ -377,6 +378,18 @@ export class ProbeGameAdapter implements GameAdapter {
       ref: raw.ref == null ? undefined : String(raw.ref),
       hasMore: !!raw.hasMore,
       bytes: raw.bytes == null ? undefined : Number(raw.bytes),
+    };
+  }
+
+  async getActionLog(limit = 50): Promise<ActionLog> {
+    const raw = await this.call("get_action_log", { limit });
+    return {
+      actions: (raw.actions ?? []).map((action: any) => ({
+        ...this.mapResult(action),
+        kind: String(action.kind ?? ""),
+        createdTick: action.createdTick == null ? undefined : Number(action.createdTick),
+      })),
+      count: Number(raw.count ?? 0),
     };
   }
 

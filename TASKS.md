@@ -97,8 +97,8 @@
 - [x] harness：真实 survival wave fixture：`start_wave` 连续触发 wave 1→2→3，分别生成 3/5 个敌人、27 个 spawn group；`query_area includeEnemies=true` 读到 wave dagger（health 114，已被炮塔打伤）
 - [ ] harness：完整 survival 多波防守、长线铺带
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
-- [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、26 tools、1 次工具调用、24/12 tokens
-- [x] LLM harness 真实本地模型：Ollama `lfm3:latest` 经 `/v1` 在 mock adapter 和真实 Fortress probe 上都调用 `get_context`；真实 probe 26 tools、6237/426 tokens、2.4s
+- [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、27 tools、1 次工具调用、24/12 tokens
+- [x] LLM harness 真实本地模型：Ollama `lfm3:latest` 经 `/v1` 在 mock adapter 和真实 Fortress probe 上都调用 `get_context`；真实 probe 27 tools、6237/426 tokens、2.4s
 - [x] LLM 固定动作任务：真实 Fortress 上 `get_context` → `move_to(952,584)` → `get_action_result` 返回 done，最终 assistant `x=944.95`；toolLog 记录参数
 - [x] LLM 自算目标 + 验收：模型从 context 计算 `core.x + 24` 并移动；`LLM_EXPECT_NEAR_X/Y` 检查最终位置 `944.92,584` 通过（模型未主动调用 `get_action_result`，验收直接用最终 context）
 - [ ] LLM harness：接外部供应商 endpoint 并跑固定动作任务

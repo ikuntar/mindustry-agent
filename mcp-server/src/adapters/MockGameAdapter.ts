@@ -1,5 +1,6 @@
 import {
   ActionError,
+  ActionLog,
   ActionResult,
   AreaQuery,
   AreaSnapshot,
@@ -461,6 +462,15 @@ export class MockGameAdapter implements GameAdapter {
       dropped: this.droppedEvents,
       hasMore: filtered.length > events.length,
     };
+  }
+
+  async getActionLog(limit = 50): Promise<ActionLog> {
+    const actions = [...this.ops.values()].slice(0, Math.max(1, limit)).map((op) => ({
+      ...this.opResult(op),
+      kind: op.kind,
+      createdTick: op.createdTick,
+    }));
+    return { actions, count: this.ops.size };
   }
 
   async queryArea(query: AreaQuery): Promise<AreaSnapshot> {

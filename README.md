@@ -37,9 +37,9 @@ mindustry-ai/
 - [x] 路线定为：局内 co-op 助手（mod + 本地执行层），不是独立 AI 客户端
 - [x] 设计落档：`docs/ASSISTANT-DESIGN.md`、`docs/MCP-PROTOCOL.md`、`docs/REMOTE-DATA-PLANE.md`、`TASKS.md`
 - [x] MCP 接口脚手架 + MockGameAdapter（`mcp-server/`）
-- [x] MCP server 26 个工具、stdio 入口、Mock/MCP 测试、stdio harness（`npm test` 16/16）
+- [x] MCP server 27 个工具、stdio 入口、Mock/MCP 测试、stdio harness（`npm test` 16/16）
 - [x] Probe mod：真实 v160.8 服务端加载、get_context/move_to/build/get_tile 跑通
-- [x] ProbeGameAdapter：MCP 26 工具中的 context/capabilities/content/map_summary/get_area/query_area/move/build/attack/mine/follow/withdraw/deposit/configure/command_units/set_stance/stop/possess/release/respawn/deconstruct/repair/cancel 接真实游戏
+- [x] ProbeGameAdapter：MCP 27 工具中的 context/capabilities/content/map_summary/get_area/query_area/move/build/attack/mine/follow/withdraw/deposit/configure/command_units/set_stance/stop/possess/release/respawn/deconstruct/repair/cancel/get_action_log 接真实游戏
 - [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance、附身/释放、sand 挖矿、死亡重生、攻击容器、deconstruct、repair
 - [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
 - [x] `get_events` 摘要模式：`summary=true` 返回 `byType` 计数 + `ref`，高频事件不占页
