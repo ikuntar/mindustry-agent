@@ -54,6 +54,7 @@ node client/probe-client.mjs
 - 空闲控制：每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 dagger 被命中，health 150→123。
 - 供弹防守：固定场景建 `duo` 炮塔和 feeder conveyor，从核心取 5 copper，炮塔 ammoTotal 6；4 个启用真实 AI 的敌方 dagger 连续进攻，均被命中（150→141），弹药实际消耗到 0。
 - 数据 token 轮换：probe `rotate_data_token` 更新 discovery；旧 token 401，新 token 200。
+- 数据面速率限制：`PROBE_DATA_RATE_LIMIT_PER_SEC` 默认 120；超限 429 + `Retry-After`，场景 limit=10 实测 9/11 成功。
 - 多客户端写互斥：`PROBE_REQUIRE_WRITER=1` 时先 `claim_writer`，写操作带 `writerToken`；第二个客户端 claim 得到 `writer_held`，无 token 写入得到 `writer_required`；`renew_writer` 续期，1s TTL 过期后新客户端可 claim。`scripts/run-writer-lock.sh` 验证 raw 客户端和 MCP adapter（`writer-harness`）两条路径。
 - `get_tile` 现在返回建筑的 `items` 和炮塔 `ammoTotal`；`get_area` tile 也带同样的有限字段。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 209→62、敌方距离 63→84。

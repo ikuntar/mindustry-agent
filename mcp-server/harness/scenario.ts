@@ -809,6 +809,25 @@ async function main(): Promise<void> {
     freshResponse.ok && staleResponse.status === 401,
     JSON.stringify({ fresh: freshResponse.status, stale: staleResponse.status }),
   );
+  const rateDiscovery = JSON.parse(fs.readFileSync(discoveryPath, "utf8"));
+  const rateLimit = Number(rateDiscovery.dataRateLimit ?? 120);
+  const rateStatuses = await Promise.all(
+    Array.from({ length: rateLimit + 1 }, () =>
+      fetch(`${dataBase}/manifest/current`, {
+        headers: { Authorization: `Bearer ${rateDiscovery.dataToken}` },
+      })
+        .then((response) => response.status)
+        .catch(() => 0),
+    ),
+  );
+  check(
+    "data plane rate limit returns 429",
+    rateStatuses.includes(429),
+    JSON.stringify({ limit: rateLimit, sample: rateStatuses.slice(0, 5), counts: {
+      ok: rateStatuses.filter((status) => status === 200).length,
+      limited: rateStatuses.filter((status) => status === 429).length,
+    } }),
+  );
 
   console.log(
     JSON.stringify({

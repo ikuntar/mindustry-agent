@@ -61,7 +61,8 @@
 - [x] 无代码 host 的 `get_area` 有界查询 fallback：半径上限 24 tiles、maxTiles 512；固定场景读回 25 个 tile，并验证 `maxTiles=10` 时 `truncated=true`
 - [x] `get_events` 分页：非 summary `limit=1` 返回 1 条，`next` 从 1 推进到 2；`summary=true` 时只聚合、不返回 events
 - [x] `get_events` 类型过滤：固定场景 `summary=true, types=['unit_destroy','build_damage']` 返回 `byType` 仅含这两类
-- [ ] 数据面鉴权/TTL/路径白名单/速率限制与验收
+- [x] 数据面速率限制：`PROBE_DATA_RATE_LIMIT_PER_SEC`（默认 120），超限返回 429 + `Retry-After: 1`；固定场景用 limit=10，实测 9 个 200、2 个 429
+- [x] 数据面鉴权/TTL/路径白名单：token、410 过期、GET/HEAD only
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
 - [x] `move_to` 基础 BFS 寻路：地面单位绕过 solid tile；Fortress 场景用 5 个 container 做墙，助手到达墙后目标（`1089,588` vs `1084,588`）；follow/attack 的接近移动共用该路径，attack 绕障接近已在固定场景验证

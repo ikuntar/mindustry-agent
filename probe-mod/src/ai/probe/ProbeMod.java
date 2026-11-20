@@ -88,6 +88,9 @@ public class ProbeMod extends Mod {
             + Long.parseLong(System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
     private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
     private boolean requireWriter = "1".equals(System.getenv("PROBE_REQUIRE_WRITER"));
+    private final int dataRateLimit = Math.max(1, Integer.parseInt(
+            System.getenv().getOrDefault("PROBE_DATA_RATE_LIMIT_PER_SEC", "120")));
+    private final ArrayDeque<Long> dataRequestTimes = new ArrayDeque<>();
     private String writerToken = "";
     private String writerClient = "";
     private long writerExpires = 0;
@@ -2106,6 +2109,16 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private synchronized boolean allowDataRequest() {
+        long now = System.currentTimeMillis();
+        while (!dataRequestTimes.isEmpty() && now - dataRequestTimes.peekFirst() >= 1000L) {
+            dataRequestTimes.removeFirst();
+        }
+        if (dataRequestTimes.size() >= dataRateLimit) return false;
+        dataRequestTimes.addLast(now);
+        return true;
+    }
+
     private void handleData(HttpExchange exchange) {
         try {
             String method = exchange.getRequestMethod();
@@ -2120,6 +2133,11 @@ public class ProbeMod extends Mod {
             }
             if (System.currentTimeMillis() > dataTokenExpires) {
                 sendText(exchange, 410, "ref_expired", "text/plain", false);
+                return;
+            }
+            if (!allowDataRequest()) {
+                exchange.getResponseHeaders().set("Retry-After", "1");
+                sendText(exchange, 429, "rate_limited", "text/plain", false);
                 return;
             }
             String path = exchange.getRequestURI().getPath();
@@ -2347,6 +2365,7 @@ public class ProbeMod extends Mod {
                     .put("dataPort", DATA_PORT)
                     .put("dataToken", dataToken)
                     .put("dataTokenExpires", dataTokenExpires)
+                    .put("dataRateLimit", dataRateLimit)
                     .put("dataBaseUrl", dataBaseUrl)
                     .put("pid", ProcessHandle.current().pid())
                     .toString(Jval.Jformat.plain);
