@@ -247,6 +247,16 @@ public class ProbeMod extends Mod {
         if (assistant == null) return;
         for (Op op : ops.values()) {
             if (!"running".equals(op.status)) continue;
+            if (op.timeoutTick > 0 && Vars.state.tick >= op.timeoutTick) {
+                op.status = "failed";
+                op.data = Jval.newObject().put("code", "timeout");
+                if ("attack".equals(op.kind)) {
+                    controller.attackPosition = null;
+                    controller.attackEntity = null;
+                    assistant.isShooting = false;
+                }
+                continue;
+            }
             if ("attack".equals(op.kind)) {
                 if (op.targetUnit != null || op.targetBuilding != null) {
                     float health = op.targetUnit != null ? op.targetUnit.health : op.targetBuilding.health;
@@ -1600,6 +1610,8 @@ public class ProbeMod extends Mod {
             controller.attackPosition = new Vec2(position.getX(), position.getY());
             Op result = newOp("attack");
             result.status = "running";
+            int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
+            if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.targetUnit = targetUnit;
             result.targetBuilding = targetBuilding;
             result.targetPosition = new Vec2(position.getX(), position.getY());

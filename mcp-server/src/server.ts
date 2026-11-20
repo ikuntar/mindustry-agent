@@ -314,9 +314,9 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
     "attack",
     {
       description: "Attack a unit, building, or position with the assistant body.",
-      inputSchema: { target: targetSchema },
+      inputSchema: { target: targetSchema, timeoutTicks: z.number().int().min(0).max(1200).optional() },
     },
-    async (args) => run(() => adapter.attack(args.target)),
+    async (args) => run(() => adapter.attack(args.target, args.timeoutTicks)),
   );
 
   server.registerTool(

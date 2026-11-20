@@ -69,7 +69,7 @@
 - [x] 基础自动索敌/开火：空闲时扫描武器射程内最近敌军，设置 aim/isShooting；固定场景 `spawn_enemy ai=true` 后轮询 2s 内 health `150→141`，敌人也会还击
 - [x] 低血撤退：health < 30% 且无当前动作时优先退到远离敌人的同队核心，否则向远离最近敌军 120px 的方向移动；固定场景 core 距离 `209→62`，敌方距离 `63→84`
 - [x] `attack.unitId` 独立伤害：固定场景在核心附近生成 idle dagger 后按 `unitId` 攻击，health `150→141`（4 波后的低血助手路径不作为验收）
-- [x] 动作超时：`move_to` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；固定场景 `timeoutTicks=1` 实测
+- [x] 动作超时：`move_to`/`attack` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；固定场景分别实测
 - [ ] 本地反射控制器：建造推进、卡住重试、撤退完成后的回归
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
@@ -101,7 +101,8 @@
 - [x] harness：4 个启用真实 AI 的敌方 dagger 连续进攻，炮塔均命中（150→141），炮塔弹药实际消耗到 0；敌人会还击
 - [x] harness：4 波 survival 后核心存活（health `920`）、助手存活（health `20`），说明波次真实伤害到核心且防守未崩溃；仍有远处敌人未解决
 - [x] harness：核心连续受击：3+2 个启用真实 AI 的敌方 dagger 两波进攻，核心 health `1100→1082→128` 仍存活
-- [ ] harness：完整 survival 多波防守、长线铺带
+- [x] harness：4 波官方 survival 连续触发：核心存活（health `920`）、助手存活；远处敌人未全部清理，作为已知限制
+- [ ] harness：完整清理 survival 敌人、长距离/多拐弯传送带
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
 - [x] LLM harness 多步 mock：`LLM_TASK` 含 withdraw/deposit 时 mock planner 依次调用 context/withdraw/deposit；`LLM_REQUIRE_TOOLS` 验收通过
 - [x] LLM harness 真实多步任务：`qwen3.5:4b` + `LLM_TOOL_FILTER=get_context,withdraw,deposit` 完成 `get_context → withdraw → deposit`，toolCalls=3，最终报告成功

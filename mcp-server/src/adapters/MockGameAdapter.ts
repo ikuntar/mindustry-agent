@@ -571,7 +571,7 @@ export class MockGameAdapter implements GameAdapter {
     return this.opResult(op);
   }
 
-  async attack(target: CommandTarget): Promise<ActionResult> {
+  async attack(target: CommandTarget, _timeoutTicks?: number): Promise<ActionResult> {
     this.requireAlive();
     const resolved = this.resolveTarget(target);
     const op = this.newOp("attack", { target: resolved });

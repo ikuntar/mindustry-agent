@@ -272,6 +272,17 @@ async function main(): Promise<void> {
     timeoutMoveResult.status === "failed" && timeoutMoveResult.data?.code === "timeout",
     JSON.stringify(timeoutMoveResult),
   );
+  const timeoutAttack = await tool("attack", {
+    target: { x: context.assistant.x + 500, y: context.assistant.y },
+    timeoutTicks: 1,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const timeoutAttackResult = await tool("get_action_result", { opId: timeoutAttack.opId });
+  check(
+    "attack timeout fails action",
+    timeoutAttackResult.status === "failed" && timeoutAttackResult.data?.code === "timeout",
+    JSON.stringify(timeoutAttackResult),
+  );
 
   const core = context.cores[0];
   const baseX = Math.floor(core.x / 8);

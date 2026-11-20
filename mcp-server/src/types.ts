@@ -348,7 +348,7 @@ export interface GameAdapter {
   getActionResult(opId: string, waitMs: number): Promise<ActionResult>;
 
   moveTo(x: number, y: number, arriveRadius?: number, timeoutTicks?: number): Promise<ActionResult>;
-  attack(target: CommandTarget): Promise<ActionResult>;
+  attack(target: CommandTarget, timeoutTicks?: number): Promise<ActionResult>;
   follow(unitId: EntityId, distance?: number): Promise<ActionResult>;
   mine(x: number, y: number): Promise<ActionResult>;
   stop(): Promise<ActionResult>;
