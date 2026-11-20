@@ -15,6 +15,7 @@
 - [x] `harness/smoke.ts`：stdio 连接、列工具、读上下文、最小动作序列
 - [x] `docs/ASSISTANT-DESIGN.md`
 - [x] `docs/MCP-PROTOCOL.md`
+- [x] `docs/REMOTE-DATA-PLANE.md`（方案 A：远程只读数据面 + 客户端代码）
 - [x] `README.md` 更新目录与运行方式
 - [x] `mcp-server/README.md`
 
@@ -47,6 +48,11 @@
 - [x] `cancel`：全量取消已实测；按 opId 定向取消已实现但未单独回放
 - [x] `get_events`：probe 事件环（unit_destroy / unit_create / block_destroy / block_build_end / build_damage / unit_damage），`since/limit/next/dropped` 已接；MCP 实测返回真实事件
 - [ ] 事件类型过滤、事件合并、核心事件细分和 dropped 压测
+- [ ] 远程数据面：`DatasetRef`/manifest、只读 HTTP GET/HEAD + Range、revision 保留
+- [ ] 客户端 SDK：`open_dataset(ref)`、本地 token 解析、npz/Parquet 读取、输出预算
+- [ ] `get_map_summary` / `get_events` 摘要 + ref；客户端代码读取完整数据
+- [ ] 无代码 host 的 `get_area` / `get_events` 有界查询 fallback
+- [ ] 数据面鉴权/TTL/路径白名单/速率限制与验收
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
 - [ ] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）

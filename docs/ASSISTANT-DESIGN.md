@@ -218,9 +218,10 @@ respawn(core = null):
 
 ### 传输
 
-- MCP server 独立进程，默认 stdio；由 MCP host 启动。
+- MCP server 独立进程，默认 stdio；远程部署使用网络传输（HTTP/Streamable HTTP）。
 - MCP server ↔ 游戏 mod：本地 socket / JSON（未来实现）；当前用 `MockGameAdapter` 内存模拟。
 - 游戏 mod 暴露 `bridge-info.json` 类似发现文件：host、port、token、version。
+- 大体积地图/事件不通过 MCP tool result 返回；使用只读数据面 + `DatasetRef`，由客户端代码读取。详见 `docs/REMOTE-DATA-PLANE.md`。
 - 不把 MCP 实现塞进游戏渲染线程。
 
 ### 读工具

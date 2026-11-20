@@ -12,6 +12,7 @@ mindustry-ai/
 │   ├── bek-mindustryx-ai-bridge.md   ← BEK-Group/MindustryX 的 AI 通道拆解（参考实现）
 │   ├── ASSISTANT-DESIGN.md           ← 助手总体设计：身体/附身/权限/团队/验收
 │   ├── MCP-PROTOCOL.md               ← MCP 工具、动作生命周期、事件、权限矩阵
+│   ├── REMOTE-DATA-PLANE.md          ← 远程只读数据面：DatasetRef、HTTP range、客户端代码分析
 │   ├── OPEN-QUESTIONS.md             ← 待拍板项与默认建议
 │   └── REALITY-CHECK.md              ← v160.8 真实 jar 的 API/启动核对
 ├── mcp-server/                       ← MCP 工具接口（当前 MockGameAdapter）
@@ -33,7 +34,7 @@ mindustry-ai/
 
 - [x] 拉取参考实现（不初始化 submodule 也能读 AI 代码；要编译才需要 `work/` `Arc/`）
 - [x] 路线定为：局内 co-op 助手（mod + 本地执行层），不是独立 AI 客户端
-- [x] 设计落档：`docs/ASSISTANT-DESIGN.md`、`docs/MCP-PROTOCOL.md`、`TASKS.md`
+- [x] 设计落档：`docs/ASSISTANT-DESIGN.md`、`docs/MCP-PROTOCOL.md`、`docs/REMOTE-DATA-PLANE.md`、`TASKS.md`
 - [x] MCP 接口脚手架 + MockGameAdapter（`mcp-server/`）
 - [x] MCP server 24 个工具、stdio 入口、Mock/MCP 测试、stdio harness（`npm test` 15/15）
 - [x] Probe mod：真实 v160.8 服务端加载、get_context/move_to/build/get_tile 跑通
