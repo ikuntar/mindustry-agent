@@ -87,7 +87,7 @@ public class ProbeMod extends Mod {
     private long dataTokenExpires = System.currentTimeMillis()
             + Long.parseLong(System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
     private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
-    private final boolean requireWriter = "1".equals(System.getenv("PROBE_REQUIRE_WRITER"));
+    private boolean requireWriter = "1".equals(System.getenv("PROBE_REQUIRE_WRITER"));
     private String writerToken = "";
     private String writerClient = "";
     private long writerExpires = 0;
@@ -387,6 +387,13 @@ public class ProbeMod extends Mod {
 
         if (requireAuth && !"hello".equals(op) && !token.equals(request.getString("token", ""))) {
             replyError(command, "unauthorized", "Missing or invalid probe token");
+            return;
+        }
+
+        if ("set_require_writer".equals(op)) {
+            // Test helper: enable/disable the writer lease at runtime.
+            requireWriter = request.getBool("enabled", false);
+            reply(command, Jval.newObject().put("requireWriter", requireWriter));
             return;
         }
 

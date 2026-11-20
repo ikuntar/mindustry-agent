@@ -50,6 +50,7 @@ function send(op, args = {}) {
 }
 
 async function main() {
+  await send("set_require_writer", { enabled: true });
   const hello = await send("hello");
   if (!hello.requireWriter) throw new Error("writer enforcement is not enabled");
 

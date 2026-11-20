@@ -11,7 +11,8 @@
     "test": "npm run build && node --test dist/test/*.test.js",
     "harness": "tsx harness/smoke.ts",
     "scenario": "tsx harness/scenario.ts",
-    "llm-harness": "tsx harness/llm.ts"
+    "llm-harness": "tsx harness/llm.ts",
+    "writer-harness": "tsx harness/writer.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

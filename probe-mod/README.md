@@ -54,12 +54,12 @@ node client/probe-client.mjs
 - 空闲控制：每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 dagger 被命中，health 150→123。
 - 供弹防守：固定场景建 `duo` 炮塔和 feeder conveyor，从核心取 5 copper，炮塔 ammoTotal 6；连续 spawn 4 个敌人均被命中（150→141），弹药实际消耗到 0。
 - 数据 token 轮换：probe `rotate_data_token` 更新 discovery；旧 token 401，新 token 200。
-- 多客户端写互斥：`PROBE_REQUIRE_WRITER=1` 时先 `claim_writer`，写操作带 `writerToken`；第二个客户端 claim 得到 `writer_held`，无 token 写入得到 `writer_required`。`scripts/run-writer-lock.sh` 验证整条路径。
+- 多客户端写互斥：`PROBE_REQUIRE_WRITER=1` 时先 `claim_writer`，写操作带 `writerToken`；第二个客户端 claim 得到 `writer_held`，无 token 写入得到 `writer_required`。`scripts/run-writer-lock.sh` 验证 raw 客户端和 MCP adapter（`writer-harness`）两条路径。
 - `get_tile` 现在返回建筑的 `items` 和炮塔 `ammoTotal`；`get_area` tile 也带同样的有限字段。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 209→62、敌方距离 63→84。
 - `deconstruct`/`repair` 已实现并实测：deconstruct 后建筑消失，repair conveyor 25→45。
 - `get_events` 事件环已接：unit_destroy/unit_create/block_destroy/block_build_end/build_damage/unit_damage，支持 since/limit/next/dropped。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`（port/token/protocol/version/pid）；`hello` 握手；`ping`/heartbeat；`PROBE_REQUIRE_AUTH=1` 启用 token 校验；socket 命令入队，游戏每帧最多处理 50 条。adapter 重连已有 fake probe 单测。
-- `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`query_area` 默认只返回助手队伍单位，`includeEnemies=true` 才返回敌军。`spawn_ally`/`spawn_enemy`/`spawn_ally_core`/`destroy_core`/`give`/`set_core_items`/`start_wave`/`set_possession_allowed`/`list_unit_types`/`set_type_player_controllable`/`set_writes_enabled`/`get_unit`/`kill_assistant`/`damage_building` 是测试辅助，不是 MCP 工具；`get_unit` 额外返回 `isAI`/`isPlayer`/`playerControllable`/`controller`。
+- `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`query_area` 默认只返回助手队伍单位，`includeEnemies=true` 才返回敌军。`spawn_ally`/`spawn_enemy`/`spawn_ally_core`/`destroy_core`/`give`/`set_core_items`/`start_wave`/`set_possession_allowed`/`list_unit_types`/`set_type_player_controllable`/`set_writes_enabled`/`set_require_writer`/`get_unit`/`kill_assistant`/`damage_building` 是测试辅助，不是 MCP 工具；`get_unit` 额外返回 `isAI`/`isPlayer`/`playerControllable`/`controller`。
 - `spawn_enemy` 默认 `ai=false`（IdleController，静止靶子）；传 `ai=true` 保留引擎默认 AI，单位会主动攻击。固定场景用 3 个 `ai=true` dagger 验证核心受击 1100→1082。
 - 失败注入：固定场景验证未知物品 withdraw、越界 mine/move_to/build_plan、攻击同队单位、资源不足建造。

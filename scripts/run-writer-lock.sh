@@ -18,7 +18,7 @@ cd "$SERVER_DIR"
 (
   printf 'host fortress\n'
   sleep 60
-) | PROBE_REQUIRE_WRITER=1 timeout 70 java -jar server-release.jar > "$SERVER_LOG" 2>&1 &
+) | timeout 70 java -jar server-release.jar > "$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
 for _ in $(seq 1 30); do
@@ -36,3 +36,5 @@ fi
 
 cd "$ROOT"
 timeout 30s node probe-mod/client/writer-test.mjs
+cd "$ROOT/mcp-server"
+MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 timeout 45s npm run writer-harness
