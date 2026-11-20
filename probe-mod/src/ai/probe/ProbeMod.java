@@ -58,6 +58,8 @@ public class ProbeMod extends Mod {
 
     private final ConcurrentLinkedQueue<Command> queue = new ConcurrentLinkedQueue<>();
     private final Map<String, Op> ops = new HashMap<>();
+    private final Seq<Jval> eventLog = new Seq<>();
+    private long eventSeq = 0;
     private Unit assistant;
     private Unit homeBody;
     private UnitController savedController;
@@ -70,8 +72,79 @@ public class ProbeMod extends Mod {
     public void init() {
         Events.run(EventType.Trigger.update, this::update);
         Events.on(EventType.WorldLoadEvent.class, event -> reset());
+        Events.on(EventType.UnitDestroyEvent.class, event -> {
+            if (event.unit != null) {
+                addEvent("unit_destroy", Jval.newObject()
+                        .put("unitId", event.unit.id)
+                        .put("type", event.unit.type.name)
+                        .put("team", event.unit.team.id)
+                        .put("x", event.unit.x)
+                        .put("y", event.unit.y));
+            }
+        });
+        Events.on(EventType.BlockDestroyEvent.class, event -> {
+            if (event.tile != null) {
+                addEvent("block_destroy", Jval.newObject()
+                        .put("x", event.tile.x)
+                        .put("y", event.tile.y)
+                        .put("block", event.tile.block().name)
+                        .put("team", event.tile.team().id));
+            }
+        });
+        Events.on(EventType.BlockBuildEndEvent.class, event -> {
+            if (event.tile != null) {
+                addEvent("block_build_end", Jval.newObject()
+                        .put("x", event.tile.x)
+                        .put("y", event.tile.y)
+                        .put("block", event.tile.block().name)
+                        .put("team", event.team.id)
+                        .put("breaking", event.breaking));
+            }
+        });
+        Events.on(EventType.UnitCreateEvent.class, event -> {
+            if (event.unit != null) {
+                addEvent("unit_create", Jval.newObject()
+                        .put("unitId", event.unit.id)
+                        .put("type", event.unit.type.name)
+                        .put("team", event.unit.team.id)
+                        .put("x", event.unit.x)
+                        .put("y", event.unit.y));
+            }
+        });
+        Events.on(EventType.BuildDamageEvent.class, event -> {
+            if (event.build != null) {
+                addEvent("build_damage", Jval.newObject()
+                        .put("buildingId", event.build.id)
+                        .put("x", event.build.tile.x)
+                        .put("y", event.build.tile.y)
+                        .put("health", event.build.health));
+            }
+        });
+        Events.on(EventType.UnitDamageEvent.class, event -> {
+            if (event.unit != null) {
+                addEvent("unit_damage", Jval.newObject()
+                        .put("unitId", event.unit.id)
+                        .put("health", event.unit.health)
+                        .put("x", event.unit.x)
+                        .put("y", event.unit.y));
+            }
+        });
         startSocket();
         Log.info("[ai-probe] listening on 127.0.0.1:" + PORT);
+    }
+
+    private void addEvent(String type, Jval data) {
+        long id = ++eventSeq;
+        Jval event = Jval.newObject()
+                .put("id", id)
+                .put("type", type)
+                .put("tick", Vars.state.tick)
+                .put("timeMs", System.currentTimeMillis())
+                .put("data", data);
+        eventLog.add(event);
+        while (eventLog.size > 512) {
+            eventLog.remove(0);
+        }
     }
 
     private void reset() {
@@ -82,6 +155,8 @@ public class ProbeMod extends Mod {
         autoRespawn = true;
         controller = null;
         ops.clear();
+        eventLog.clear();
+        eventSeq = 0;
         Log.info("[ai-probe] world loaded, waiting for requests");
     }
 
@@ -176,6 +251,12 @@ public class ProbeMod extends Mod {
                             .put("health", op.targetBuilding.health)
                             .put("maxHealth", op.targetBuilding.block.health);
                 }
+            } else if ("follow".equals(op.kind)) {
+                if (op.targetUnit == null || op.targetUnit.dead) {
+                    op.status = "done";
+                    op.progress = 1f;
+                    op.data = Jval.newObject().put("reason", "target_gone");
+                }
             }
         }
     }
@@ -244,6 +325,27 @@ public class ProbeMod extends Mod {
                 return;
             }
             reply(command, result.toJson());
+            return;
+        }
+
+        if ("get_events".equals(op)) {
+            int since = request.getInt("since", 0);
+            int limit = Math.max(1, Math.min(200, request.getInt("limit", 50)));
+            Jval events = Jval.newArray();
+            long next = since;
+            long oldest = eventLog.isEmpty() ? 0 : eventLog.first().getInt("id", 0);
+            for (Jval event : eventLog) {
+                int id = event.getInt("id", 0);
+                if (id <= since) continue;
+                if (events.asArray().size >= limit) break;
+                events.add(event);
+                next = id;
+            }
+            int dropped = since < oldest - 1 ? (int) (oldest - 1 - since) : 0;
+            reply(command, Jval.newObject()
+                    .put("events", events)
+                    .put("next", next)
+                    .put("dropped", dropped));
             return;
         }
 
@@ -822,24 +924,38 @@ public class ProbeMod extends Mod {
         }
 
         if ("cancel".equals(op)) {
+            String opId = request.getString("opId", "");
             int cancelled = 0;
             for (Op result : ops.values()) {
+                if (!opId.isEmpty() && !opId.equals(result.id)) continue;
                 if ("running".equals(result.status) || "queued".equals(result.status)) {
                     result.status = "cancelled";
                     result.progress = 0f;
                     cancelled++;
+                    if (controller != null) {
+                        if ("move".equals(result.kind)) controller.target = null;
+                        if ("attack".equals(result.kind)) {
+                            controller.attackEntity = null;
+                            controller.attackPosition = null;
+                            if (assistant != null) assistant.isShooting = false;
+                        }
+                        if ("follow".equals(result.kind)) controller.followTarget = null;
+                        if ("build".equals(result.kind) || "deconstruct".equals(result.kind) || "repair".equals(result.kind)) {
+                            if (assistant != null) assistant.clearBuilding();
+                        }
+                    }
                 }
             }
-            if (assistant != null) {
-                assistant.clearBuilding();
+            if (opId.isEmpty()) {
+                if (assistant != null) assistant.clearBuilding();
+                if (controller != null) {
+                    controller.target = null;
+                    controller.attackEntity = null;
+                    controller.attackPosition = null;
+                    controller.followTarget = null;
+                }
             }
-            if (controller != null) {
-                controller.target = null;
-                controller.attackEntity = null;
-                controller.attackPosition = null;
-                controller.followTarget = null;
-            }
-            reply(command, Jval.newObject().put("cancelled", cancelled));
+            reply(command, Jval.newObject().put("cancelled", cancelled).put("opId", opId));
             return;
         }
 
@@ -954,6 +1070,7 @@ public class ProbeMod extends Mod {
             controller.followDistance = request.getFloat("distance", 48f);
             Op result = newOp("follow");
             result.status = "running";
+            result.targetUnit = targetUnit;
             result.data = Jval.newObject().put("unitId", targetUnit.id);
             reply(command, result.toJson());
             return;
@@ -1203,7 +1320,8 @@ public class ProbeMod extends Mod {
                 .put("team", team.id)
                 .put("teamName", team.name)
                 .put("paused", Vars.state.isPaused())
-                .put("gameOver", Vars.state.gameOver);
+                .put("gameOver", Vars.state.gameOver)
+                .put("eventsSince", eventSeq);
 
         Jval assistantJson = Jval.newObject();
         if (assistant != null) {

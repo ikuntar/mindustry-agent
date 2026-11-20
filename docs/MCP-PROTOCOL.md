@@ -259,7 +259,8 @@ MCP server（Node/TypeScript）
 
 当前进度：
 
-- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `query_area` / `move_to` / `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `attack` / `mine` / `follow` / `possess` / `release` / `respawn` / `deconstruct` / `repair` / `cancel`；`get_content` 为静态注册表；`get_events` 为空页。
+- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `query_area` / `move_to` / `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `attack` / `mine` / `follow` / `possess` / `release` / `respawn` / `deconstruct` / `repair` / `cancel`；`get_content` 为静态注册表。
+- `get_events` 已接真实事件环：`unit_destroy`/`unit_create`/`block_destroy`/`block_build_end`/`build_damage`/`unit_damage`，支持 `since/limit/next/dropped`；高频 `build_damage` 会占满页。
 - `attack` / `follow` 已接入口。`attack` 支持单位/建筑/坐标三种目标：建筑实测 `targetHealth 220→0`，坐标实测 done/inRange；单位目标未独立验收。`follow` 仍缺稳定验收。
 - `respawn` 已实测死亡后核心重生。
 - 其余动作（`deconstruct`/`repair`/`cancel` 之外）仍有 probe 未实现项；不是假成功。

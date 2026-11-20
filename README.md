@@ -39,8 +39,9 @@ mindustry-ai/
 - [x] Probe mod：真实 v160.8 服务端加载、get_context/move_to/build/get_tile 跑通
 - [x] ProbeGameAdapter：MCP 24 工具中的 context/capabilities/query_area/move/build/attack/mine/follow/withdraw/deposit/configure/command_units/set_stance/stop/possess/release/respawn/deconstruct/repair/cancel 接真实游戏
 - [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance、附身/释放、sand 挖矿、死亡重生、攻击容器、deconstruct、repair
-- [ ] 真实 Mindustry mod adapter（本地 socket + 游戏线程动作队列）
-- [ ] follow 稳定性、cancel opId 定向取消、真实事件日志
+- [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
+- [ ] 真实 Mindustry mod adapter（本地 socket 鉴权/发现文件/版本握手/线程预算）
+- [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
 - [ ] 固定地图端到端验收
 

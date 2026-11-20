@@ -42,9 +42,11 @@
 - [x] `configure`：sorter 配置已验证
 - [x] `command_units` / `set_stance`：dagger move 与 holdPosition 已验证
 - [x] `possess` / `release` / `respawn`：基本状态机已验证
-- [ ] `follow`：入口与移动跟随已验证，但持续跟随/目标死亡语义未定
-- [ ] `cancel`：已实现并实测取消 follow；更细的 opId 定向取消未做
-- [ ] `get_events`：真实事件日志
+- [x] `follow`：入口与移动跟随已验证；目标死亡时 op 会结束，持续跟随/复杂避障仍未定义
+- [x] `cancel`：全量取消已实测；按 opId 定向取消已实现但未单独回放
+- [x] `get_events`：probe 事件环（unit_destroy / unit_create / block_destroy / block_build_end / build_damage / unit_damage），`since/limit/next/dropped` 已接；MCP 实测返回真实事件
+- [ ] 事件类型过滤、事件合并、核心事件细分和 dropped 压测
+- [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
 - [ ] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [ ] 死亡/重生：`Player.deathDelay`、任意核心、无核心、核心被拆

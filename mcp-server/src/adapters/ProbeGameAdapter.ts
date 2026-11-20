@@ -206,7 +206,7 @@ export class ProbeGameAdapter implements GameAdapter {
               units: units.filter((unit) => unit.id !== assistant.id),
               buildings: cores,
             },
-      eventsSince: 0,
+      eventsSince: Number(raw.eventsSince ?? 0),
     };
   }
 
@@ -261,9 +261,19 @@ export class ProbeGameAdapter implements GameAdapter {
     return { blocks, units, items, liquids };
   }
 
-  async getEvents(since: number, _limit = 50): Promise<EventPage> {
-    // Probe does not record events yet; expose an explicit empty page.
-    return { events: [], next: since, dropped: 0 };
+  async getEvents(since: number, limit = 50): Promise<EventPage> {
+    const raw = await this.call("get_events", { since, limit });
+    return {
+      events: (raw.events ?? []).map((event: any) => ({
+        id: Number(event.id),
+        type: String(event.type ?? ""),
+        tick: Number(event.tick ?? 0),
+        timeMs: Number(event.timeMs ?? 0),
+        data: (event.data ?? {}) as Record<string, unknown>,
+      })),
+      next: Number(raw.next ?? since),
+      dropped: Number(raw.dropped ?? 0),
+    };
   }
 
   async queryArea(query: AreaQuery): Promise<AreaSnapshot> {
