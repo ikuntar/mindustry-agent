@@ -614,6 +614,15 @@ async function main(): Promise<void> {
     `${beforeCoreDistance} -> ${afterCoreDistance}`,
   );
 
+  const cancelMove = await tool("move_to", { x: core.x + 80, y: core.y, arriveRadius: 8 });
+  const cancelResult = await tool("cancel", { opId: cancelMove.opId });
+  const cancelledOp = await tool("get_action_result", { opId: cancelMove.opId });
+  check(
+    "targeted cancel marks op cancelled",
+    cancelResult.data?.cancelled >= 1 && cancelledOp.status === "cancelled",
+    JSON.stringify({ cancelResult, cancelledOp }),
+  );
+
   const waveHistory: { waveBefore: number; waveAfter: number; enemies: number }[] = [];
   for (let cycle = 0; cycle < 2; cycle++) {
     const waveBefore = (await tool("get_context", { detail: "summary" })).wave;
