@@ -530,8 +530,8 @@ export class ProbeGameAdapter implements GameAdapter {
     return this.immediate(await this.call("attack", { target, timeoutTicks }));
   }
 
-  async follow(unitId: EntityId, distance?: number): Promise<ActionResult> {
-    return this.immediate(await this.call("follow", { unitId, distance }));
+  async follow(unitId: EntityId, distance?: number, timeoutTicks?: number): Promise<ActionResult> {
+    return this.immediate(await this.call("follow", { unitId, distance, timeoutTicks }));
   }
 
   async mine(x: number, y: number): Promise<ActionResult> {

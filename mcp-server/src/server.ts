@@ -326,9 +326,10 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
       inputSchema: {
         unitId: z.number().int(),
         distance: z.number().positive().optional(),
+        timeoutTicks: z.number().int().min(0).max(1200).optional(),
       },
     },
-    async (args) => run(() => adapter.follow(args.unitId, args.distance)),
+    async (args) => run(() => adapter.follow(args.unitId, args.distance, args.timeoutTicks)),
   );
 
   server.registerTool(

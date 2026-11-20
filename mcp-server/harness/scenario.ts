@@ -555,6 +555,14 @@ async function main(): Promise<void> {
       target: { x: ally.x + 160, y: ally.y },
     });
     await new Promise((resolve) => setTimeout(resolve, 400));
+    const timeoutFollow = await tool("follow", { unitId: ally.id, timeoutTicks: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const timeoutFollowResult = await tool("get_action_result", { opId: timeoutFollow.opId });
+    check(
+      "follow timeout fails action",
+      timeoutFollowResult.status === "failed" && timeoutFollowResult.data?.code === "timeout",
+      JSON.stringify(timeoutFollowResult),
+    );
     await tool("follow", { unitId: ally.id, distance: 48 });
     let followed = false;
     let lastDistance = Infinity;

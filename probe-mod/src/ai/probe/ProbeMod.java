@@ -254,6 +254,8 @@ public class ProbeMod extends Mod {
                     controller.attackPosition = null;
                     controller.attackEntity = null;
                     assistant.isShooting = false;
+                } else if ("follow".equals(op.kind)) {
+                    controller.followTarget = null;
                 }
                 continue;
             }
@@ -1641,6 +1643,8 @@ public class ProbeMod extends Mod {
             controller.followDistance = request.getFloat("distance", 48f);
             Op result = newOp("follow");
             result.status = "running";
+            int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
+            if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.targetUnit = targetUnit;
             result.data = Jval.newObject().put("unitId", targetUnit.id);
             reply(command, result.toJson());

@@ -578,7 +578,7 @@ export class MockGameAdapter implements GameAdapter {
     return this.opResult(op);
   }
 
-  async follow(unitId: EntityId, distance = 3): Promise<ActionResult> {
+  async follow(unitId: EntityId, distance = 3, _timeoutTicks?: number): Promise<ActionResult> {
     this.requireAlive();
     this.unitAt(unitId);
     const op = this.newOp("follow", { unitId, distance });
