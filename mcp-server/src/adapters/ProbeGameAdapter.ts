@@ -76,6 +76,7 @@ export class ProbeGameAdapter implements GameAdapter {
   private actionSeq = 0;
   private handshaken = false;
   private writerToken?: string;
+  private writerExpires = 0;
   private heartbeat?: NodeJS.Timeout;
   private pending = new Map<number, Pending>();
 
@@ -148,6 +149,15 @@ export class ProbeGameAdapter implements GameAdapter {
       this.send("ping", {}).catch(() => {
         this.socket?.destroy();
       });
+      if (this.writerToken) {
+        this.send("renew_writer", { writerToken: this.writerToken, ttlMs: 30000 })
+          .then((renewed) => {
+            this.writerExpires = Number(renewed?.expires ?? this.writerExpires);
+          })
+          .catch(() => {
+            // A failed renewal will surface on the next protected write.
+          });
+      }
     }, this.heartbeatMs);
     this.heartbeat.unref?.();
   }
@@ -209,6 +219,7 @@ export class ProbeGameAdapter implements GameAdapter {
           clientId: `mcp-${process.pid}-${Date.now()}`,
         });
         this.writerToken = String(claimed?.writerToken ?? "");
+        this.writerExpires = Number(claimed?.expires ?? 0);
       }
       this.handshaken = true;
       this.startHeartbeat();

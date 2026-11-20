@@ -77,12 +77,17 @@ async function main() {
   await send("release_writer", { writerToken: first.writerToken });
   const second = await send("claim_writer", { clientId: "client-b", ttlMs: 30000 });
   await send("release_writer", { writerToken: second.writerToken });
+  await send("claim_writer", { clientId: "client-expiring", ttlMs: 1000 });
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const afterExpiry = await send("claim_writer", { clientId: "client-after-expiry", ttlMs: 30000 });
+  await send("release_writer", { writerToken: afterExpiry.writerToken });
 
   const result = {
     held,
     missingToken,
     allowed: allowed.status === "running" || allowed.status === "done",
     secondClaim: !!second.writerToken,
+    expiryReleasesLease: !!afterExpiry.writerToken,
   };
   console.log(JSON.stringify(result));
   if (!Object.values(result).every(Boolean)) process.exitCode = 1;

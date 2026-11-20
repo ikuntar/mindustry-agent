@@ -421,6 +421,19 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("renew_writer".equals(op)) {
+            String supplied = request.getString("writerToken", "");
+            long now = System.currentTimeMillis();
+            if (writerToken.isEmpty() || !writerToken.equals(supplied) || now >= writerExpires) {
+                replyError(command, "writer_required", "Writer lease is missing or expired");
+                return;
+            }
+            long ttl = Math.max(1000L, Math.min(300000L, request.getInt("ttlMs", 30000)));
+            writerExpires = now + ttl;
+            reply(command, Jval.newObject().put("writerToken", writerToken).put("expires", writerExpires));
+            return;
+        }
+
         if ("release_writer".equals(op)) {
             String supplied = request.getString("writerToken", "");
             if (writerToken.isEmpty() || !writerToken.equals(supplied)) {

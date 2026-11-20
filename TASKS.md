@@ -38,7 +38,7 @@
 - [x] 游戏线程动作队列 + 每帧预算：socket 只入队，游戏 `update` 每帧最多处理 50 条；LLM 调用不在游戏线程
 - [x] 心跳与连接重试：probe `ping`；adapter 每 `PROBE_HEARTBEAT_MS`（默认 15s）发心跳，连接失败重试 3 次；`PROBE_HEARTBEAT_MS=200` 固定场景通过
 - [x] 运行中服务器重启重连：`ProbeGameAdapter` 在 fake probe 崩溃并同端口重启后自动重连并读到新 `map`；单测 16/16
-- [x] 多客户端写互斥：probe writer lease（`claim_writer`/`release_writer`），`PROBE_REQUIRE_WRITER=1` 时写操作必须带有效 `writerToken`；第二客户端 claim 返回 `writer_held`，无 token 写入返回 `writer_required`；adapter 握手后自动 claim，`writer-harness` 在强制模式下 `move_to=done`
+- [x] 多客户端写互斥：probe writer lease（`claim_writer`/`renew_writer`/`release_writer`），`PROBE_REQUIRE_WRITER=1` 时写操作必须带有效 `writerToken`；第二客户端 claim 返回 `writer_held`，无 token 写入返回 `writer_required`；adapter 握手后自动 claim，heartbeat 续期，`writer-harness` 在强制模式下 `move_to=done`；1s TTL 过期后可重新 claim
 - [x] token 轮换：数据面 `rotate_data_token`；旧 token 401、新 token 200
 - [x] `get_context` / `get_capabilities` / `get_content` / `query_area` 真实数据；`get_content` 从 probe 读取 70 units 及真实 blocks/items/liquids，并支持 `query` 名称过滤和 `limit`（最大 500）
 - [x] `build_plan`：单块和多块 placement 均已实测；Fortress 场景一次提交 2 个 conveyor，query_area 两个 tile 都出现
