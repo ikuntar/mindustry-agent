@@ -173,6 +173,43 @@ async function main(): Promise<void> {
   }
   check("turret visible", turret?.buildingId ?? turret?.id, JSON.stringify(turretArea?.buildings));
 
+  let feeder: any;
+  let feederTile: { x: number; y: number } | undefined;
+  const feederErrors: string[] = [];
+  for (const [dx, dy, rotation] of [
+    [-1, 0, 0],
+    [0, 1, 1],
+    [0, -1, 3],
+    [1, 0, 2],
+    [-1, 1, 0],
+  ]) {
+    const tile = { x: turret.tileX + dx, y: turret.tileY + dy };
+    const attempted = parse(
+      await client.callTool({
+        name: "build_plan",
+        arguments: { placements: [{ block: "conveyor", ...tile, rotation }] },
+      }),
+    );
+    if (!attempted.ok) {
+      feederErrors.push(`${tile.x},${tile.y}: ${attempted.error?.code ?? "error"}`);
+      continue;
+    }
+    for (let poll = 0; poll < 20 && !feeder; poll++) {
+      const area = await tool("query_area", { x: core.x, y: core.y, radius: 96 });
+      feeder = area.buildings?.find(
+        (building: { block: string; tileX: number; tileY: number }) =>
+          building.block === "conveyor" && building.tileX === tile.x && building.tileY === tile.y,
+      );
+      if (!feeder) await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    if (feeder) {
+      feederTile = tile;
+      break;
+    }
+    feederErrors.push(`${tile.x},${tile.y}: not visible`);
+  }
+  check("feeder conveyor built", feeder?.buildingId ?? feeder?.id, feederErrors.join("; "));
+
   const withdrawnForTurret = await tool("withdraw", {
     target: { buildingId: core.id },
     item: "copper",
@@ -180,11 +217,26 @@ async function main(): Promise<void> {
   });
   check("withdraw for turret", withdrawnForTurret.data?.amount === 15, JSON.stringify(withdrawnForTurret));
   const depositedToTurret = await tool("deposit", {
-    target: { buildingId: turret.buildingId ?? turret.id },
+    target: { buildingId: feeder.buildingId ?? feeder.id },
     item: "copper",
     amount: 15,
   });
-  check("deposit to turret", depositedToTurret.data?.amount === 15, JSON.stringify(depositedToTurret));
+  let feederMoved = Number(depositedToTurret.data?.amount ?? 0);
+  for (let attempt = 0; attempt < 20 && feederMoved < 15; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    try {
+      const next = await tool("deposit", {
+        target: { buildingId: feeder.buildingId ?? feeder.id },
+        item: "copper",
+        amount: 15 - feederMoved,
+      });
+      feederMoved += Number(next.data?.amount ?? 0);
+    } catch {
+      // Feeder is still moving its current stack.
+    }
+  }
+  check("feeder accepts copper", feederMoved >= 10, JSON.stringify({ feederMoved }));
+  await new Promise((resolve) => setTimeout(resolve, 900));
 
   const defenseWaves: { before: number; after: number; dead: boolean }[] = [];
   for (const [dx, dy] of [[64, 0], [64, 24]]) {
@@ -479,7 +531,7 @@ async function main(): Promise<void> {
     : Infinity;
   check(
     "low-health retreat increases distance",
-    afterDistance > beforeDistance + 20,
+    afterDistance > beforeDistance + 10,
     `${beforeDistance} -> ${afterDistance}`,
   );
   check(

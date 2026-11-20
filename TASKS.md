@@ -89,7 +89,7 @@
 
 - [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（上下文/事件增量/移动/多块建造/事件摘要/附身/释放/指定核心重生/无核心恢复）
 - [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
-- [x] harness：固定场景建 `duo` 炮塔、从核心取 15 copper 装入、连续 spawn 2 个敌人均被炮塔命中（150→132、150→141）；完整 N 波防守仍待补
+- [x] harness：固定场景建 `duo` 炮塔 + feeder conveyor，从核心取 15 copper 存入传送带，连续 2 个敌人均被命中（150→132、150→141）；完整 N 波防守仍待补
 - [ ] harness：完整铺带、供弹、防守 N 波、换核心重生
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
 - [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、26 tools、1 次工具调用、24/12 tokens
