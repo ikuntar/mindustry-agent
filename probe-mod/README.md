@@ -52,7 +52,8 @@ node client/probe-client.mjs
 - `follow` 已有 MCP 入口和移动跟随验证；`cancel` 支持全量取消和按 opId 定向取消。固定场景让 ally 移动后助手追到 30px 内，目标死亡/复杂避障仍简化。
 - `move_to` 对地面单位使用 BFS 路径，避免 solid tile 并禁止对角切角；飞行单位仍直接移动。路径在目标变化时计算一次，不每 tick 寻路；`follow`/`attack` 的接近移动也走同一 helper，attack 绕障接近已用墙后容器验收。
 - 空闲控制：每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 dagger 被命中，health 150→123。
-- 供弹防守：固定场景建 `duo` 炮塔和 feeder conveyor，从核心取 30 copper，传送带接收 19，连续 spawn 4 个敌人均被命中（150→123、141、141、141）；完整 survival wave 未做。
+- 供弹防守：固定场景建 `duo` 炮塔和 feeder conveyor，从核心取 5 copper，炮塔 ammoTotal 6；再建 2 段上游 conveyor，向最上游存入后炮塔 ammoTotal 6→8；连续 spawn 4 个敌人均被命中（150→141）。
+- `get_tile` 现在返回建筑的 `items` 和炮塔 `ammoTotal`；`get_area` tile 也带同样的有限字段。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 209→62、敌方距离 63→84。
 - `deconstruct`/`repair` 已实现并实测：deconstruct 后建筑消失，repair conveyor 25→45。
 - `get_events` 事件环已接：unit_destroy/unit_create/block_destroy/block_build_end/build_damage/unit_damage，支持 since/limit/next/dropped。

@@ -166,6 +166,8 @@ export interface TileSnapshot {
   team: number;
   drop?: string;
   solid: boolean;
+  items?: { item: string; amount: number }[];
+  ammoTotal?: number;
 }
 
 export interface AreaTileQuery {

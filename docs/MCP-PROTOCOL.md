@@ -201,7 +201,7 @@ MCP server（Node/TypeScript）
 只读 bounded tile window，供没有代码执行能力的 host 使用：
 - `radius` 以 tile 为单位，最大 24
 - 默认最多 256 个 tile，最大 512
-- 返回 `{x,y,radius,tiles:[{x,y,block,team,drop?,solid}],truncated}`
+- 返回 `{x,y,radius,tiles:[{x,y,block,team,drop?,solid,items?,ammoTotal?}],truncated}`
 - 不返回全图；需要大范围分析时用 `get_map_summary` + 数据面
 
 ### `query_area`

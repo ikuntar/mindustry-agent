@@ -32,6 +32,7 @@ import mindustry.core.World;
 import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.CoreBlock.CoreBuild;
+import mindustry.world.blocks.defense.turrets.Turret;
 import mindustry.world.modules.ItemModule;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -599,6 +600,19 @@ public class ProbeMod extends Mod {
                 data.put("health", tile.build.health);
                 data.put("maxHealth", tile.build.block.health);
                 data.put("rotation", tile.build.rotation);
+                if (tile.build.items != null) {
+                    Jval items = Jval.newArray();
+                    for (Item item : Vars.content.items()) {
+                        int amount = tile.build.items.get(item);
+                        if (amount > 0) {
+                            items.add(Jval.newObject().put("item", item.name).put("amount", amount));
+                        }
+                    }
+                    data.put("items", items);
+                }
+                if (tile.build instanceof Turret.TurretBuild turret) {
+                    data.put("ammoTotal", turret.totalAmmo);
+                }
             }
             reply(command, data);
             return;
@@ -733,6 +747,21 @@ public class ProbeMod extends Mod {
                             .put("team", tile.team().id)
                             .put("solid", tile.block().solid);
                     if (drop != null) entry.put("drop", drop.name);
+                    if (tile.build != null) {
+                        if (tile.build.items != null) {
+                            Jval items = Jval.newArray();
+                            for (Item item : Vars.content.items()) {
+                                int amount = tile.build.items.get(item);
+                                if (amount > 0) {
+                                    items.add(Jval.newObject().put("item", item.name).put("amount", amount));
+                                }
+                            }
+                            entry.put("items", items);
+                        }
+                        if (tile.build instanceof Turret.TurretBuild turret) {
+                            entry.put("ammoTotal", turret.totalAmmo);
+                        }
+                    }
                     tiles.add(entry);
                 }
             }

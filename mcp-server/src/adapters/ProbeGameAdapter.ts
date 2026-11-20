@@ -439,6 +439,11 @@ export class ProbeGameAdapter implements GameAdapter {
       team: Number(tile.team ?? 0),
       drop: tile.drop == null ? undefined : String(tile.drop),
       solid: !!tile.solid,
+      items: (tile.items ?? []).map((item: { item: string; amount: number }) => ({
+        item: String(item.item),
+        amount: Number(item.amount ?? 0),
+      })),
+      ammoTotal: tile.ammoTotal == null ? undefined : Number(tile.ammoTotal),
     }));
     return {
       x: Number(raw.x ?? query.x),
