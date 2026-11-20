@@ -135,6 +135,15 @@ async function main(): Promise<void> {
     { target: { buildingId: 999999 }, item: "copper", amount: 1 },
     "No target building",
   );
+  await expectToolError("mine", { x: -1, y: -1 }, "outside the map");
+  await expectToolError(
+    "build_plan",
+    { placements: [{ block: "conveyor", x: -1, y: -1 }] },
+    "outside the map",
+  );
+  if (seed?.ally?.id) {
+    await expectToolError("attack", { target: { unitId: seed.ally.id } }, "Refusing to attack a unit");
+  }
 
   const local = await tool("get_context", { detail: "full", radius: 4 });
   const localUnits = local.nearby?.units ?? [];

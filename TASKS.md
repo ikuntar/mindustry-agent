@@ -98,8 +98,8 @@
 - [x] LLM 自算目标 + 验收：模型从 context 计算 `core.x + 24` 并移动；`LLM_EXPECT_NEAR_X/Y` 检查最终位置 `944.92,584` 通过（模型未主动调用 `get_action_result`，验收直接用最终 context）
 - [ ] LLM harness：接外部供应商 endpoint 并跑固定动作任务
 - [ ] 指标：任务成功率、动作失败率、响应延迟、token/分钟、误伤玩家资产、助手死亡（harness 已记录基础计数）
-- [x] 失败注入：固定场景验证未知物品 `withdraw`、附身自己 `possess`、不存在建筑 `deposit` 都返回明确错误
-- [ ] 失败注入：越界坐标、攻击错队、LLM 超时/重试
+- [x] 失败注入：固定场景验证未知物品 `withdraw`、附身自己 `possess`、不存在建筑 `deposit`、越界 `mine`/`build_plan`、攻击同队单位都返回明确错误
+- [ ] 失败注入：LLM 超时/重试、越界 `move_to`、资源不足
 
 ## M4：运行时/安全/多人
 
