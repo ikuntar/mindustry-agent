@@ -159,6 +159,14 @@ async function main(): Promise<void> {
     y: context.cores[0].y,
   });
   await expectToolError("possess", { unitId: enemyForPossession.id }, "not on the assistant's team");
+  const nonControllable = await rawProbe("spawn_ally", {
+    type: "dagger",
+    x: context.cores[0].x + 260,
+    y: context.cores[0].y,
+  });
+  await rawProbe("set_type_player_controllable", { name: "dagger", allowed: false });
+  await expectToolError("possess", { unitId: nonControllable.id }, "not player-controllable");
+  await rawProbe("set_type_player_controllable", { name: "dagger", allowed: true });
   if (seed?.ally?.id) {
     await expectToolError("attack", { target: { unitId: seed.ally.id } }, "Refusing to attack a unit");
   }

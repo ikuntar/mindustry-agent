@@ -864,6 +864,31 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("set_type_player_controllable".equals(op)) {
+            // Probe/debug helper for possession/type tests; not part of the MCP surface.
+            UnitType type = Vars.content.unit(request.getString("name", ""));
+            if (type == null) {
+                replyError(command, "not_found", "Unknown unit type");
+                return;
+            }
+            type.playerControllable = request.getBool("allowed", true);
+            reply(command, Jval.newObject().put("name", type.name).put("playerControllable", type.playerControllable));
+            return;
+        }
+
+        if ("list_unit_types".equals(op)) {
+            // Probe/debug helper for possession/type tests; not part of the MCP surface.
+            Jval units = Jval.newArray();
+            for (UnitType type : Vars.content.units()) {
+                units.add(Jval.newObject()
+                        .put("name", type.name)
+                        .put("playerControllable", type.playerControllable)
+                        .put("health", type.health));
+            }
+            reply(command, Jval.newObject().put("units", units));
+            return;
+        }
+
         if ("set_possession_allowed".equals(op)) {
             // Probe/debug helper for rule-guard tests; not part of the MCP surface.
             Vars.state.rules.possessionAllowed = request.getBool("allowed", true);

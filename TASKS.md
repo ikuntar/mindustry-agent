@@ -73,7 +73,7 @@
 - [ ] 借体解控后的命令恢复/复杂 AI 状态
 - [ ] 人口绕过只限重生/默认身体
 - [ ] 团队规则：全程 `assistant.team`；`team.rules()` / `state.rules`
-- [x] 附身基本校验：同队（敌方单位 `wrong_team`）、非助手自己身体（`bad_target`）；`isAI`/`playerControllable`/玩家身体仍待补
+- [x] 附身基本校验：同队（敌方单位 `wrong_team`）、非助手自己身体（`bad_target`）、非 `playerControllable`（`not_possessable`）；玩家身体仍待补
 - [x] `possessionAllowed` 规则：规则关闭时 `possess` 返回 `possession_disabled`
 - [x] 助手身体不可附身：非 `AIController` 控制器 + 显式拒绝
 - [ ] 动作日志 / 失败原因 / 停机开关
