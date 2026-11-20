@@ -24,6 +24,9 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 ../scripts/run-fixed-scenario.sh
 # OpenAI-compatible tool loop; LLM_MOCK=1 needs no credentials
 LLM_MOCK=1 MINDUSTRY_AI_ADAPTER=mock npm run llm-harness
+# local HTTP mock endpoint (second terminal)
+node harness/mock-openai-server.mjs
+MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-harness
 ```
 
 Implemented: `get_context`, `get_capabilities`, `get_content` (static registry),
