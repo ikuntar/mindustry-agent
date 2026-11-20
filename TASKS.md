@@ -57,8 +57,8 @@
 - [x] `get_map_summary`：MCP 返回 `DatasetRef`/schema，不返回 tile；MCP harness 实测
 - [ ] Parquet 事件、revision/TTL 压测、远端 baseUrl 配置
 - [x] 无代码 host 的 `get_area` 有界查询 fallback：半径上限 24 tiles、maxTiles 512；固定场景读回 25 个 tile，并验证 `maxTiles=10` 时 `truncated=true`
+- [x] `get_events` 分页：非 summary `limit=1` 返回 1 条，`next` 从 1 推进到 2；`summary=true` 时只聚合、不返回 events
 - [x] `get_events` 类型过滤：固定场景 `summary=true, types=['unit_destroy','build_damage']` 返回 `byType` 仅含这两类
-- [ ] `get_events` 无代码 host 的 summary/分页组合：当前 `summary=true` 时不返回 events，`hasMore=false`；分页需走非 summary 路径
 - [ ] 数据面鉴权/TTL/路径白名单/速率限制与验收
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）

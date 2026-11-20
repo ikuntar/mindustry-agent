@@ -91,6 +91,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 30 copper，传送带接收 19，连续 spawn 4 个敌人，炮塔分别造成伤害（150→123、150→141、150→141、150→141）；完整 survival wave 未做。
 - 失败注入：固定场景验证 `withdraw` 未知物品返回 `not_found/Unknown item`、`possess` 自己返回 `bad_target/Cannot possess the assistant's own body`、`deposit` 不存在建筑返回 `building_not_found/No target building`；越界 `mine`/`build_plan` 返回 `out_of_bounds/Tile is outside the map`，越界 `move_to` 返回 `out_of_bounds/Target is outside the map`；`attack` 同队单位返回 `wrong_team/Refusing to attack a unit`；资源清零后 `build_plan` 返回 `insufficient_resources/Missing copper 0/1`。
 - `get_events` 类型过滤：固定场景 `summary=true, types=['unit_destroy','build_damage']` 实测 `byType={unit_destroy:4,build_damage:25}`；`summary=true` 时 events 为空、`hasMore=false`。
+- `get_events` 分页：非 summary `limit=1` 实测返回 1 条，`next` 从 1 推进到 2。
 - LLM 超时：`LLM_REQUEST_TIMEOUT_MS=150` 配合延迟 mock endpoint 实测退出码 1，错误为 `LLM request timed out after 150ms`；重试未做。
 - LLM 重试：`LLM_MAX_RETRIES=1` + mock endpoint 首次 503，实测第二次成功，`llmRetries=1`；重试耗尽时退出码 1、错误 `LLM request failed: 503 mock transient failure`。
 - LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 26 tools、1 次 `get_context`、token/latency 记录。`harness/mock-openai-server.mjs` 已真实验证 HTTP 路径（`mock=false`、24/12 tokens）；真实本地 Ollama `lfm3:latest` 在 mock 和 Fortress probe 上都调用了 `get_context`，真实 probe 6237/426 tokens、2.4s。固定动作任务 `get_context → move_to(952,584) → get_action_result` 返回 done，最终 `x=944.95`；自算 `core.x+24` 任务最终 `x=944.92`，`LLM_EXPECT_NEAR` 验收通过。外部供应商 endpoint 未验收。

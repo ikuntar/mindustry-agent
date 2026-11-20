@@ -410,6 +410,16 @@ async function main(): Promise<void> {
     const secondEventPage = await tool("get_events", { since: firstEventPage.next, limit: 1, summary: true });
     check("event page cursor advances", Number(secondEventPage.next) > Number(firstEventPage.next), JSON.stringify(secondEventPage));
   }
+  const rawFirstPage = await tool("get_events", { since: 0, limit: 1 });
+  check("raw event page returns one event", rawFirstPage.events?.length === 1, JSON.stringify(rawFirstPage));
+  if (rawFirstPage.hasMore) {
+    const rawSecondPage = await tool("get_events", { since: rawFirstPage.next, limit: 1 });
+    check(
+      "raw event pagination advances",
+      rawSecondPage.events?.[0]?.id > rawFirstPage.events?.[0]?.id,
+      JSON.stringify({ first: rawFirstPage.events?.[0]?.id, second: rawSecondPage.events?.[0]?.id }),
+    );
+  }
 
   if (seed?.ally?.id) {
     const ally = { ...seed.ally, x: core.x + 80, y: core.y };
