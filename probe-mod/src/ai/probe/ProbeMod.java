@@ -740,6 +740,12 @@ public class ProbeMod extends Mod {
                 if (tile.build instanceof Turret.TurretBuild turret) {
                     data.put("ammoTotal", turret.totalAmmo);
                 }
+                Object config = tile.build.config();
+                if (config instanceof Item item) {
+                    data.put("config", item.name);
+                } else if (config != null) {
+                    data.put("config", String.valueOf(config));
+                }
             }
             reply(command, data);
             return;

@@ -174,6 +174,7 @@ export interface TileSnapshot {
   solid: boolean;
   items?: { item: string; amount: number }[];
   ammoTotal?: number;
+  config?: string;
 }
 
 export interface AreaTileQuery {

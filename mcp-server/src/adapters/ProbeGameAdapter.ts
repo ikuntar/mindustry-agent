@@ -479,6 +479,7 @@ export class ProbeGameAdapter implements GameAdapter {
         amount: Number(item.amount ?? 0),
       })),
       ammoTotal: tile.ammoTotal == null ? undefined : Number(tile.ammoTotal),
+      config: tile.config == null ? undefined : String(tile.config),
     }));
     return {
       x: Number(raw.x ?? query.x),
