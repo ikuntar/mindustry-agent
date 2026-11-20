@@ -52,6 +52,23 @@ class DataPlaneTest(unittest.TestCase):
         width, height, layers = struct.unpack_from("<iii", payload, 4)
         self.assertEqual(len(payload), 16 + width * height * layers * 2)
 
+        with self._request(f"/map/{revision}/chunk/0/0") as response:
+            chunk = response.read()
+        self.assertEqual(chunk[:4], b"MNC1")
+        chunk_width, chunk_height, chunk_layers = struct.unpack_from("<iii", chunk, 12)
+        self.assertGreater(chunk_width, 0)
+        self.assertGreater(chunk_height, 0)
+        self.assertEqual(len(chunk), 24 + chunk_width * chunk_height * chunk_layers * 2)
+
+        request = urllib.request.Request(self.base + f"/map/{revision}")
+        request.add_header("Authorization", f"Bearer {self.token}")
+        request.add_header("Range", "bytes=0-15")
+        with urllib.request.urlopen(request, timeout=10) as response:
+            ranged = response.read()
+            self.assertEqual(response.status, 206)
+            self.assertEqual(response.headers.get("Content-Range"), f"bytes 0-15/{len(payload)}")
+        self.assertEqual(ranged, payload[:16])
+
         try:
             self._request(f"/map/{revision}", auth=False)
         except urllib.error.HTTPError as error:

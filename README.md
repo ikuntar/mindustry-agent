@@ -43,8 +43,8 @@ mindustry-ai/
 - [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance、附身/释放、sand 挖矿、死亡重生、攻击容器、deconstruct、repair
 - [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
 - [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权
-- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、`mindustry_data` SDK、`get_map_summary`
-- [ ] 地图 chunk、Parquet 事件、Range、远端 baseUrl/TTL/压测
+- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、`mindustry_data` SDK、`get_map_summary`
+- [ ] Parquet 事件、revision/TTL 压测、远端 baseUrl 配置
 - [ ] 真实 Mindustry mod adapter 生产化（重连、心跳、多客户端、token 轮换）
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）

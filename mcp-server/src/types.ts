@@ -247,6 +247,7 @@ export interface DatasetSchema {
   layers: string[];
   dtype: string;
   coord: string;
+  chunkSize?: number;
 }
 
 export interface DatasetAccess {

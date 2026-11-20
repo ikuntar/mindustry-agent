@@ -303,6 +303,7 @@ export class ProbeGameAdapter implements GameAdapter {
         layers: (raw.schema?.layers ?? []) as string[],
         dtype: String(raw.schema?.dtype ?? "int16-le"),
         coord: String(raw.schema?.coord ?? "tile"),
+        chunkSize: raw.schema?.chunkSize == null ? undefined : Number(raw.schema.chunkSize),
       },
       bytes: raw.bytes == null ? undefined : Number(raw.bytes),
       access: raw.access

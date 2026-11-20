@@ -415,6 +415,7 @@ export class MockGameAdapter implements GameAdapter {
         layers: ["block_id", "team", "drop_id", "solid"],
         dtype: "int16-le",
         coord: "tile",
+        chunkSize: 32,
       },
       bytes: 16 + width * height * 8,
       access: {

@@ -68,7 +68,8 @@ import java.util.concurrent.Executors;
  */
 public class ProbeMod extends Mod {
     private static final int PORT = 46500;
-    private static final int DATA_PORT = 46501;
+    private static final int DATA_PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_DATA_PORT", "46501"));
+    private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
     private static final String VERSION = "0.1.0";
 
@@ -78,7 +79,8 @@ public class ProbeMod extends Mod {
     private final Map<Long, MapSnapshot> mapSnapshots = new LinkedHashMap<>();
     private long mapRevision = 0;
     private long lastMapCaptureTick = -1;
-    private String dataBaseUrl = "http://127.0.0.1:" + DATA_PORT + "/data";
+    private final String dataBaseUrl = System.getenv().getOrDefault(
+            "PROBE_DATA_BASE", "http://127.0.0.1:" + DATA_PORT + "/data");
 
     private final ConcurrentLinkedQueue<Command> queue = new ConcurrentLinkedQueue<>();
     private final Map<String, Op> ops = new HashMap<>();
@@ -1573,16 +1575,75 @@ public class ProbeMod extends Mod {
                 return;
             }
             if ("map".equals(parts[0])) {
-                if (parts.length > 2) {
-                    sendText(exchange, 404, "chunk endpoint is not implemented yet", "text/plain", false);
-                    return;
-                }
                 MapSnapshot snapshot = findMapSnapshot(revision);
                 if (snapshot == null) {
                     sendText(exchange, 410, "ref_expired", "text/plain", false);
                     return;
                 }
-                sendBytes(exchange, 200, snapshot.toBytes(), "application/octet-stream", "\"map-" + revision + "\"", method.equals("HEAD"));
+                byte[] body;
+                String etag;
+                if (parts.length == 2) {
+                    body = snapshot.toBytes();
+                    etag = "\"map-" + revision + "\"";
+                } else if (parts.length == 5 && "chunk".equals(parts[2])) {
+                    try {
+                        int cx = Integer.parseInt(parts[3]);
+                        int cy = Integer.parseInt(parts[4]);
+                        body = snapshot.chunkBytes(cx, cy);
+                        if (body == null) {
+                            sendText(exchange, 404, "chunk out of range", "text/plain", false);
+                            return;
+                        }
+                        etag = "\"map-" + revision + "-chunk-" + cx + "-" + cy + "\"";
+                    } catch (NumberFormatException error) {
+                        sendText(exchange, 400, "bad chunk coordinates", "text/plain", false);
+                        return;
+                    }
+                } else {
+                    sendText(exchange, 404, "not found", "text/plain", false);
+                    return;
+                }
+
+                int start = 0;
+                int end = body.length - 1;
+                int status = 200;
+                String rangeHeader = exchange.getRequestHeaders().getFirst("Range");
+                if (rangeHeader != null) {
+                    String trimmed = rangeHeader.trim();
+                    if (!trimmed.startsWith("bytes=") || trimmed.contains(",")) {
+                        exchange.getResponseHeaders().set("Content-Range", "bytes */" + body.length);
+                        sendText(exchange, 416, "invalid range", "text/plain", false);
+                        return;
+                    }
+                    String spec = trimmed.substring("bytes=".length());
+                    int dash = spec.indexOf('-');
+                    try {
+                        if (dash < 0) throw new NumberFormatException();
+                        if (dash == 0) {
+                            int suffix = Integer.parseInt(spec.substring(1));
+                            if (suffix <= 0) throw new NumberFormatException();
+                            start = Math.max(0, body.length - suffix);
+                        } else {
+                            start = Integer.parseInt(spec.substring(0, dash));
+                            if (dash + 1 < spec.length()) {
+                                end = Integer.parseInt(spec.substring(dash + 1));
+                            }
+                        }
+                        if (start < 0 || start >= body.length || end < start) throw new NumberFormatException();
+                        end = Math.min(end, body.length - 1);
+                        status = 206;
+                        exchange.getResponseHeaders().set(
+                                "Content-Range", "bytes " + start + "-" + end + "/" + body.length);
+                    } catch (NumberFormatException error) {
+                        exchange.getResponseHeaders().set("Content-Range", "bytes */" + body.length);
+                        sendText(exchange, 416, "invalid range", "text/plain", false);
+                        return;
+                    }
+                }
+                byte[] payload = status == 206
+                        ? java.util.Arrays.copyOfRange(body, start, end + 1)
+                        : body;
+                sendBytes(exchange, status, payload, "application/octet-stream", etag, method.equals("HEAD"));
                 return;
             }
             if ("events".equals(parts[0])) {
@@ -1616,6 +1677,7 @@ public class ProbeMod extends Mod {
         try {
             exchange.getResponseHeaders().set("Content-Type", contentType);
             exchange.getResponseHeaders().set("Cache-Control", "no-store");
+            exchange.getResponseHeaders().set("Accept-Ranges", "bytes");
             if (etag != null) exchange.getResponseHeaders().set("ETag", etag);
             if (head) {
                 exchange.sendResponseHeaders(status, -1);
@@ -1754,6 +1816,43 @@ public class ProbeMod extends Mod {
             return buffer.array();
         }
 
+        byte[] chunkBytes(int cx, int cy) {
+            int startX = cx * MAP_CHUNK_SIZE;
+            int startY = cy * MAP_CHUNK_SIZE;
+            if (startX < 0 || startY < 0 || startX >= width || startY >= height) return null;
+            int chunkWidth = Math.min(MAP_CHUNK_SIZE, width - startX);
+            int chunkHeight = Math.min(MAP_CHUNK_SIZE, height - startY);
+            int cells = chunkWidth * chunkHeight;
+            ByteBuffer buffer = ByteBuffer.allocate(24 + cells * 8).order(ByteOrder.LITTLE_ENDIAN);
+            buffer.put((byte) 'M').put((byte) 'N').put((byte) 'C').put((byte) '1');
+            buffer.putInt(cx);
+            buffer.putInt(cy);
+            buffer.putInt(chunkWidth);
+            buffer.putInt(chunkHeight);
+            buffer.putInt(4);
+            for (int y = 0; y < chunkHeight; y++) {
+                for (int x = 0; x < chunkWidth; x++) {
+                    buffer.putShort(blocks[(startY + y) * width + startX + x]);
+                }
+            }
+            for (int y = 0; y < chunkHeight; y++) {
+                for (int x = 0; x < chunkWidth; x++) {
+                    buffer.putShort(teams[(startY + y) * width + startX + x]);
+                }
+            }
+            for (int y = 0; y < chunkHeight; y++) {
+                for (int x = 0; x < chunkWidth; x++) {
+                    buffer.putShort(drops[(startY + y) * width + startX + x]);
+                }
+            }
+            for (int y = 0; y < chunkHeight; y++) {
+                for (int x = 0; x < chunkWidth; x++) {
+                    buffer.putShort(solids[(startY + y) * width + startX + x]);
+                }
+            }
+            return buffer.array();
+        }
+
         Jval manifest(String baseUrl) {
             return Jval.newObject()
                     .put("ref", "obs://map/rev/" + revision)
@@ -1765,7 +1864,8 @@ public class ProbeMod extends Mod {
                             .put("height", height)
                             .put("layers", Jval.newArray().add("block_id").add("team").add("drop_id").add("solid"))
                             .put("dtype", "int16-le")
-                            .put("coord", "tile"))
+                            .put("coord", "tile")
+                            .put("chunkSize", MAP_CHUNK_SIZE))
                     .put("bytes", 16 + width * height * 8)
                     .put("access", Jval.newObject()
                             .put("mode", "http-readonly")
