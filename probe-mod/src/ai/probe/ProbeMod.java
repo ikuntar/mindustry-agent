@@ -864,6 +864,13 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("set_possession_allowed".equals(op)) {
+            // Probe/debug helper for rule-guard tests; not part of the MCP surface.
+            Vars.state.rules.possessionAllowed = request.getBool("allowed", true);
+            reply(command, Jval.newObject().put("possessionAllowed", Vars.state.rules.possessionAllowed));
+            return;
+        }
+
         if ("start_wave".equals(op)) {
             // Probe/debug helper for survival-wave tests; not part of the MCP surface.
             Vars.state.rules.waves = true;
@@ -960,6 +967,10 @@ public class ProbeMod extends Mod {
         if ("possess".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            if (!Vars.state.rules.possessionAllowed) {
+                replyError(command, "possession_disabled", "Possession is disabled in the current rules");
                 return;
             }
             if (possessing) {
