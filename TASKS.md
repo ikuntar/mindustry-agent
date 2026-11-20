@@ -57,8 +57,9 @@
 - [ ] 数据面鉴权/TTL/路径白名单/速率限制与验收
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
-- [ ] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
-- [ ] 死亡/重生：`Player.deathDelay`、任意核心、无核心、核心被拆
+- [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
+- [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}` 已实测；无核心、核心被拆仍待补
+- [x] 多核心 fixture：probe 调试 op `spawn_ally_core` 创建同队核心；Fortress 场景已验证从第二个核心重生（home body id 变化、坐标在第二个核心附近）
 - [ ] 借体解控：`resetController()`，不消失；命令恢复
 - [ ] 人口绕过只限重生/默认身体
 - [ ] 团队规则：全程 `assistant.team`；`team.rules()` / `state.rules`
@@ -78,7 +79,7 @@
 
 ## M3：Harness / LLM 测试
 
-- [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（移动/建造/事件摘要/附身/释放）
+- [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（移动/建造/事件摘要/附身/释放/指定核心重生）
 - [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
 - [ ] harness：完整铺带、供弹、防守 N 波、换核心重生
 - [ ] LLM harness：接真实模型，记录工具调用、token、延迟

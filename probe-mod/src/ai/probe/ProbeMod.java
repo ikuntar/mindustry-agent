@@ -310,10 +310,15 @@ public class ProbeMod extends Mod {
         if (!autoRespawn && assistant != null && assistant.dead) return;
         if (assistant != null && assistant.isValid() && !assistant.dead) return;
 
-        Team team = Vars.state.rules.defaultTeam;
+        Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         CoreBuild core = team.core();
         if (core == null) return;
+        spawnAssistantAt(core);
+    }
 
+    private void spawnAssistantAt(CoreBuild core) {
+        if (core == null) return;
+        Team team = core.team;
         UnitType type = ((CoreBlock) core.block).unitType;
         Unit unit = type.create(team);
         unit.x = core.x;
@@ -330,6 +335,14 @@ public class ProbeMod extends Mod {
         homeBody = unit;
         Log.info("[ai-probe] assistant spawned: id=" + unit.id + " type=" + type.name + " team=" + team.name
                 + " valid=" + unit.isValid() + " added=" + unit.isAdded() + " dead=" + unit.dead + " health=" + unit.health);
+    }
+
+    private CoreBuild findTeamCore(int coreId) {
+        if (assistant == null) return null;
+        for (CoreBuild core : assistant.team.cores()) {
+            if (core.id == coreId) return core;
+        }
+        return null;
     }
 
     private void updateMoveOps() {
@@ -914,6 +927,16 @@ public class ProbeMod extends Mod {
                 replyError(command, "assistant_alive", "Assistant body is alive");
                 return;
             }
+            int coreId = request.getInt("coreId", -1);
+            CoreBuild requestedCore = coreId < 0 ? null : findTeamCore(coreId);
+            if (coreId >= 0 && requestedCore == null) {
+                replyError(command, "core_not_found", "No team core with id " + coreId);
+                return;
+            }
+            if (requestedCore != null && !((CoreBlock) requestedCore.block).allowSpawn) {
+                replyError(command, "core_cannot_spawn", "Core does not allow spawn");
+                return;
+            }
             if (possessing) {
                 possessing = false;
                 savedController = null;
@@ -921,7 +944,11 @@ public class ProbeMod extends Mod {
                 homeBody = null;
                 controller = null;
             }
-            ensureAssistant();
+            if (requestedCore != null) {
+                spawnAssistantAt(requestedCore);
+            } else {
+                ensureAssistant();
+            }
             if (assistant == null) {
                 replyError(command, "no_core", "No core is available for respawn");
                 return;
@@ -929,7 +956,8 @@ public class ProbeMod extends Mod {
             reply(command, Jval.newObject()
                     .put("unitId", assistant.id)
                     .put("type", assistant.type.name)
-                    .put("health", assistant.health));
+                    .put("health", assistant.health)
+                    .put("coreId", requestedCore == null ? -1 : requestedCore.id));
             return;
         }
 
@@ -960,6 +988,44 @@ public class ProbeMod extends Mod {
                     .put("x", x)
                     .put("y", y)
                     .put("health", building == null ? 0 : building.health));
+            return;
+        }
+
+        if ("spawn_ally_core".equals(op)) {
+            // Probe/debug helper for multi-core respawn tests; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Block block = Vars.content.block(request.getString("block", "core-shard"));
+            if (!(block instanceof CoreBlock)) {
+                replyError(command, "bad_block", "Block is not a core");
+                return;
+            }
+            int x = request.getInt("x", Integer.MIN_VALUE);
+            int y = request.getInt("y", Integer.MIN_VALUE);
+            if (!Vars.world.tiles.in(x, y)) {
+                replyError(command, "out_of_bounds", "Tile is outside the map");
+                return;
+            }
+            Tile tile = Vars.world.tile(x, y);
+            Team team = assistant.team;
+            if (tile.build != null || !tile.block().isAir()) {
+                replyError(command, "occupied", "Tile is not empty");
+                return;
+            }
+            tile.setBlock(block, team, 0);
+            if (!(tile.build instanceof CoreBuild)) {
+                replyError(command, "core_not_created", "Core build was not created");
+                return;
+            }
+            CoreBuild core = (CoreBuild) tile.build;
+            reply(command, Jval.newObject()
+                    .put("coreId", core.id)
+                    .put("block", block.name)
+                    .put("x", x)
+                    .put("y", y)
+                    .put("allowSpawn", ((CoreBlock) block).allowSpawn));
             return;
         }
 

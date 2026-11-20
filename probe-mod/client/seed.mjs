@@ -64,7 +64,7 @@ async function main() {
     requireOk(await call("give", { item, amount: 200 }), `give ${item}`);
   }
   const ally = requireOk(
-    await call("spawn_ally", { type: "dagger", x: core.x + 30, y: core.y }),
+    await call("spawn_ally", { type: "dagger", x: core.x + 80, y: core.y }),
     "spawn_ally",
   );
   const enemy = requireOk(
@@ -75,6 +75,22 @@ async function main() {
   let enemyBuilding = null;
   const coreTileX = Math.floor(core.x / 8);
   const coreTileY = Math.floor(core.y / 8);
+  let secondCore = null;
+  const coreOffsets = [];
+  for (const radius of [5, 6, 7, 8, 10, 12, 16]) {
+    coreOffsets.push([radius, 0], [-radius, 0], [0, radius], [0, -radius], [radius, radius], [-radius, -radius]);
+  }
+  for (const [dx, dy] of coreOffsets) {
+    const response = await call("spawn_ally_core", {
+      block: "core-shard",
+      x: coreTileX + dx,
+      y: coreTileY + dy,
+    });
+    if (response.ok) {
+      secondCore = response.data;
+      break;
+    }
+  }
   for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [7, 0], [-7, 0]]) {
     const response = await call("spawn_enemy_building", {
       block: "container",
@@ -98,7 +114,7 @@ async function main() {
       }
     }
   }
-  console.log(JSON.stringify({ core, ally, enemy, enemyBuilding, ore }));
+  console.log(JSON.stringify({ core, ally, enemy, enemyBuilding, secondCore, ore }));
   socket.end();
 }
 

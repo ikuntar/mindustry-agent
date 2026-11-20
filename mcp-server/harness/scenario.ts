@@ -1,4 +1,7 @@
 import fs from "node:fs";
+import net from "node:net";
+import os from "node:os";
+import path from "node:path";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -41,6 +44,40 @@ async function tool(name: string, args: Record<string, unknown> = {}): Promise<a
   const result = parse(await client.callTool({ name, arguments: args }));
   if (!result.ok) throw new Error(`${name}: ${JSON.stringify(result.error)}`);
   return result.data;
+}
+
+async function rawProbe(name: string, args: Record<string, unknown> = {}): Promise<any> {
+  const discoveryPath =
+    process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+  const discovery = JSON.parse(fs.readFileSync(discoveryPath, "utf8"));
+  return await new Promise((resolve, reject) => {
+    const socket = net.createConnection({ host: "127.0.0.1", port: Number(discovery.port) });
+    let buffer = "";
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`probe timeout: ${name}`));
+    }, 5000);
+    socket.on("data", (chunk) => {
+      buffer += chunk.toString();
+      const index = buffer.indexOf("\n");
+      if (index < 0) return;
+      const response = JSON.parse(buffer.slice(0, index));
+      clearTimeout(timer);
+      socket.destroy();
+      if (!response.ok) reject(new Error(`${name}: ${JSON.stringify(response.error)}`));
+      else resolve(response.data);
+    });
+    socket.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    socket.once("connect", () => {
+      socket.write(
+        JSON.stringify({ id: 9001, op: name, ...args, ...(discovery.token ? { token: discovery.token } : {}) }) +
+          "\n",
+      );
+    });
+  });
 }
 
 async function waitAction(opId: string, waitMs = 5000): Promise<any> {
@@ -118,6 +155,23 @@ async function main(): Promise<void> {
     const release = await tool("release");
     check("release completed", release.status === "done", JSON.stringify(release));
   }
+
+  const secondCore = seed?.secondCore;
+  check("second core fixture", secondCore?.coreId, JSON.stringify(secondCore));
+  const killed = await rawProbe("kill_assistant");
+  check("assistant killed for respawn", killed?.dead === true, JSON.stringify(killed));
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const respawned = await tool("respawn", { coreId: secondCore.coreId });
+  const respawnData = respawned.data ?? respawned;
+  check("respawn at requested core", respawnData.coreId === secondCore.coreId, JSON.stringify(respawned));
+  const afterRespawn = await tool("get_context", { detail: "summary" });
+  const secondCoreWorld = { x: secondCore.x * 8 + 4, y: secondCore.y * 8 + 4 };
+  check(
+    "respawned near second core",
+    Math.hypot(afterRespawn.assistant.x - secondCoreWorld.x, afterRespawn.assistant.y - secondCoreWorld.y) < 32,
+    `${afterRespawn.assistant.x},${afterRespawn.assistant.y}`,
+  );
+  check("respawned body is home", afterRespawn.assistant.isHome === true, JSON.stringify(afterRespawn.assistant));
 
   console.log(
     JSON.stringify({
