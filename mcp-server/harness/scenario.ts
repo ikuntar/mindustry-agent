@@ -379,6 +379,26 @@ async function main(): Promise<void> {
     JSON.stringify({ before: autoBefore.health, after: autoAfter.health, dead: autoAfter.dead }),
   );
 
+  const retreatStart = await tool("get_context", { detail: "summary" });
+  await rawProbe("set_health", { health: 20 });
+  const threatUnit = await rawProbe("get_unit", { unitId: autoEnemy.id });
+  const beforeDistance = Math.hypot(
+    retreatStart.assistant.x - threatUnit.x,
+    retreatStart.assistant.y - threatUnit.y,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  const retreatAfter = await tool("get_context", { detail: "summary" });
+  const threatAfter = await rawProbe("get_unit", { unitId: autoEnemy.id });
+  const afterDistance = Math.hypot(
+    retreatAfter.assistant.x - threatAfter.x,
+    retreatAfter.assistant.y - threatAfter.y,
+  );
+  check(
+    "low-health retreat increases distance",
+    afterDistance > beforeDistance + 20,
+    `${beforeDistance} -> ${afterDistance}`,
+  );
+
   console.log(
     JSON.stringify({
       ok: true,

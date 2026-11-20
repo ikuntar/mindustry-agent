@@ -849,6 +849,18 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("set_health".equals(op)) {
+            // Probe/debug helper for retreat tests; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            float health = Math.max(0f, Math.min(assistant.maxHealth, request.getFloat("health", 1f)));
+            assistant.health = health;
+            reply(command, Jval.newObject().put("unitId", assistant.id).put("health", assistant.health));
+            return;
+        }
+
         if ("destroy_core".equals(op)) {
             // Probe/debug helper for no-core respawn tests; not part of the MCP surface.
             if (assistant == null) {
@@ -2191,6 +2203,20 @@ public class ProbeMod extends Mod {
                 }
             }
 
+            if (target == null && unit.health <= unit.maxHealth * 0.3f) {
+                Unit threat = nearestEnemy(240f);
+                if (threat != null) {
+                    float dx = unit.x - threat.x;
+                    float dy = unit.y - threat.y;
+                    float length = (float) Math.hypot(dx, dy);
+                    if (length > 1f) {
+                        target = new Vec2(unit.x + dx / length * 120f, unit.y + dy / length * 120f);
+                        moveToward(target);
+                        return;
+                    }
+                }
+            }
+
             if (target == null) {
                 maybeAutoTarget();
                 clearPath();
@@ -2199,14 +2225,7 @@ public class ProbeMod extends Mod {
             moveToward(target);
         }
 
-        private void maybeAutoTarget() {
-            if (unit == null || unit.dead || unit.type.weapons.isEmpty()) return;
-            double tick = Vars.state.tick;
-            if (tick - lastAutoScanTick < 10) return;
-            lastAutoScanTick = tick;
-            float range = 0f;
-            for (var weapon : unit.type.weapons) range = Math.max(range, weapon.range());
-            if (range <= 0f) return;
+        private Unit nearestEnemy(float range) {
             Unit best = null;
             float bestDistance = range;
             for (Unit other : Groups.unit) {
@@ -2217,6 +2236,18 @@ public class ProbeMod extends Mod {
                     bestDistance = distance;
                 }
             }
+            return best;
+        }
+
+        private void maybeAutoTarget() {
+            if (unit == null || unit.dead || unit.type.weapons.isEmpty()) return;
+            double tick = Vars.state.tick;
+            if (tick - lastAutoScanTick < 10) return;
+            lastAutoScanTick = tick;
+            float range = 0f;
+            for (var weapon : unit.type.weapons) range = Math.max(range, weapon.range());
+            if (range <= 0f) return;
+            Unit best = nearestEnemy(range);
             if (best == null) {
                 unit.isShooting = false;
                 return;
