@@ -490,26 +490,16 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async getConfigSchema(block: string): Promise<ConfigSchema> {
-    const schemas: Record<string, ConfigSchema> = {
-      sorter: {
-        block,
-        configurable: true,
-        fields: [{ key: "value", type: "item", values: ["copper", "lead", "graphite", "metaglass"] }],
-      },
-      unloader: {
-        block,
-        configurable: true,
-        fields: [{ key: "value", type: "string", values: ["north", "east", "south", "west"] }],
-      },
-      "micro-processor": {
-        block,
-        configurable: true,
-        fields: [{ key: "code", type: "string" }],
-      },
-      message: { block, configurable: true, fields: [{ key: "text", type: "string" }] },
-      switch: { block, configurable: true, fields: [{ key: "enabled", type: "boolean" }] },
+    const raw = await this.call("get_config_schema", { block });
+    return {
+      block: String(raw.block ?? block),
+      configurable: !!raw.configurable,
+      fields: Array.isArray(raw.fields) ? raw.fields.map((field: any) => ({
+        key: String(field.key ?? ""),
+        type: field.type,
+        values: Array.isArray(field.values) ? field.values.map((value: any) => String(value)) : undefined,
+      })) : [],
     };
-    return schemas[block] ?? { block, configurable: false, fields: [] };
   }
 
   async getActionResult(opId: string, waitMs = 0): Promise<ActionResult> {

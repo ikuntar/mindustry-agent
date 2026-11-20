@@ -137,6 +137,16 @@ async function main(): Promise<void> {
   );
   if (expectedMap) check(`fixed map ${expectedMap}`, context.map === expectedMap, String(context.map));
 
+  const sorterSchema = await tool("get_config_schema", { block: "sorter" });
+  check(
+    "sorter config schema comes from game",
+    sorterSchema.configurable === true &&
+      sorterSchema.fields?.some((field: { key: string; values?: string[] }) =>
+        field.key === "value" && field.values?.includes("copper"),
+      ),
+    JSON.stringify(sorterSchema),
+  );
+
   const coreId = context.cores?.[0]?.id;
   if (coreId != null) {
   const invalidWithdraw = await expectToolError(

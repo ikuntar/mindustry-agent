@@ -680,6 +680,35 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("get_config_schema".equals(op)) {
+            String blockName = request.getString("block", "");
+            Block block = Vars.content.block(blockName);
+            if (block == null) {
+                replyError(command, "not_found", "Unknown block " + blockName);
+                return;
+            }
+            Jval fields = Jval.newArray();
+            if ("sorter".equals(block.name)) {
+                Jval values = Jval.newArray();
+                for (Item item : Vars.content.items()) values.add(item.name);
+                fields.add(Jval.newObject().put("key", "value").put("type", "item").put("values", values));
+            } else if ("unloader".equals(block.name)) {
+                fields.add(Jval.newObject().put("key", "value").put("type", "string")
+                        .put("values", Jval.newArray().add("north").add("east").add("south").add("west")));
+            } else if ("switch".equals(block.name)) {
+                fields.add(Jval.newObject().put("key", "enabled").put("type", "boolean"));
+            } else if ("message".equals(block.name)) {
+                fields.add(Jval.newObject().put("key", "text").put("type", "string"));
+            } else if ("micro-processor".equals(block.name)) {
+                fields.add(Jval.newObject().put("key", "code").put("type", "string"));
+            }
+            reply(command, Jval.newObject()
+                    .put("block", block.name)
+                    .put("configurable", fields.asArray().size > 0)
+                    .put("fields", fields));
+            return;
+        }
+
         if ("get_tile".equals(op)) {
             int x = request.getInt("x", Integer.MIN_VALUE);
             int y = request.getInt("y", Integer.MIN_VALUE);

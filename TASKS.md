@@ -89,7 +89,7 @@
 
 - [x] `get_context` 摘要 + 局部窗口（radius，tile）+ 团队取 assistant.team + `since` 事件增量摘要 + `includeEnemies` 的 `threats`（最多 16 个）+ `maxUnits`（1–64，默认 20，返回 `unitsTruncated`）+ `maxBytes`（有界裁剪，返回 `bytesTruncated`）+ 粗略 `bytes`
 - [ ] token 预算、detail/radius/since 的完整分页/resource
-- [ ] 可配置方块 schema（sorter/unloader/processor/message/switch/turret 等）
+- [x] 可配置方块 schema：probe `get_config_schema` 从游戏内容返回 sorter 的全部物品值、unloader 方向、switch/message/processor 字段；固定场景 sorter 返回 `configurable=true` 且 values 含 `copper`
 - [ ] 可指挥单位 + stance + 命令队列
 - [ ] 玩家上下文：当前选择/镜头/当前工具（如果后续做对话/指令）
 - [ ] 事件合并与 dropped 检测
