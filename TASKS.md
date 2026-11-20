@@ -57,6 +57,7 @@
 - [ ] 数据面鉴权/TTL/路径白名单/速率限制与验收
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
+- [x] `move_to` 基础 BFS 寻路：地面单位绕过 solid tile；Fortress 场景用 5 个 container 做墙，助手到达墙后目标（`1089,588` vs `1084,588`）
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
 - [x] 多核心 fixture：probe 调试 op `spawn_ally_core` 创建同队核心；Fortress 场景已验证从第二个核心重生（home body id 变化、坐标在第二个核心附近）

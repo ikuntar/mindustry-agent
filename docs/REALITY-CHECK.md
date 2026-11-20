@@ -85,6 +85,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `attack` 支持三种目标：`unitId`（单位）、`buildingId`（建筑）和 `x,y`（坐标）；建筑实测 220→0，坐标实测 done/inRange。单位目标入口已接，但独立伤害验收受测试单位消失影响。
 - `build_plan`：固定场景一次提交 2 个 conveyor `(112,73)`/`(113,73)`，op 完成且 `query_area` 两个 tile 都存在；多块提交路径已验收。
 - `respawn`：probe 接受 `coreId`，只在目标核心属于助手队伍且 `allowSpawn` 时生成；MCP 固定场景实测从第二个核心重生，坐标 `968,584`、coreId `228`，home body id 变化。无核心时返回 `no_core`；核心重建后自动生成新 home body（id `247`，坐标 `972,582`）。
+- `move_to`：地面单位新增 BFS 路径（solid tile 规避、对角不切角）；Fortress 场景 5 个 container 墙后目标 `(1084,588)`，助手到达 `(1089,588)`，`get_action_result=done`。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
 - `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。
 - `follow`：MCP follow 后助手位置变化；`cancel` 成功取消 follow。

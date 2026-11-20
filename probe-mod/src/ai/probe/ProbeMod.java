@@ -50,8 +50,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -2129,6 +2133,9 @@ public class ProbeMod extends Mod {
         volatile float followDistance = 48f;
         volatile Teamc attackEntity;
         volatile Vec2 attackPosition;
+        private Vec2 pathTarget;
+        private List<Vec2> path = List.of();
+        private int pathIndex;
 
         @Override
         public void unit(Unit unit) {
@@ -2181,15 +2188,96 @@ public class ProbeMod extends Mod {
                 }
             }
 
-            if (target == null) return;
-            float dx = target.x - unit.x;
-            float dy = target.y - unit.y;
-            if (Math.hypot(dx, dy) < 1f) {
+            if (target == null) {
+                pathTarget = null;
+                path = List.of();
+                pathIndex = 0;
+                return;
+            }
+            Vec2 destination = target;
+            if (pathTarget == null || Math.hypot(pathTarget.x - destination.x, pathTarget.y - destination.y) > 4f) {
+                pathTarget = new Vec2(destination);
+                path = findPath(destination);
+                pathIndex = 0;
+            }
+            while (pathIndex < path.size()
+                    && Math.hypot(path.get(pathIndex).x - unit.x, path.get(pathIndex).y - unit.y) < 6f) {
+                pathIndex++;
+            }
+            Vec2 waypoint = pathIndex < path.size() ? path.get(pathIndex) : destination;
+            float dx = waypoint.x - unit.x;
+            float dy = waypoint.y - unit.y;
+            if (Math.hypot(dx, dy) < 1f && pathIndex >= path.size()) {
                 target = null;
                 return;
             }
-            Vec2 desired = new Vec2(target).sub(unit.x, unit.y).limit(unit.speed());
+            Vec2 desired = new Vec2(destination).sub(unit.x, unit.y).limit(unit.speed());
+            if (waypoint != destination) {
+                desired = new Vec2(waypoint).sub(unit.x, unit.y).limit(unit.speed());
+            }
             unit.moveAt(desired);
+        }
+
+        private List<Vec2> findPath(Vec2 destination) {
+            if (unit == null || unit.type.flying || unit.dead) return List.of();
+            int width = Vars.world.width();
+            int height = Vars.world.height();
+            int startX = Math.max(0, Math.min(width - 1, (int) (unit.x / 8f)));
+            int startY = Math.max(0, Math.min(height - 1, (int) (unit.y / 8f)));
+            int goalX = Math.max(0, Math.min(width - 1, (int) (destination.x / 8f)));
+            int goalY = Math.max(0, Math.min(height - 1, (int) (destination.y / 8f)));
+            int start = startY * width + startX;
+            int goal = goalY * width + goalX;
+            if (start == goal) return List.of();
+
+            boolean[] visited = new boolean[width * height];
+            int[] previous = new int[width * height];
+            Arrays.fill(previous, -1);
+            ArrayDeque<Integer> queue = new ArrayDeque<>();
+            queue.add(start);
+            visited[start] = true;
+            int[] offsetsX = { 1, -1, 0, 0, 1, 1, -1, -1 };
+            int[] offsetsY = { 0, 0, 1, -1, 1, -1, 1, -1 };
+            boolean found = false;
+            while (!queue.isEmpty() && !found) {
+                int current = queue.poll();
+                int cx = current % width;
+                int cy = current / width;
+                for (int i = 0; i < offsetsX.length; i++) {
+                    int nx = cx + offsetsX[i];
+                    int ny = cy + offsetsY[i];
+                    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+                    int next = ny * width + nx;
+                    if (visited[next]) continue;
+                    if (next != goal) {
+                        Tile tile = Vars.world.tile(nx, ny);
+                        if (tile == null || tile.block().solid) continue;
+                    }
+                    if (offsetsX[i] != 0 && offsetsY[i] != 0) {
+                        Tile sideA = Vars.world.tile(cx + offsetsX[i], cy);
+                        Tile sideB = Vars.world.tile(cx, cy + offsetsY[i]);
+                        if (sideA == null || sideB == null || sideA.block().solid || sideB.block().solid) continue;
+                    }
+                    visited[next] = true;
+                    previous[next] = current;
+                    if (next == goal) {
+                        found = true;
+                        break;
+                    }
+                    queue.add(next);
+                }
+            }
+            if (!found) return List.of();
+            ArrayList<Vec2> result = new ArrayList<>();
+            int current = goal;
+            while (current != start && current >= 0) {
+                int x = current % width;
+                int y = current / width;
+                result.add(new Vec2(x * 8f + 4f, y * 8f + 4f));
+                current = previous[current];
+            }
+            java.util.Collections.reverse(result);
+            return result;
         }
 
         @Override

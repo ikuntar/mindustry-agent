@@ -81,8 +81,14 @@ async function rawProbe(name: string, args: Record<string, unknown> = {}): Promi
 }
 
 async function waitAction(opId: string, waitMs = 5000): Promise<any> {
-  const result = await tool("get_action_result", { opId, waitMs });
-  check(`action ${opId} done`, result.status === "done", String(result.status));
+  const deadline = Date.now() + waitMs;
+  let result: any;
+  while (Date.now() < deadline) {
+    result = await tool("get_action_result", { opId, waitMs: 100 });
+    if (result.status === "done" || result.status === "failed" || result.status === "cancelled") break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  check(`action ${opId} done`, result?.status === "done", String(result?.status));
   return result;
 }
 
@@ -261,6 +267,30 @@ async function main(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 200));
   const recovered = await tool("get_context", { detail: "summary" });
   check("respawn recovers after core recreated", recovered.assistant?.dead === false, JSON.stringify(recovered.assistant));
+
+  // Route around a solid wall: direct movement would get stuck, BFS should detour.
+  const startX = Math.floor(recovered.assistant.x / 8);
+  const startY = Math.floor(recovered.assistant.y / 8);
+  const wallX = startX + 6;
+  let wallBlocks = 0;
+  for (const dy of [-6, -3, 0, 3, 6]) {
+    try {
+      const placed = await rawProbe("spawn_enemy_building", { block: "container", x: wallX, y: startY + dy });
+      if (placed?.buildingId >= 0) wallBlocks++;
+    } catch {
+      // A blocked tile is fine; the wall does not need to be contiguous at every offset.
+    }
+  }
+  check("path obstruction created", wallBlocks >= 3, String(wallBlocks));
+  const pathTarget = { x: (wallX + 8) * 8 + 4, y: startY * 8 + 4 };
+  const pathMove = await tool("move_to", { ...pathTarget, arriveRadius: 12 });
+  await waitAction(pathMove.opId, 12000);
+  const afterPath = await tool("get_context", { detail: "summary" });
+  check(
+    "pathfinding reaches target behind wall",
+    Math.hypot(afterPath.assistant.x - pathTarget.x, afterPath.assistant.y - pathTarget.y) < 48,
+    `${afterPath.assistant.x},${afterPath.assistant.y} vs ${pathTarget.x},${pathTarget.y}`,
+  );
 
   console.log(
     JSON.stringify({
