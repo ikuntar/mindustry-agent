@@ -2157,8 +2157,9 @@ public class ProbeMod extends Mod {
                 } else {
                     float distance = (float) Math.hypot(followTarget.x - unit.x, followTarget.y - unit.y);
                     if (distance > followDistance) {
-                        Vec2 desired = new Vec2(followTarget.x - unit.x, followTarget.y - unit.y).limit(unit.speed());
-                        unit.moveAt(desired);
+                        moveToward(new Vec2(followTarget.x, followTarget.y));
+                    } else {
+                        clearPath();
                     }
                     return;
                 }
@@ -2181,20 +2182,29 @@ public class ProbeMod extends Mod {
                     unit.aimY = attackPosition.y;
                     unit.isShooting = distance <= range;
                     if (distance > Math.max(8f, range * 0.8f)) {
-                        Vec2 desired = new Vec2(attackPosition.x - unit.x, attackPosition.y - unit.y).limit(unit.speed());
-                        unit.moveAt(desired);
+                        moveToward(attackPosition);
+                    } else {
+                        clearPath();
                     }
                     return;
                 }
             }
 
             if (target == null) {
-                pathTarget = null;
-                path = List.of();
-                pathIndex = 0;
+                clearPath();
                 return;
             }
-            Vec2 destination = target;
+            moveToward(target);
+        }
+
+        private void clearPath() {
+            pathTarget = null;
+            path = List.of();
+            pathIndex = 0;
+        }
+
+        private void moveToward(Vec2 destination) {
+            if (unit == null) return;
             if (pathTarget == null || Math.hypot(pathTarget.x - destination.x, pathTarget.y - destination.y) > 4f) {
                 pathTarget = new Vec2(destination);
                 path = findPath(destination);
@@ -2205,17 +2215,12 @@ public class ProbeMod extends Mod {
                 pathIndex++;
             }
             Vec2 waypoint = pathIndex < path.size() ? path.get(pathIndex) : destination;
-            float dx = waypoint.x - unit.x;
-            float dy = waypoint.y - unit.y;
-            if (Math.hypot(dx, dy) < 1f && pathIndex >= path.size()) {
-                target = null;
+            if (Math.hypot(waypoint.x - unit.x, waypoint.y - unit.y) < 1f && pathIndex >= path.size()) {
+                if (target != null && Math.hypot(target.x - unit.x, target.y - unit.y) < 1f) target = null;
+                unit.moveAt(new Vec2());
                 return;
             }
-            Vec2 desired = new Vec2(destination).sub(unit.x, unit.y).limit(unit.speed());
-            if (waypoint != destination) {
-                desired = new Vec2(waypoint).sub(unit.x, unit.y).limit(unit.speed());
-            }
-            unit.moveAt(desired);
+            unit.moveAt(new Vec2(waypoint).sub(unit.x, unit.y).limit(unit.speed()));
         }
 
         private List<Vec2> findPath(Vec2 destination) {
