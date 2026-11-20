@@ -430,7 +430,8 @@ public class ProbeMod extends Mod {
         if ("get_context".equals(op)) {
             int radius = Math.max(0, request.getInt("radius", 0));
             int since = Math.max(0, request.getInt("since", 0));
-            reply(command, context(radius, since));
+            boolean includeEnemies = request.getBool("includeEnemies", false);
+            reply(command, context(radius, since, includeEnemies));
             return;
         }
 
@@ -1755,7 +1756,7 @@ public class ProbeMod extends Mod {
         return op;
     }
 
-    private Jval context(int radius, int since) {
+    private Jval context(int radius, int since, boolean includeEnemies) {
         Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         Jval data = Jval.newObject()
                 .put("tick", Vars.state.tick)
@@ -1851,6 +1852,25 @@ public class ProbeMod extends Mod {
         }
         data.put("units", units);
         data.put("unitCount", team.data().unitCount);
+        Jval threats = Jval.newArray();
+        if (includeEnemies && assistant != null) {
+            int count = 0;
+            for (Unit unit : Groups.unit) {
+                if (unit.team == team || unit.dead) continue;
+                if (radius > 0 && Math.hypot(unit.x - assistant.x, unit.y - assistant.y) > radius * 8f) continue;
+                threats.add(Jval.newObject()
+                        .put("id", unit.id)
+                        .put("type", unit.type.name)
+                        .put("team", unit.team.id)
+                        .put("x", unit.x)
+                        .put("y", unit.y)
+                        .put("health", unit.health)
+                        .put("maxHealth", unit.maxHealth)
+                        .put("dead", unit.dead));
+                if (++count >= 16) break;
+            }
+        }
+        data.put("threats", threats);
 
         return data;
     }

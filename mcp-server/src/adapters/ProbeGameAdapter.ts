@@ -229,6 +229,7 @@ export class ProbeGameAdapter implements GameAdapter {
     const raw = await this.call("get_context", {
       radius: options.radius ?? 0,
       since: options.since ?? 0,
+      includeEnemies: options.includeEnemies ?? false,
     });
     const assistantRaw = raw.assistant ?? {};
     const units: UnitSnapshot[] = (raw.units ?? []).map((unit: any) => this.mapUnit(unit));
@@ -282,6 +283,7 @@ export class ProbeGameAdapter implements GameAdapter {
               units: units.filter((unit) => unit.id !== assistant.id),
               buildings: cores,
             },
+      threats: Array.isArray(raw.threats) ? raw.threats.map((unit: any) => this.mapUnit(unit)) : undefined,
       eventsSince: Number(raw.eventsSince ?? 0),
       eventsPending: Number(raw.eventsPending ?? 0),
       eventSummary: raw.eventSummary

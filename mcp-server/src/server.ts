@@ -105,6 +105,7 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
         detail: detailSchema.optional(),
         radius: z.number().positive().optional(),
         since: z.number().int().nonnegative().optional(),
+        includeEnemies: z.boolean().optional(),
       },
       annotations: readOnly,
     },

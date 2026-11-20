@@ -609,8 +609,12 @@ async function main(): Promise<void> {
     y: autoStart.assistant.y,
   });
   const autoBefore = await rawProbe("get_unit", { unitId: autoEnemy.id });
-  await new Promise((resolve) => setTimeout(resolve, 900));
-  const autoAfter = await rawProbe("get_unit", { unitId: autoEnemy.id });
+  let autoAfter = autoBefore;
+  for (let i = 0; i < 20; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    autoAfter = await rawProbe("get_unit", { unitId: autoEnemy.id });
+    if (autoAfter.dead || autoAfter.health < autoBefore.health) break;
+  }
   check(
     "auto defense damages nearby enemy",
     autoAfter?.dead === true || autoAfter.health < autoBefore.health,
@@ -700,6 +704,12 @@ async function main(): Promise<void> {
   });
   const enemyUnits = (enemyArea.units ?? []).filter((unit: { team: number }) => unit.team !== context.team);
   check("enemy area query includes wave enemies", enemyUnits.length > 0, JSON.stringify(enemyUnits.slice(0, 3)));
+  const threatContext = await tool("get_context", { detail: "full", radius: 300, includeEnemies: true });
+  check(
+    "context threats include wave enemies",
+    (threatContext.threats ?? []).some((unit: { team: number }) => unit.team !== context.team),
+    JSON.stringify(threatContext.threats?.slice(0, 3)),
+  );
 
   console.log(
     JSON.stringify({

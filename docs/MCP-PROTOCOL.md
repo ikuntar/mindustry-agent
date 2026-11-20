@@ -120,13 +120,14 @@ MCP server（Node/TypeScript）
 {
   "detail": "normal",     // summary | normal | full
   "radius": 15,           // 附近实体半径（tile）
-  "since": 0              // 可选：附带事件起点
+  "since": 0,             // 可选：附带事件起点
+  "includeEnemies": false // 可选：额外返回 threats
 }
 ```
 
-返回 `GameContext`：tick、timeMs、paused、gameOver、map、mode、wave、enemies、team、teamName、player、assistant、resources、cores、counts、nearby、eventsSince、eventsPending、eventSummary。
+返回 `GameContext`：tick、timeMs、paused、gameOver、map、mode、wave、enemies、team、teamName、player、assistant、resources、cores、counts、nearby、threats、eventsSince、eventsPending、eventSummary。
 
-`detail=summary` 不带 nearby；`full` 可扩大实体和字段；`radius` 以 tile 为单位。
+`detail=summary` 不带 nearby；`full` 可扩大实体和字段；`radius` 以 tile 为单位；`includeEnemies=true` 时 `threats` 最多 16 个敌军。
 
 ### `get_capabilities`
 

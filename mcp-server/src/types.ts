@@ -76,6 +76,7 @@ export interface GameContext {
     units: UnitSnapshot[];
     buildings: BuildingSnapshot[];
   };
+  threats?: UnitSnapshot[];
   eventsSince?: number;
   eventsPending?: number;
   eventSummary?: {
@@ -276,6 +277,7 @@ export interface ContextOptions {
   detail?: Detail;
   radius?: number;
   since?: number;
+  includeEnemies?: boolean;
 }
 
 export interface DatasetSchema {

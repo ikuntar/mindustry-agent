@@ -82,7 +82,7 @@
 
 ## M2：观测与上下文
 
-- [x] `get_context` 摘要 + 局部窗口（radius，tile）+ 团队取 assistant.team + `since` 事件增量摘要
+- [x] `get_context` 摘要 + 局部窗口（radius，tile）+ 团队取 assistant.team + `since` 事件增量摘要 + `includeEnemies` 的 `threats`（最多 16 个）
 - [ ] token 预算、detail/radius/since 的完整分页/resource
 - [ ] 可配置方块 schema（sorter/unloader/processor/message/switch/turret 等）
 - [ ] 可指挥单位 + stance + 命令队列
