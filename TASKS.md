@@ -118,7 +118,7 @@
 ## M4：运行时/安全/多人
 
 - [ ] 本地 socket 鉴权、localhost only、token
-- [ ] 动作 allowlist、rate limit、prompt injection 防护
+- [x] 动作 allowlist：`MCP_ALLOWED_TOOLS`/`MCP_DENIED_TOOLS` 在注册阶段过滤工具；`MCP_ALLOWED_TOOLS=get_context` 实测只暴露 1 个工具，`move_to` 调用被拒绝
 - [ ] API key 只在伴生进程；日志脱敏
 - [ ] 存档/读档记忆处理
 - [ ] 跨区块/跨地图重生

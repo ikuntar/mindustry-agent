@@ -12,7 +12,8 @@
     "harness": "tsx harness/smoke.ts",
     "scenario": "tsx harness/scenario.ts",
     "llm-harness": "tsx harness/llm.ts",
-    "writer-harness": "tsx harness/writer.ts"
+    "writer-harness": "tsx harness/writer.ts",
+    "allowlist-harness": "tsx harness/allowlist.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

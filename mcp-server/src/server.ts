@@ -100,8 +100,18 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   // All tools accept an optional idempotencyKey. Successful results are cached
   // in-process so a client retry cannot execute the same action twice.
   const idempotencyCache = new Map<string, CallToolResult>();
+  const allowedTools = (process.env.MCP_ALLOWED_TOOLS ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  const deniedTools = (process.env.MCP_DENIED_TOOLS ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
   const registerTool = server.registerTool.bind(server);
   (server as any).registerTool = (name: string, config: any, handler: any) => {
+    if (allowedTools.length && !allowedTools.includes(name)) return;
+    if (deniedTools.includes(name)) return;
     const inputSchema = {
       ...(config.inputSchema ?? {}),
       idempotencyKey: z.string().max(128).optional(),

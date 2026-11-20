@@ -92,6 +92,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 数据 token 轮换：probe 新增 `rotate_data_token`；旧 token 访问返回 401，新 token 访问 manifest 返回 200。
 - 数据面速率限制：`PROBE_DATA_RATE_LIMIT_PER_SEC`（默认 120）；固定场景 limit=10 时 11 个并发请求得到 9 个 200、2 个 429。
 - 多客户端写互斥：probe writer lease 实测 `claim_writer` 第二客户端返回 `writer_held`，无 token 的 `move_to` 返回 `writer_required`，带 token 的 `move_to` 可执行，release 后第二客户端可 claim；`PROBE_REQUIRE_WRITER=1` 下 MCP adapter 自动 claim 并完成 `move_to=done`；1s TTL 过期后新客户端可 claim；默认未开启时保持原有行为。
+- MCP allowlist：`MCP_ALLOWED_TOOLS=get_context` 时 `listTools` 只剩 `get_context`，`get_context` 成功，`move_to` 返回错误。
 - 失败注入：固定场景验证 `withdraw` 未知物品返回 `not_found/Unknown item`、`possess` 自己返回 `bad_target/Cannot possess the assistant's own body`、`deposit` 不存在建筑返回 `building_not_found/No target building`；越界 `mine`/`build_plan` 返回 `out_of_bounds/Tile is outside the map`，越界 `move_to` 返回 `out_of_bounds/Target is outside the map`；`attack` 同队单位返回 `wrong_team/Refusing to attack a unit`；资源清零后 `build_plan` 返回 `insufficient_resources/Missing copper 0/1`。
 - 定向 `cancel`：`move_to` 后 `cancel {opId}` 返回 `cancelled=1`，对应 `get_action_result` 状态为 `cancelled`。
 - 幂等：MCP 工具可选 `idempotencyKey`；固定场景两次相同 `move_to` key 返回同一个 `opId`，第二次不创建新动作。
