@@ -102,7 +102,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `get_events` 类型过滤：固定场景 `summary=true, types=['unit_destroy','build_damage']` 实测 `byType={unit_destroy:4,build_damage:25}`；`summary=true` 时 events 为空、`hasMore=false`。
 - 错误分类：MCP error 增加 `category`（input/rule/resource/world/transport/internal）和 `retryable`；固定场景未知物品返回 `not_found/input/false`。
 - 真实 `get_content`：probe 读取 `Vars.content.units()` 70 个类型、blocks/items/liquids；固定场景 `get_content(type=units)` 包含 dagger，并用 `query=dag, limit=5` 返回仅 dagger。
-- 真实 survival wave：固定场景连续触发 4 波 `start_wave`，wave 逐波推进，每波生成敌人和 27 个 spawn group；`query_area includeEnemies=true` 找到 wave dagger 并被炮塔打伤；`get_context includeEnemies=true` 的 `threats` 返回同一敌军。完整 survival 多波防守（敌人到达核心并全部解决）仍未验证。
+- 真实 survival wave：固定场景连续触发 4 波 `start_wave`，wave 逐波推进，每波生成敌人和 27 个 spawn group；`query_area includeEnemies=true` 找到 wave dagger 并被炮塔打伤；`get_context includeEnemies=true` 的 `threats` 返回同一敌军。4 波后核心仍存活（health `920`）、助手存活（health `20`），但远处敌人未全部解决。
 - 核心受击：`spawn_enemy` 新增 `ai=true` 启用引擎默认 AI；助手撤离后生成 3 个敌方 dagger，核心 health `1100→1082`。默认 `ai=false` 仍为静止测试敌人。
 - LLM 超时：`LLM_REQUEST_TIMEOUT_MS=150` 配合延迟 mock endpoint 实测退出码 1，错误为 `LLM request timed out after 150ms`；重试未做。
 - LLM 重试：`LLM_MAX_RETRIES=1` + mock endpoint 首次 503，实测第二次成功，`llmRetries=1`；重试耗尽时退出码 1、错误 `LLM request failed: 503 mock transient failure`。

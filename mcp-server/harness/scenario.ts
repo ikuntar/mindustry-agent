@@ -766,6 +766,11 @@ async function main(): Promise<void> {
     (threatContext.threats ?? []).some((unit: { team: number }) => unit.team !== context.team),
     JSON.stringify(threatContext.threats?.slice(0, 3)),
   );
+  check(
+    "core survives four survival waves",
+    Number(threatContext.cores?.[0]?.health ?? 0) > 0 && !threatContext.assistant?.dead,
+    JSON.stringify({ coreHealth: threatContext.cores?.[0]?.health, assistant: threatContext.assistant?.health }),
+  );
 
   const homeCore = threatContext.cores?.[0];
   if (homeCore) {
