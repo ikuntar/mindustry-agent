@@ -87,6 +87,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `respawn`：probe 接受 `coreId`，只在目标核心属于助手队伍且 `allowSpawn` 时生成；MCP 固定场景实测从第二个核心重生，坐标 `968,584`、coreId `228`，home body id 变化。无核心时返回 `no_core`；核心重建后自动生成新 home body（id `247`，坐标 `972,582`）。
 - `move_to`：地面单位新增 BFS 路径（solid tile 规避、对角不切角）；Fortress 场景 5 个 container 墙后目标 `(1084,588)`，助手到达 `(1089,588)`，`get_action_result=done`。`follow`/`attack` 的接近移动也走同一 helper；attack 用墙后目标容器验收，接近到 150px 内并 `cancel`。移动完成或取消目标时会清零速度，避免惯性漂移。
 - 地面单位 `move_to` 会拒绝 solid tile（`unreachable/Target tile is solid for a ground unit`）；固定场景附身 dagger 后验证该错误，飞行 alpha 不做此限制。
+- `mine`：固定场景在助手附近放 `ore-copper`；`timeoutTicks=1` 返回 `failed/timeout`，无超时挖矿 `done` 并获得 1 copper。
 - `move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 均可选 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，并清除对应控制器目标。
 - 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景用 `spawn_enemy ai=true` 生成会还击的 dagger，轮询 2s 内 health `150→141`。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。

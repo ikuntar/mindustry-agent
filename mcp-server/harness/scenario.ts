@@ -357,6 +357,17 @@ async function main(): Promise<void> {
         timeoutMineResult.status === "failed" && timeoutMineResult.data?.code === "timeout",
         JSON.stringify(timeoutMineResult),
       );
+      const normalMine = await tool("mine", { x: oreX, y: oreY });
+      let normalMineResult = normalMine;
+      for (let i = 0; i < 40 && normalMineResult.status === "running"; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        normalMineResult = await tool("get_action_result", { opId: normalMine.opId });
+      }
+      check(
+        "mine completes and yields item",
+        normalMineResult.status === "done" && Number(normalMineResult.data?.amount ?? 0) > 0,
+        JSON.stringify(normalMineResult),
+      );
     }
   }
 
