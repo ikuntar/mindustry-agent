@@ -89,7 +89,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `follow`：MCP follow 后助手位置变化；`cancel` 成功取消 follow。
 - `get_events`：probe 事件环已接，实测能读到 `unit_destroy`、`build_damage`、`block_build_end` 等；`get_context.eventsSince` 为真实序号。
 - `get_events` 摘要模式已接：`summary=true` 返回 `byType` 计数 + `ref`，可加 `types` 在游戏侧过滤；原始页仍保留。
-- `get_context`：队伍字段改为 `assistant.team`，`radius` 以 tile 为单位过滤 near units；固定场景实测 `radius=4` 无邻近单位，`radius=15` 包含 ally 226。
+- `get_context`：队伍字段改为 `assistant.team`，`radius` 以 tile 为单位过滤 near units；固定场景实测 `radius=4` 无邻近单位，`radius=15` 包含 ally 226。`since` 事件增量摘要实测 `eventsPending=4`/`byType.total=4`，推进到 `eventsSince` 后为 0。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。
 - 失败会返回错误或保持 running，不是假成功。
 

@@ -239,6 +239,13 @@ export class ProbeGameAdapter implements GameAdapter {
               buildings: cores,
             },
       eventsSince: Number(raw.eventsSince ?? 0),
+      eventsPending: Number(raw.eventsPending ?? 0),
+      eventSummary: raw.eventSummary
+        ? {
+            total: Number(raw.eventSummary.total ?? 0),
+            byType: (raw.eventSummary.byType ?? {}) as Record<string, number>,
+          }
+        : undefined,
     };
   }
 

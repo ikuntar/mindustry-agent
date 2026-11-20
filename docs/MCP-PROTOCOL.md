@@ -124,7 +124,7 @@ MCP server（Node/TypeScript）
 }
 ```
 
-返回 `GameContext`：tick、timeMs、paused、gameOver、map、mode、wave、enemies、team、teamName、player、assistant、resources、cores、counts、nearby、eventsSince。
+返回 `GameContext`：tick、timeMs、paused、gameOver、map、mode、wave、enemies、team、teamName、player、assistant、resources、cores、counts、nearby、eventsSince、eventsPending、eventSummary。
 
 `detail=summary` 不带 nearby；`full` 可扩大实体和字段；`radius` 以 tile 为单位。
 

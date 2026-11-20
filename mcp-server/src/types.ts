@@ -77,6 +77,11 @@ export interface GameContext {
     buildings: BuildingSnapshot[];
   };
   eventsSince?: number;
+  eventsPending?: number;
+  eventSummary?: {
+    total: number;
+    byType: Record<string, number>;
+  };
 }
 
 export interface Capabilities {

@@ -343,6 +343,15 @@ export class MockGameAdapter implements GameAdapter {
       },
       nearby,
       eventsSince: this.nextEventId - 1,
+      eventsPending: this.events.filter((event) => event.id > (options.since ?? 0)).length,
+      eventSummary: (() => {
+        const byType: Record<string, number> = {};
+        for (const event of this.events) {
+          if (event.id <= (options.since ?? 0)) continue;
+          byType[event.type] = (byType[event.type] ?? 0) + 1;
+        }
+        return { total: Object.values(byType).reduce((sum, count) => sum + count, 0), byType };
+      })(),
     };
   }
 

@@ -95,6 +95,13 @@ async function main(): Promise<void> {
   check("assistant alive", !context.assistant.dead);
   check("assistant has core", context.cores?.length > 0);
   check("context uses assistant team", context.team === context.assistant.team, `${context.team}/${context.assistant.team}`);
+  check(
+    "event delta matches summary",
+    context.eventSummary?.total === context.eventsPending,
+    `${context.eventSummary?.total}/${context.eventsPending}`,
+  );
+  const caughtUp = await tool("get_context", { detail: "summary", since: context.eventsSince });
+  check("event delta catches up", caughtUp.eventsPending === 0, String(caughtUp.eventsPending));
   if (expectedMap) check(`fixed map ${expectedMap}`, context.map === expectedMap, String(context.map));
 
   const local = await tool("get_context", { detail: "full", radius: 4 });

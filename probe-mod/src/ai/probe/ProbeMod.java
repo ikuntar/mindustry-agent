@@ -398,7 +398,8 @@ public class ProbeMod extends Mod {
 
         if ("get_context".equals(op)) {
             int radius = Math.max(0, request.getInt("radius", 0));
-            reply(command, context(radius));
+            int since = Math.max(0, request.getInt("since", 0));
+            reply(command, context(radius, since));
             return;
         }
 
@@ -1487,7 +1488,7 @@ public class ProbeMod extends Mod {
         return op;
     }
 
-    private Jval context(int radius) {
+    private Jval context(int radius, int since) {
         Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         Jval data = Jval.newObject()
                 .put("tick", Vars.state.tick)
@@ -1502,6 +1503,23 @@ public class ProbeMod extends Mod {
                 .put("paused", Vars.state.isPaused())
                 .put("gameOver", Vars.state.gameOver)
                 .put("eventsSince", eventSeq);
+
+        Jval eventByType = Jval.newObject();
+        int eventsPending = 0;
+        synchronized (eventLog) {
+            for (Jval event : eventLog) {
+                int id = event.getInt("id", 0);
+                if (id <= since) continue;
+                eventsPending++;
+                String type = event.get("type") == null ? "unknown" : event.get("type").asString();
+                Jval count = eventByType.get(type);
+                eventByType.put(type, (count == null ? 0 : count.asInt()) + 1);
+            }
+        }
+        data.put("eventsPending", eventsPending);
+        data.put("eventSummary", Jval.newObject()
+                .put("total", eventsPending)
+                .put("byType", eventByType));
 
         Jval assistantJson = Jval.newObject();
         if (assistant != null) {
