@@ -189,7 +189,11 @@ async function main(): Promise<void> {
 
     if (seed?.enemyBuilding || seed?.enemy) {
       const target = seed.enemyBuilding
-        ? { buildingId: seed.enemyBuilding.buildingId }
+        ? {
+            buildingId: seed.enemyBuilding.buildingId,
+            x: seed.enemyBuilding.x,
+            y: seed.enemyBuilding.y,
+          }
         : { unitId: seed.enemy.id };
       const attacked = parse(
         await client.callTool({
@@ -208,6 +212,31 @@ async function main(): Promise<void> {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
       console.log("attack result:", attackResult);
+
+      if (seed.enemyBuilding) {
+        const positionTarget = {
+          x: seed.enemyBuilding.x * 8 + 4,
+          y: seed.enemyBuilding.y * 8 + 4,
+        };
+        const positionAttack = parse(
+          await client.callTool({ name: "attack", arguments: { target: positionTarget } }),
+        );
+        console.log("position attack:", positionAttack);
+        let positionResult: any = positionAttack;
+        if (positionAttack.ok) {
+          for (let attempt = 0; attempt < 12; attempt++) {
+            positionResult = parse(
+              await client.callTool({
+                name: "get_action_result",
+                arguments: { opId: positionAttack.data?.opId, waitMs: 500 },
+              }),
+            );
+            if (positionResult.data?.status !== "running") break;
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          }
+        }
+        console.log("position attack result:", positionResult);
+      }
     }
 
     if (seed?.ore) {

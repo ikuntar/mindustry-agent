@@ -260,7 +260,8 @@ MCP server（Node/TypeScript）
 当前进度：
 
 - 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `query_area` / `move_to` / 单块 `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `possess` / `release` / `respawn` / `mine`；`get_content` 为静态注册表；`get_events` 为空页。
-- `attack` / `follow` 已接入口；`attack` 对敌方 container 实测 `targetHealth 220→0`，`follow` 仍缺稳定验收；`respawn` 已实测死亡后核心重生。
+- `attack` / `follow` 已接入口。`attack` 支持单位/建筑/坐标三种目标：建筑实测 `targetHealth 220→0`，坐标实测 done/inRange；单位目标未独立验收。`follow` 仍缺稳定验收。
+- `respawn` 已实测死亡后核心重生。
 - 其余动作在 probe adapter 返回 `not_implemented`，不是假成功。
 - 已验证 `query_area` 能读回真实 `conveyor`/`sorter`；`withdraw`/`deposit` 的 copper 5 与 `get_context` 携带量一致；`configure` sorter 成功；`command_units` 的 dagger 位移；`set_stance` holdPosition 成功。
 - 已验证附身/释放：home body despawn、目标 dagger 接管、release 后新 alpha 在核心生成；`isHome/possessing` 读回正确；`respawn` 死亡后 id 211→212、health 150。`mine` 实测 sand 1，`attack` 实测 220→0。

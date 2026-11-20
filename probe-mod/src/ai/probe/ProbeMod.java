@@ -112,15 +112,30 @@ public class ProbeMod extends Mod {
         for (Op op : ops.values()) {
             if (!"running".equals(op.status)) continue;
             if ("attack".equals(op.kind)) {
-                float health = -1f;
-                if (op.targetUnit != null) health = op.targetUnit.health;
-                else if (op.targetBuilding != null) health = op.targetBuilding.health;
-                if (health <= 0f) {
-                    op.status = "done";
-                    op.progress = 1f;
-                    op.data = Jval.newObject().put("targetHealth", 0f);
-                } else if (health > 0f) {
-                    op.data = Jval.newObject().put("targetHealth", health);
+                if (op.targetUnit != null || op.targetBuilding != null) {
+                    float health = op.targetUnit != null ? op.targetUnit.health : op.targetBuilding.health;
+                    if (health <= 0f) {
+                        op.status = "done";
+                        op.progress = 1f;
+                        op.data = Jval.newObject().put("targetHealth", 0f);
+                    } else {
+                        op.data = Jval.newObject().put("targetHealth", health);
+                    }
+                } else if (op.targetPosition != null) {
+                    float range = 0f;
+                    for (var weapon : assistant.type.weapons) range = Math.max(range, weapon.range());
+                    float distance = (float) Math.hypot(op.targetPosition.x - assistant.x, op.targetPosition.y - assistant.y);
+                    if (distance <= range) {
+                        op.status = "done";
+                        op.progress = 1f;
+                        op.data = Jval.newObject()
+                                .put("kind", "position")
+                                .put("x", op.targetPosition.x)
+                                .put("y", op.targetPosition.y)
+                                .put("inRange", true);
+                        controller.attackPosition = null;
+                        assistant.isShooting = false;
+                    }
                 }
             } else if ("mine".equals(op.kind)) {
                 if (assistant.stack != null && assistant.stack.amount > 0) {
@@ -713,31 +728,46 @@ public class ProbeMod extends Mod {
                 return;
             }
             Jval target = request.get("target");
-            Unit targetUnit = target == null ? null : findUnit(target);
-            Building targetBuilding = target == null ? null : findBuilding(target);
+            Unit targetUnit = null;
+            Building targetBuilding = null;
             Position position = null;
             Teamc entity = null;
-            if (targetUnit != null) {
+            String kind = "";
+            if (target == null) {
+                replyError(command, "bad_request", "Missing target");
+                return;
+            }
+            if (target.get("unitId") != null) {
+                targetUnit = findUnit(target);
+                if (targetUnit == null) {
+                    replyError(command, "unit_not_found", "Target unit not found");
+                    return;
+                }
                 if (targetUnit.team == assistant.team) {
                     replyError(command, "wrong_team", "Refusing to attack a unit on the assistant's team");
                     return;
                 }
                 position = targetUnit;
                 entity = targetUnit;
-            } else if (target != null && target.get("unitId") != null) {
-                replyError(command, "unit_not_found", "Target unit not found");
-                return;
-            } else if (targetBuilding != null) {
+                kind = "unit";
+            } else if (target.get("buildingId") != null) {
+                targetBuilding = findBuilding(target);
+                if (targetBuilding == null) {
+                    replyError(command, "building_not_found", "Target building not found");
+                    return;
+                }
                 if (targetBuilding.team == assistant.team) {
                     replyError(command, "wrong_team", "Refusing to attack a building on the assistant's team");
                     return;
                 }
                 position = targetBuilding;
                 entity = targetBuilding;
-            } else if (target != null && target.get("x") != null && target.get("y") != null) {
+                kind = "building";
+            } else if (target.get("x") != null && target.get("y") != null) {
                 position = new Vec2(target.get("x").asFloat(), target.get("y").asFloat());
+                kind = "position";
             } else {
-                replyError(command, "bad_request", "Missing target unit/building/position");
+                replyError(command, "bad_request", "Target must contain unitId, buildingId, or x/y");
                 return;
             }
             controller.target = null;
@@ -748,7 +778,9 @@ public class ProbeMod extends Mod {
             result.status = "running";
             result.targetUnit = targetUnit;
             result.targetBuilding = targetBuilding;
+            result.targetPosition = new Vec2(position.getX(), position.getY());
             result.data = Jval.newObject()
+                    .put("kind", kind)
                     .put("unitId", targetUnit == null ? -1 : targetUnit.id)
                     .put("buildingId", targetBuilding == null ? -1 : targetBuilding.id)
                     .put("x", position.getX())
@@ -1185,6 +1217,7 @@ public class ProbeMod extends Mod {
         Jval data;
         Unit targetUnit;
         Building targetBuilding;
+        Vec2 targetPosition;
 
         Jval toJson() {
             Jval json = Jval.newObject()
