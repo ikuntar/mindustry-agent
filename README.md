@@ -65,6 +65,8 @@ node harness/mock-openai-server.mjs # 另一个终端：本地 mock OpenAI endpo
 MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-harness
 # local Ollama OpenAI-compatible endpoint
 MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest npm run llm-harness
+# 真实本地模型 + 最终位置验收（需要已启动 Fortress 服务端和 probe）
+MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest LLM_FINAL_CONTEXT=1 LLM_EXPECT_NEAR_X=952 LLM_EXPECT_NEAR_Y=584 LLM_TASK='Call get_context, move to core.x+24 and report.' npm run llm-harness
 ```
 
 ## 备注

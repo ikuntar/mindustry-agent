@@ -139,6 +139,7 @@ async function main(): Promise<void> {
   let completionTokens = 0;
   let finalContent = "";
   let finalContext: unknown;
+  let verification: { expectedX: number; expectedY: number; tolerance: number; actualX?: number; actualY?: number; ok?: boolean } | undefined;
   const toolLog: { name: string; arguments?: Record<string, unknown>; ok: boolean; elapsedMs: number; result: string }[] = [];
 
   for (let step = 0; step < maxSteps; step++) {
@@ -181,10 +182,25 @@ async function main(): Promise<void> {
     finalContext = parse(result).parsed;
   }
 
+  if (process.env.LLM_EXPECT_NEAR_X != null && process.env.LLM_EXPECT_NEAR_Y != null) {
+    const expectedX = Number(process.env.LLM_EXPECT_NEAR_X);
+    const expectedY = Number(process.env.LLM_EXPECT_NEAR_Y);
+    const tolerance = Number(process.env.LLM_EXPECT_TOLERANCE ?? 32);
+    const context = finalContext as { data?: { assistant?: { x?: number; y?: number } } } | undefined;
+    const actualX = context?.data?.assistant?.x;
+    const actualY = context?.data?.assistant?.y;
+    const ok =
+      actualX != null &&
+      actualY != null &&
+      Math.hypot(actualX - expectedX, actualY - expectedY) <= tolerance;
+    verification = { expectedX, expectedY, tolerance, actualX, actualY, ok };
+    if (!ok) process.exitCode = 1;
+  }
+
   console.log(
     JSON.stringify(
       {
-        ok: true,
+        ok: process.exitCode !== 1,
         model,
         mock,
         task,
@@ -194,6 +210,7 @@ async function main(): Promise<void> {
         completionTokens,
         finalContent,
         finalContext,
+        verification,
         elapsedMs: Date.now() - started,
         toolLog,
       },
