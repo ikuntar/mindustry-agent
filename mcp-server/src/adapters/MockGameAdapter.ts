@@ -32,6 +32,7 @@ import {
   UnitStanceName,
   Vec2,
 } from "../types.js";
+import { structuredError } from "../errors.js";
 
 interface MockUnit extends UnitSnapshot {
   isAi: boolean;
@@ -297,7 +298,7 @@ export class MockGameAdapter implements GameAdapter {
 
   private fail(op: MockOp, code: string, message: string): void {
     op.status = "failed";
-    op.error = { code, message };
+    op.error = structuredError(code, message);
     if (this.currentOpId === op.id) this.currentOpId = null;
     this.emit("action_failed", { opId: op.id, kind: op.kind, code, message });
   }

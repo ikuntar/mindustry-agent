@@ -78,7 +78,7 @@
 - [x] 助手身体不可附身：非 `AIController` 控制器 + 显式拒绝
 - [x] 停机开关：probe `set_writes_enabled(enabled=false)` 时 `move_to` 返回 `writes_disabled/Probe writes are disabled`，读操作仍可用
 - [x] 动作日志：probe `get_action_log` 返回活跃/历史 op 的 `opId`、kind、status、progress、data、createdTick；ops 上限 256，优先淘汰已结束动作
-- [ ] 结构化失败原因
+- [x] 结构化失败原因：MCP error 带 `category`（input/rule/resource/world/transport/internal）和 `retryable`；未知物品、越界、资源不足、同队攻击等已分类
 
 ## M2：观测与上下文
 

@@ -7,6 +7,7 @@ import {
   GameAdapter,
   GameError,
 } from "./types.js";
+import { classifyError } from "./errors.js";
 
 const detailSchema = z.enum(["summary", "normal", "full"]);
 const contentSchema = z.enum(["all", "blocks", "units", "items", "liquids"]);
@@ -74,7 +75,8 @@ async function run<T>(fn: () => Promise<T>): Promise<CallToolResult> {
   } catch (error) {
     const code = error instanceof GameError ? error.code : "internal_error";
     const message = error instanceof Error ? error.message : String(error);
-    return textResult({ ok: false, error: { code, message } }, true);
+    const meta = classifyError(code);
+    return textResult({ ok: false, error: { code, message, ...meta } }, true);
   }
 }
 

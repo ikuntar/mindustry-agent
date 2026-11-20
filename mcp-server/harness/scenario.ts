@@ -51,10 +51,11 @@ async function expectToolError(
   args: Record<string, unknown>,
   contains: string,
   label = `${name} rejects ${contains}`,
-): Promise<void> {
+): Promise<any> {
   const result = parse(await client.callTool({ name, arguments: args }));
   const text = JSON.stringify(result);
   check(label, !result.ok && text.includes(contains), text.slice(0, 300));
+  return result;
 }
 
 async function rawProbe(name: string, args: Record<string, unknown> = {}): Promise<any> {
@@ -137,11 +138,16 @@ async function main(): Promise<void> {
 
   const coreId = context.cores?.[0]?.id;
   if (coreId != null) {
-    await expectToolError(
+  const invalidWithdraw = await expectToolError(
       "withdraw",
       { target: { buildingId: coreId }, item: "unobtainium-test", amount: 1 },
       "Unknown item",
     );
+  check(
+    "errors are classified as non-retryable input",
+    invalidWithdraw.error?.category === "input" && invalidWithdraw.error?.retryable === false,
+    JSON.stringify(invalidWithdraw.error),
+  );
   }
   await expectToolError("possess", { unitId: context.assistant.id }, "own body");
   await expectToolError(

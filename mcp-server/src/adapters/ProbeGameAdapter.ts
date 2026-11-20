@@ -3,8 +3,8 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
+import { structuredError } from "../errors.js";
 import {
-  ActionError,
   ActionLog,
   ActionResult,
   AreaQuery,
@@ -622,10 +622,10 @@ export class ProbeGameAdapter implements GameAdapter {
       data: raw.data,
     };
     if (raw.error) {
-      result.error = {
-        code: String(raw.error.code ?? "probe_error"),
-        message: String(raw.error.message ?? "Probe action failed"),
-      } satisfies ActionError;
+      result.error = structuredError(
+        String(raw.error.code ?? "probe_error"),
+        String(raw.error.message ?? "Probe action failed"),
+      );
     }
     return result;
   }

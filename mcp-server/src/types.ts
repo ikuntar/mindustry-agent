@@ -260,9 +260,13 @@ export interface CommandUnitsRequest {
 
 export type OpStatus = "queued" | "running" | "done" | "failed" | "cancelled";
 
+export type ErrorCategory = "input" | "rule" | "resource" | "world" | "transport" | "internal";
+
 export interface ActionError {
   code: string;
   message: string;
+  category?: ErrorCategory;
+  retryable?: boolean;
 }
 
 export interface ActionResult {
