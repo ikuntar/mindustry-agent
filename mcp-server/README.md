@@ -20,6 +20,8 @@ mod, then:
 
 ```bash
 MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
+# fixed-map scenario (starts Fortress, seeds, asserts movement/build/events/possess)
+../scripts/run-fixed-scenario.sh
 ```
 
 Implemented: `get_context`, `get_capabilities`, `get_content` (static registry),

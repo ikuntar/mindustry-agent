@@ -78,8 +78,9 @@
 
 ## M3：Harness / LLM 测试
 
-- [ ] 固定地图场景：铺带、供弹、防守 N 波、附身/解控/换核心重生
-- [ ] harness：MCP stdio 客户端，跑固定动作序列并断言
+- [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（移动/建造/事件摘要/附身/释放）
+- [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
+- [ ] harness：完整铺带、供弹、防守 N 波、换核心重生
 - [ ] LLM harness：接真实模型，记录工具调用、token、延迟
 - [ ] 指标：任务成功率、动作失败率、响应延迟、token/分钟、误伤玩家资产、助手死亡
 - [ ] 失败注入：越界、资源不足、错队、不可附身、无核心、LLM 超时

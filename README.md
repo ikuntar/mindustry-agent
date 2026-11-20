@@ -49,7 +49,7 @@ mindustry-ai/
 - [ ] 真实 Mindustry mod adapter 生产化（重连、心跳、多客户端、token 轮换）
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
-- [ ] 固定地图端到端验收
+- [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/移动/建造/事件摘要/附身/释放
 
 ## MCP 快速开始
 
@@ -59,6 +59,7 @@ npm install
 npm run build
 npm test        # MockGameAdapter + MCP 工具测试
 npm run harness # stdio harness（构建后运行）
+../scripts/run-fixed-scenario.sh # 启动 Fortress 固定地图 + 场景断言
 ```
 
 ## 备注
