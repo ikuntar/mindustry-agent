@@ -271,7 +271,7 @@ print({
 - `mindustry_data.open_dataset(ref)`。
 - 本地 token 解析、raw-v1 地图解码、NDJSON 事件读取；无 numpy 时回退纯 Python。
 - Hermes `execute_code` 示例和输出预算。
-- `mindustry_data/demo.py` 和 `test_data_plane.py` 已跑通。
+- `mindustry_data/demo.py` 和 `test_data_plane.py` 已跑通；`test_data_plane.py` 需要正在运行的 probe 数据面，未运行时会整体 skip（不再以 connection refused 失败）。
 
 ### Phase 4：MCP 接入（部分完成）
 

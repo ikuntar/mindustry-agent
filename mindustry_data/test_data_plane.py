@@ -23,9 +23,15 @@ def _discovery():
 class DataPlaneTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.info = _discovery()
-        cls.base = cls.info["dataBaseUrl"].rstrip("/")
-        cls.token = cls.info["dataToken"]
+        try:
+            cls.info = _discovery()
+            cls.base = cls.info["dataBaseUrl"].rstrip("/")
+            cls.token = cls.info["dataToken"]
+            request = urllib.request.Request(cls.base + "/manifest/current")
+            request.add_header("Authorization", f"Bearer {cls.token}")
+            urllib.request.urlopen(request, timeout=2).close()
+        except (OSError, KeyError, urllib.error.URLError) as error:
+            raise unittest.SkipTest(f"data plane is not running: {error}") from error
 
     def _request(self, path, method="GET", auth=True):
         request = urllib.request.Request(self.base + path, method=method)
