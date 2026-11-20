@@ -187,16 +187,19 @@ async function main(): Promise<void> {
       console.log("no ally found for command test");
     }
 
-    if (seed?.enemy) {
+    if (seed?.enemyBuilding || seed?.enemy) {
+      const target = seed.enemyBuilding
+        ? { buildingId: seed.enemyBuilding.buildingId }
+        : { unitId: seed.enemy.id };
       const attacked = parse(
         await client.callTool({
           name: "attack",
-          arguments: { target: { unitId: seed.enemy.id } },
+          arguments: { target },
         }),
       );
       console.log("attack:", attacked);
       let attackResult: any;
-      for (let attempt = 0; attempt < 16; attempt++) {
+      for (let attempt = 0; attempt < 20; attempt++) {
         attackResult = parse(
           await client.callTool({ name: "get_action_result", arguments: { opId: attacked.data?.opId, waitMs: 500 } }),
         );

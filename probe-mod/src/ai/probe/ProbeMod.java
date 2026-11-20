@@ -673,6 +673,36 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("spawn_enemy_building".equals(op)) {
+            // Probe/debug helper for attack tests; not part of the MCP surface.
+            Block block = Vars.content.block(request.getString("block", "container"));
+            if (block == null) {
+                replyError(command, "not_found", "Unknown block");
+                return;
+            }
+            int x = request.getInt("x", Integer.MIN_VALUE);
+            int y = request.getInt("y", Integer.MIN_VALUE);
+            if (!Vars.world.tiles.in(x, y)) {
+                replyError(command, "out_of_bounds", "Tile is outside the map");
+                return;
+            }
+            Tile tile = Vars.world.tile(x, y);
+            if (tile.build != null || !tile.block().isAir()) {
+                replyError(command, "occupied", "Tile is not empty");
+                return;
+            }
+            Team team = assistant != null && assistant.team == Team.crux ? Team.sharded : Team.crux;
+            tile.setBlock(block, team, 0);
+            Building building = tile.build;
+            reply(command, Jval.newObject()
+                    .put("buildingId", building == null ? -1 : building.id)
+                    .put("block", block.name)
+                    .put("x", x)
+                    .put("y", y)
+                    .put("health", building == null ? 0 : building.health));
+            return;
+        }
+
         if ("attack".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -929,6 +959,14 @@ public class ProbeMod extends Mod {
             int id = buildingId.asInt();
             for (Building building : Groups.build) {
                 if (building.id == id) return building;
+            }
+            for (int ty = 0; ty < Vars.world.height(); ty++) {
+                for (int tx = 0; tx < Vars.world.width(); tx++) {
+                    Tile tile = Vars.world.tile(tx, ty);
+                    if (tile != null && tile.build != null && tile.build.id == id) {
+                        return tile.build;
+                    }
+                }
             }
         }
         Jval x = target.get("x");

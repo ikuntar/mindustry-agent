@@ -61,6 +61,21 @@ async function main() {
     "spawn_enemy",
   );
 
+  let enemyBuilding = null;
+  const coreTileX = Math.floor(core.x / 8);
+  const coreTileY = Math.floor(core.y / 8);
+  for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [7, 0], [-7, 0]]) {
+    const response = await call("spawn_enemy_building", {
+      block: "container",
+      x: coreTileX + dx,
+      y: coreTileY + dy,
+    });
+    if (response.ok) {
+      enemyBuilding = response.data;
+      break;
+    }
+  }
+
   let ore = null;
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);
@@ -72,7 +87,7 @@ async function main() {
       }
     }
   }
-  console.log(JSON.stringify({ core, ally, enemy, ore }));
+  console.log(JSON.stringify({ core, ally, enemy, enemyBuilding, ore }));
   socket.end();
 }
 

@@ -82,19 +82,20 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `stop` 清理移动/攻击目标。
 - `mine`：在可达的 sand tile 上实测完成，assistant 获得 sand 1。
 - `possess` / `release`：同队 dagger 附身后 `assistant.id` 变为 dagger，`isHome=false/possessing=true`；原 home body 被 despawn；release 后 dagger 恢复控制器，核心生成新 alpha，`isHome=true`。
+- `attack`：用敌方 container 实测，目标 health 220→0，`get_action_result` 为 done；说明目标定位改为按 buildingId 扫描世界 tile 后才能稳定找到。
 - `respawn`：`kill_assistant` 后 `dead=true`，`respawn` 在核心生成新 alpha（id 211→212，health 150）。
-- `attack` 目标在探针场景中会消失/不可定位，尚未完成伤害验证；失败会返回错误或保持 running，不是假成功。
+- 失败会返回错误或保持 running，不是假成功。
 
 限制：
 
-- probe adapter 的 `respawn` 死亡路径和 `attack` 伤害仍不完整。
+- 之后仍需补 `deconstruct`/`repair`/`cancel`、`follow` 稳定性、`get_events`。
 - headless 服务端没有本地 `Player`，所以 `get_context.player.dead=true`；桌面客户端会不同。
 
 
 ## 结论
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。
-- Probe mod + `ProbeGameAdapter` 已把 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop`/`possess`/`release`/`respawn`/`mine` 接到真实游戏；物流、sorter 配置、指挥、stance、附身/释放、死亡重生、sand 挖矿已实测。
-- `attack` 伤害还没达到可交付标准；真实事件日志还没做。
+- Probe mod + `ProbeGameAdapter` 已把 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop`/`possess`/`release`/`respawn`/`mine`/`attack` 接到真实游戏；物流、sorter 配置、指挥、stance、附身/释放、死亡重生、sand 挖矿、攻击容器已实测。
+- 仍未完成：`deconstruct`/`repair`/`cancel`、`follow` 稳定验收、真实事件日志。
 - 版本基线默认 v160.8；BEK/MindustryX 的 v154 代码只作参考，不作为主干。
 - 不要直接用服务端 `js` 当生产接口；probe 只是过渡验证。
