@@ -559,7 +559,7 @@ export class MockGameAdapter implements GameAdapter {
 
   // ---------------------------------------------------------------- action surface
 
-  async moveTo(x: number, y: number, arriveRadius = 1): Promise<ActionResult> {
+  async moveTo(x: number, y: number, arriveRadius = 1, _timeoutTicks?: number): Promise<ActionResult> {
     const a = this.requireAlive();
     if (x < 0 || y < 0 || x >= MAP_SIZE || y >= MAP_SIZE) {
       throw new GameError("out_of_bounds", "Target outside the map");

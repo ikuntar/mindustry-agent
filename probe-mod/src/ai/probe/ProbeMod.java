@@ -364,6 +364,16 @@ public class ProbeMod extends Mod {
 
     private void updateMoveOps() {
         if (assistant == null || controller == null) return;
+        long tick = (long) Vars.state.tick;
+        for (Op op : ops.values()) {
+            if ("move".equals(op.kind) && "running".equals(op.status) && op.timeoutTick > 0 && tick >= op.timeoutTick) {
+                op.status = "failed";
+                op.data = Jval.newObject().put("code", "timeout").put("timeoutTicks", (long) (op.timeoutTick - op.createdTick));
+                controller.target = null;
+                assistant.moveAt(new Vec2());
+                assistant.vel.setZero();
+            }
+        }
         Vec2 target = controller.target;
         if (target == null) return;
 
@@ -1738,6 +1748,8 @@ public class ProbeMod extends Mod {
             Op result = newOp("move");
             result.arriveRadius = arriveRadius;
             result.startDistance = (float) Math.hypot(x - assistant.x, y - assistant.y);
+            int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
+            if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.status = "running";
             controller.target = new Vec2(x, y);
             reply(command, result.toJson());
@@ -2567,6 +2579,7 @@ public class ProbeMod extends Mod {
         float progress;
         float arriveRadius;
         float startDistance;
+        double timeoutTick;
         double createdTick;
         Jval data;
         Unit targetUnit;

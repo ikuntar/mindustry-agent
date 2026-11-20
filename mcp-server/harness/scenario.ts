@@ -260,6 +260,19 @@ async function main(): Promise<void> {
     JSON.stringify({ before: attackUnitBefore.health, after: attackUnitAfter.health, dead: attackUnitAfter.dead, gone: attackUnitGone }),
   );
 
+  const timeoutMove = await tool("move_to", {
+    x: context.assistant.x + 300,
+    y: context.assistant.y,
+    timeoutTicks: 1,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const timeoutMoveResult = await tool("get_action_result", { opId: timeoutMove.opId });
+  check(
+    "move timeout fails action",
+    timeoutMoveResult.status === "failed" && timeoutMoveResult.data?.code === "timeout",
+    JSON.stringify(timeoutMoveResult),
+  );
+
   const core = context.cores[0];
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);

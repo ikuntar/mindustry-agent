@@ -304,9 +304,10 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
         x: z.number(),
         y: z.number(),
         arriveRadius: z.number().positive().optional(),
+        timeoutTicks: z.number().int().min(0).max(1200).optional(),
       },
     },
-    async (args) => run(() => adapter.moveTo(args.x, args.y, args.arriveRadius)),
+    async (args) => run(() => adapter.moveTo(args.x, args.y, args.arriveRadius, args.timeoutTicks)),
   );
 
   server.registerTool(
