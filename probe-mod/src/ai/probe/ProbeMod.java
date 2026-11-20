@@ -864,6 +864,18 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("start_wave".equals(op)) {
+            // Probe/debug helper for survival-wave tests; not part of the MCP surface.
+            Vars.state.rules.waves = true;
+            Vars.state.rules.waveTimer = true;
+            Vars.state.wavetime = 0f;
+            reply(command, Jval.newObject()
+                    .put("wave", Vars.state.wave)
+                    .put("wavetime", Vars.state.wavetime)
+                    .put("spawnGroups", Vars.state.rules.spawns == null ? 0 : Vars.state.rules.spawns.size));
+            return;
+        }
+
         if ("set_core_items".equals(op)) {
             // Probe/debug helper for resource-failure tests; not part of the MCP surface.
             if (assistant == null) {
