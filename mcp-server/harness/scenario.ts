@@ -292,6 +292,55 @@ async function main(): Promise<void> {
     `${afterPath.assistant.x},${afterPath.assistant.y} vs ${pathTarget.x},${pathTarget.y}`,
   );
 
+  // Attack approach must use the same path around another wall.
+  const attackStartX = Math.floor(afterPath.assistant.x / 8);
+  const attackStartY = Math.floor(afterPath.assistant.y / 8);
+  const attackWallX = attackStartX + 5;
+  let attackWallBlocks = 0;
+  for (const dy of [-4, -2, 0, 2, 4]) {
+    try {
+      const placed = await rawProbe("spawn_enemy_building", {
+        block: "container",
+        x: attackWallX,
+        y: attackStartY + dy,
+      });
+      if (placed?.buildingId >= 0) attackWallBlocks++;
+    } catch {
+      // Ignore blocked tiles.
+    }
+  }
+  check("attack wall created", attackWallBlocks >= 3, String(attackWallBlocks));
+  const attackTargets: any[] = [];
+  for (const offset of [22, 24, 26, 28]) {
+    for (const dy of [0, 2, -2, 4, -4, 6, -6]) {
+      try {
+        const placed = await rawProbe("spawn_enemy_building", {
+          block: "container",
+          force: true,
+          x: attackStartX + offset,
+          y: attackStartY + dy,
+        });
+        if (placed?.buildingId >= 0) attackTargets.push(placed);
+      } catch {
+        // Try another target tile.
+      }
+    }
+    if (attackTargets.length) break;
+  }
+  const attackTarget = attackTargets[0];
+  check("attack target created", attackTarget?.buildingId >= 0, JSON.stringify(attackTargets));
+  await tool("attack", { target: { buildingId: attackTarget.buildingId } });
+  const attackTargetWorld = { x: attackTarget.x * 8 + 4, y: attackTarget.y * 8 + 4 };
+  let approached = false;
+  for (let i = 0; i < 30 && !approached; i++) {
+    const snapshot = await tool("get_context", { detail: "summary" });
+    approached =
+      Math.hypot(snapshot.assistant.x - attackTargetWorld.x, snapshot.assistant.y - attackTargetWorld.y) < 150;
+    if (!approached) await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  check("attack approach crosses wall region", approached);
+  await tool("cancel");
+
   console.log(
     JSON.stringify({
       ok: true,

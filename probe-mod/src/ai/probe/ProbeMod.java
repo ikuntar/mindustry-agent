@@ -998,7 +998,7 @@ public class ProbeMod extends Mod {
                 return;
             }
             Tile tile = Vars.world.tile(x, y);
-            if (tile.build != null || !tile.block().isAir()) {
+            if (!request.getBool("force", false) && (tile.build != null || !tile.block().isAir())) {
                 replyError(command, "occupied", "Tile is not empty");
                 return;
             }
