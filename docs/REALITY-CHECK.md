@@ -121,7 +121,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `get_area`：固定场景半径 2 读回 25 个 tile，`truncated=false`；工具只返回 bounded window，不返回全图。
 - `query_area`：building snapshot 增加 `itemList` 和炮塔 `ammoTotal`；固定场景 turret `ammoTotal=6`。
 - `get_tile` 返回 `config`；固定场景构建 sorter、`configure {item:"copper"}` 后 `get_tile.config="copper"`。
-- `get_config_schema`：probe 从真实 `Vars.content.block` 读取；sorter 的全部物品值来自 `Vars.content.items()`，固定场景返回 `configurable=true` 且 values 含 `copper`；unloader/switch/message/micro-processor 也有对应字段。
+- `get_config_schema`：probe 从真实 `Vars.content.block` 读取；固定场景 sorter `configurable=true` 且 values 含 `copper`，unloader 含 `north`，switch 字段为 `boolean`；message/micro-processor 也有对应字段。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。固定场景脚本现在默认以 `PROBE_REQUIRE_AUTH=1` 运行，seed、raw probe、MCP adapter 全部通过 token 握手。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
 - 失败会返回错误或保持 running，不是假成功。
 

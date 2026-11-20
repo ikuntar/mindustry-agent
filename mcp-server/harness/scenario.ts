@@ -146,6 +146,19 @@ async function main(): Promise<void> {
       ),
     JSON.stringify(sorterSchema),
   );
+  const unloaderSchema = await tool("get_config_schema", { block: "unloader" });
+  check(
+    "unloader config schema",
+    unloaderSchema.configurable === true &&
+      unloaderSchema.fields?.some((field: { values?: string[] }) => field.values?.includes("north")),
+    JSON.stringify(unloaderSchema),
+  );
+  const switchSchema = await tool("get_config_schema", { block: "switch" });
+  check(
+    "switch config schema",
+    switchSchema.configurable === true && switchSchema.fields?.[0]?.type === "boolean",
+    JSON.stringify(switchSchema),
+  );
 
   const coreId = context.cores?.[0]?.id;
   if (coreId != null) {
