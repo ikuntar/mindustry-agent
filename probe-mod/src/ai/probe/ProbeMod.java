@@ -2206,11 +2206,20 @@ public class ProbeMod extends Mod {
             if (target == null && unit.health <= unit.maxHealth * 0.3f) {
                 Unit threat = nearestEnemy(240f);
                 if (threat != null) {
-                    float dx = unit.x - threat.x;
-                    float dy = unit.y - threat.y;
-                    float length = (float) Math.hypot(dx, dy);
-                    if (length > 1f) {
-                        target = new Vec2(unit.x + dx / length * 120f, unit.y + dy / length * 120f);
+                    float currentDistance = (float) Math.hypot(threat.x - unit.x, threat.y - unit.y);
+                    CoreBuild safeCore = unit.team.core();
+                    if (safeCore != null
+                            && Math.hypot(safeCore.x - threat.x, safeCore.y - threat.y) > currentDistance + 40f) {
+                        target = new Vec2(safeCore.x, safeCore.y);
+                    } else {
+                        float dx = unit.x - threat.x;
+                        float dy = unit.y - threat.y;
+                        float length = (float) Math.hypot(dx, dy);
+                        if (length > 1f) {
+                            target = new Vec2(unit.x + dx / length * 120f, unit.y + dy / length * 120f);
+                        }
+                    }
+                    if (target != null) {
                         moveToward(target);
                         return;
                     }

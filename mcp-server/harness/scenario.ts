@@ -386,6 +386,10 @@ async function main(): Promise<void> {
     retreatStart.assistant.x - threatUnit.x,
     retreatStart.assistant.y - threatUnit.y,
   );
+  const coreBefore = retreatStart.cores?.[0];
+  const beforeCoreDistance = coreBefore
+    ? Math.hypot(retreatStart.assistant.x - coreBefore.x, retreatStart.assistant.y - coreBefore.y)
+    : Infinity;
   await new Promise((resolve) => setTimeout(resolve, 900));
   const retreatAfter = await tool("get_context", { detail: "summary" });
   const threatAfter = await rawProbe("get_unit", { unitId: autoEnemy.id });
@@ -393,10 +397,19 @@ async function main(): Promise<void> {
     retreatAfter.assistant.x - threatAfter.x,
     retreatAfter.assistant.y - threatAfter.y,
   );
+  const coreAfter = retreatAfter.cores?.[0];
+  const afterCoreDistance = coreAfter
+    ? Math.hypot(retreatAfter.assistant.x - coreAfter.x, retreatAfter.assistant.y - coreAfter.y)
+    : Infinity;
   check(
     "low-health retreat increases distance",
     afterDistance > beforeDistance + 20,
     `${beforeDistance} -> ${afterDistance}`,
+  );
+  check(
+    "low-health retreat moves toward safe core",
+    afterCoreDistance < beforeCoreDistance - 20,
+    `${beforeCoreDistance} -> ${afterCoreDistance}`,
   );
 
   console.log(
