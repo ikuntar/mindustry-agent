@@ -142,6 +142,17 @@ async function main(): Promise<void> {
     { placements: [{ block: "conveyor", x: -1, y: -1 }] },
     "outside the map",
   );
+  const copperForFixture = Number(context.resources?.copper ?? 100);
+  await rawProbe("set_core_items", { item: "copper", amount: 0 });
+  try {
+    await expectToolError(
+      "build_plan",
+      { placements: [{ block: "conveyor", x: 112, y: 75 }] },
+      "insufficient_resources",
+    );
+  } finally {
+    await rawProbe("set_core_items", { item: "copper", amount: copperForFixture });
+  }
   if (seed?.ally?.id) {
     await expectToolError("attack", { target: { unitId: seed.ally.id } }, "Refusing to attack a unit");
   }

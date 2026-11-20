@@ -101,7 +101,8 @@
 - [x] 失败注入：固定场景验证未知物品 `withdraw`、附身自己 `possess`、不存在建筑 `deposit`、越界 `mine`/`move_to`/`build_plan`、攻击同队单位都返回明确错误
 - [x] 失败注入：LLM 超时返回明确 `LLM request timed out after Nms` 并以非零退出
 - [x] LLM 重试：503 首次失败后重试成功（`llmRetries=1`）；重试耗尽时以 `LLM request failed: 503 ...` 退出 1
-- [ ] 失败注入：资源不足
+- [x] 失败注入：资源不足 `build_plan` 返回 `insufficient_resources` 和缺失物品数量
+- [ ] 多步 LLM 任务、完整 N 波防守、长线铺带
 
 ## M4：运行时/安全/多人
 

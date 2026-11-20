@@ -23,6 +23,7 @@ import mindustry.gen.Teamc;
 import mindustry.gen.Unit;
 import mindustry.mod.Mod;
 import mindustry.type.Item;
+import mindustry.type.ItemStack;
 import mindustry.type.UnitType;
 import mindustry.world.Block;
 import mindustry.world.Build;
@@ -863,6 +864,23 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("set_core_items".equals(op)) {
+            // Probe/debug helper for resource-failure tests; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Item item = Vars.content.item(request.getString("item", ""));
+            if (item == null) {
+                replyError(command, "not_found", "Unknown item");
+                return;
+            }
+            int amount = Math.max(0, request.getInt("amount", 0));
+            assistant.team.items().set(item, amount);
+            reply(command, Jval.newObject().put("item", item.name).put("amount", amount));
+            return;
+        }
+
         if ("give".equals(op)) {
             // Probe/debug helper for configuring/building tests; not part of the MCP surface.
             if (assistant == null) {
@@ -1470,6 +1488,19 @@ public class ProbeMod extends Mod {
             }
             if (!assistant.canBuild()) {
                 replyError(command, "cannot_build", "Assistant body has buildSpeed <= 0");
+                return;
+            }
+            if (block.requirements.length > 0 && !team.items().has(block.requirements)) {
+                StringBuilder missing = new StringBuilder();
+                for (ItemStack stack : block.requirements) {
+                    int need = (int) Math.ceil(stack.amount * block.buildCostMultiplier);
+                    int have = team.items().get(stack.item);
+                    if (have < need) {
+                        if (missing.length() > 0) missing.append(", ");
+                        missing.append(stack.item.name).append(" ").append(have).append("/").append(need);
+                    }
+                }
+                replyError(command, "insufficient_resources", "Missing " + missing);
                 return;
             }
 

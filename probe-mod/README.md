@@ -44,7 +44,7 @@ node client/probe-client.mjs
   `spawnedByCore=true` 单位会被引擎每帧 despawn。
 - `UnitController` 自定义控制器能控制真实单位。
 - `Unit.moveAt(Vec2)` 收的是**期望速度向量**，不是目标点；要自己算方向/速度。
-- `build` 走 `BuildPlan` + `BuilderComp`，会真实扣资源并完成；客户端用
+- `build` 走 `BuildPlan` + `BuilderComp`，会真实扣资源并完成；建造前检查队伍资源，不足返回 `insufficient_resources`；客户端用
   `get_tile`/MCP `query_area` 读回。
 - `withdraw`/`deposit`、`configure`、`command_units`、`set_stance`、`stop` 已在 probe 实现并实测；物流使用 220 范围与 `maxAccepted`。
 - `mine` 在可达 sand tile 上实测完成；`attack` 支持 `unitId`/`buildingId`/`x,y`，建筑实测 220→0、坐标实测 done/inRange，单位目标仍缺独立验收；`follow` 仍缺稳定验收。
@@ -57,4 +57,5 @@ node client/probe-client.mjs
 - `deconstruct`/`repair` 已实现并实测：deconstruct 后建筑消失，repair conveyor 25→45。
 - `get_events` 事件环已接：unit_destroy/unit_create/block_destroy/block_build_end/build_damage/unit_damage，支持 since/limit/next/dropped。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`（port/token/protocol/version/pid）；`hello` 握手；`ping`/heartbeat；`PROBE_REQUIRE_AUTH=1` 启用 token 校验；socket 命令入队，游戏每帧最多处理 50 条。adapter 重连已有 fake probe 单测。
-- `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`spawn_ally`/`spawn_enemy`/`spawn_ally_core`/`destroy_core`/`give`/`get_unit`/`kill_assistant`/`damage_building` 是测试辅助，不是 MCP 工具。
+- `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`spawn_ally`/`spawn_enemy`/`spawn_ally_core`/`destroy_core`/`give`/`set_core_items`/`get_unit`/`kill_assistant`/`damage_building` 是测试辅助，不是 MCP 工具。
+- 失败注入：固定场景验证未知物品 withdraw、越界 mine/move_to/build_plan、攻击同队单位、资源不足建造。
