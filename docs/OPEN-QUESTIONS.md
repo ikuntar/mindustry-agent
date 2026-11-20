@@ -1,7 +1,7 @@
 # OPEN QUESTIONS
 
-状态：待拍板 / 待验证
-更新：2026-11-18
+状态：默认值已在实现中采用；仍可一票否决 / 待验证
+更新：2026-11-21
 
 每条包含：问题、默认建议、影响范围。默认值可一票否决。
 
@@ -20,6 +20,7 @@
 ## Q3. `state.rules.possessionAllowed=false` 时是否仍可附身？
 
 - 默认：遵守规则，不可附身。
+- 状态：probe 读取 `state.rules.possessionAllowed`，false 时拒绝；固定场景已覆盖。
 - 影响：附身功能在部分地图/模式下不可用；符合“游戏规则”。
 
 ## Q4. “控制”是否包含建筑/核心控制？
@@ -61,6 +62,7 @@
 
 - 选项：本地 socket + token / WebSocket / HTTP。
 - 默认：localhost TCP + token + 版本握手 + 发现文件；MCP server 独占连接。
+- 状态：已实现；固定场景默认 `PROBE_REQUIRE_AUTH=1`，数据面另有只读 token。
 - 影响：安全、重连、多人。
 
 ## Q11. Harness 形态？
