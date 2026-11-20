@@ -88,7 +88,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `move_to`：地面单位新增 BFS 路径（solid tile 规避、对角不切角）；Fortress 场景 5 个 container 墙后目标 `(1084,588)`，助手到达 `(1089,588)`，`get_action_result=done`。`follow`/`attack` 的接近移动也走同一 helper；attack 用墙后目标容器验收，接近到 150px 内并 `cancel`。
 - 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 spawn dagger 后 health `150→123`。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。
-- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)`，核心取 5 copper 存入炮塔，spawn 敌人后 1.2s 内敌方 health `150→123`。
+- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)`，核心取 15 copper 存入炮塔，连续 spawn 2 个敌人，炮塔分别造成伤害（150→132、150→141）。
 - LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 26 tools、1 次 `get_context`、token/latency 记录。`harness/mock-openai-server.mjs` 已真实验证 HTTP 路径（`mock=false`、24/12 tokens）；真实供应商 endpoint 未验收。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
 - `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。

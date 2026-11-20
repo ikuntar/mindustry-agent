@@ -176,29 +176,42 @@ async function main(): Promise<void> {
   const withdrawnForTurret = await tool("withdraw", {
     target: { buildingId: core.id },
     item: "copper",
-    amount: 5,
+    amount: 15,
   });
-  check("withdraw for turret", withdrawnForTurret.data?.amount === 5, JSON.stringify(withdrawnForTurret));
+  check("withdraw for turret", withdrawnForTurret.data?.amount === 15, JSON.stringify(withdrawnForTurret));
   const depositedToTurret = await tool("deposit", {
     target: { buildingId: turret.buildingId ?? turret.id },
     item: "copper",
-    amount: 5,
+    amount: 15,
   });
-  check("deposit to turret", depositedToTurret.data?.amount === 5, JSON.stringify(depositedToTurret));
+  check("deposit to turret", depositedToTurret.data?.amount === 15, JSON.stringify(depositedToTurret));
 
-  const turretEnemy = await rawProbe("spawn_enemy", {
-    type: "dagger",
-    x: turret.tileX * 8 + 64,
-    y: turret.tileY * 8 + 4,
-  });
-  const turretEnemyBefore = await rawProbe("get_unit", { unitId: turretEnemy.id });
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  const turretEnemyAfter = await rawProbe("get_unit", { unitId: turretEnemy.id });
-  check(
-    "turret damages enemy",
-    turretEnemyAfter?.dead === true || turretEnemyAfter.health < turretEnemyBefore.health,
-    JSON.stringify({ before: turretEnemyBefore.health, after: turretEnemyAfter.health, dead: turretEnemyAfter.dead }),
-  );
+  const defenseWaves: { before: number; after: number; dead: boolean }[] = [];
+  for (const [dx, dy] of [[64, 0], [64, 24]]) {
+    const turretEnemy = await rawProbe("spawn_enemy", {
+      type: "dagger",
+      x: turret.tileX * 8 + dx,
+      y: turret.tileY * 8 + dy,
+    });
+    const turretEnemyBefore = await rawProbe("get_unit", { unitId: turretEnemy.id });
+    let turretEnemyAfter = turretEnemyBefore;
+    for (let attempt = 0; attempt < 80 && !turretEnemyAfter.dead; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      turretEnemyAfter = await rawProbe("get_unit", { unitId: turretEnemy.id });
+      if (turretEnemyAfter.health < turretEnemyBefore.health && attempt > 5) break;
+    }
+    check(
+      `turret damages enemy wave ${defenseWaves.length + 1}`,
+      turretEnemyAfter?.dead === true || turretEnemyAfter.health < turretEnemyBefore.health,
+      JSON.stringify({ before: turretEnemyBefore.health, after: turretEnemyAfter.health, dead: turretEnemyAfter.dead }),
+    );
+    defenseWaves.push({
+      before: turretEnemyBefore.health,
+      after: turretEnemyAfter.health,
+      dead: turretEnemyAfter.dead,
+    });
+  }
+  check("turret defends multiple waves", defenseWaves.length === 2, JSON.stringify(defenseWaves));
 
   const target = { x: core.x + 24, y: core.y };
   const moved = await tool("move_to", { ...target, arriveRadius: 12 });
