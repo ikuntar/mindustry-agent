@@ -119,6 +119,12 @@ async function main(): Promise<void> {
   );
   const caughtUp = await tool("get_context", { detail: "summary", since: context.eventsSince });
   check("event delta does not grow", caughtUp.eventsPending <= context.eventsPending, String(caughtUp.eventsPending));
+  const content = await tool("get_content", { type: "units" });
+  check(
+    "real content includes units",
+    content.units?.some((unit: { name: string }) => unit.name === "dagger") && content.units.length > 4,
+    String(content.units?.length),
+  );
   if (expectedMap) check(`fixed map ${expectedMap}`, context.map === expectedMap, String(context.map));
 
   const coreId = context.cores?.[0]?.id;

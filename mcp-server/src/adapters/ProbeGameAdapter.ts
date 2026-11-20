@@ -324,24 +324,7 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async getContent(type: ContentType = "all"): Promise<ContentSnapshot> {
-    const blocks = [
-      { name: "conveyor", size: 1, rotate: true },
-      { name: "router", size: 1, rotate: false },
-      { name: "sorter", size: 1, rotate: false },
-      { name: "unloader", size: 1, rotate: true },
-      { name: "micro-processor", size: 1, rotate: false },
-      { name: "core-shard", size: 3, rotate: false },
-      { name: "core-foundation", size: 4, rotate: false },
-      { name: "core-nucleus", size: 5, rotate: false },
-    ];
-    const units = ["alpha", "beta", "gamma", "dagger"].map((name) => ({ name }));
-    const items = ["copper", "lead", "graphite", "metaglass", "silicon", "titanium"].map((name) => ({ name }));
-    const liquids = [{ name: "water" }];
-    if (type === "blocks") return { blocks };
-    if (type === "units") return { units };
-    if (type === "items") return { items };
-    if (type === "liquids") return { liquids };
-    return { blocks, units, items, liquids };
+    return (await this.call("get_content", { type })) as ContentSnapshot;
   }
 
   async getMapSummary(): Promise<MapSummary> {

@@ -135,7 +135,7 @@ MCP server（Node/TypeScript）
 ### `get_content`
 
 参数：`{ "type": "all" | "blocks" | "units" | "items" | "liquids" }`。
-返回注册表条目；模型用来查方块/物品/单位名字。
+返回真实游戏注册表条目；blocks 含 `name/size/health/requirements`，units 含 `name/health/flying/playerControllable`。
 
 ### `get_map_summary`
 
@@ -308,7 +308,7 @@ MCP server（Node/TypeScript）
 
 当前进度：
 
-- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `get_area` / `query_area` / `move_to` / `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `attack` / `mine` / `follow` / `possess` / `release` / `respawn` / `deconstruct` / `repair` / `cancel`；`get_content` 为静态注册表。
+- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `get_area` / `query_area` / `get_content` / `move_to` / `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `attack` / `mine` / `follow` / `possess` / `release` / `respawn` / `deconstruct` / `repair` / `cancel`；`get_content` 从游戏内容读取。、
 - `get_events` 已接真实事件环；大体积地图/事件不通过 MCP 工具结果传输，见 `docs/REMOTE-DATA-PLANE.md`。
 `unit_destroy`/`unit_create`/`block_destroy`/`block_build_end`/`build_damage`/`unit_damage`，支持 `since/limit/next/dropped`；高频 `build_damage` 会占满页。
 - `attack` / `follow` 已接入口。`attack` 支持单位/建筑/坐标三种目标：建筑实测 `targetHealth 220→0`，坐标实测 done/inRange；单位目标未独立验收。`follow` 仍缺稳定验收。

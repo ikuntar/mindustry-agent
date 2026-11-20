@@ -24,6 +24,7 @@ import mindustry.gen.Unit;
 import mindustry.mod.Mod;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
+import mindustry.type.Liquid;
 import mindustry.type.UnitType;
 import mindustry.world.Block;
 import mindustry.world.Build;
@@ -504,6 +505,55 @@ public class ProbeMod extends Mod {
                         .put("dropped", dropped)
                         .put("hasMore", hasMore));
             }
+            return;
+        }
+
+        if ("get_content".equals(op)) {
+            String type = request.getString("type", "all");
+            Jval data = Jval.newObject();
+            if ("all".equals(type) || "blocks".equals(type)) {
+                Jval blocks = Jval.newArray();
+                for (Block block : Vars.content.blocks()) {
+                    Jval requirements = Jval.newArray();
+                    for (ItemStack stack : block.requirements) {
+                        requirements.add(Jval.newObject()
+                                .put("item", stack.item.name)
+                                .put("amount", stack.amount));
+                    }
+                    blocks.add(Jval.newObject()
+                            .put("name", block.name)
+                            .put("size", block.size)
+                            .put("health", block.health)
+                            .put("requirements", requirements));
+                }
+                data.put("blocks", blocks);
+            }
+            if ("all".equals(type) || "units".equals(type)) {
+                Jval units = Jval.newArray();
+                for (UnitType unit : Vars.content.units()) {
+                    units.add(Jval.newObject()
+                            .put("name", unit.name)
+                            .put("health", unit.health)
+                            .put("flying", unit.flying)
+                            .put("playerControllable", unit.playerControllable));
+                }
+                data.put("units", units);
+            }
+            if ("all".equals(type) || "items".equals(type)) {
+                Jval items = Jval.newArray();
+                for (Item item : Vars.content.items()) {
+                    items.add(Jval.newObject().put("name", item.name).put("id", item.id));
+                }
+                data.put("items", items);
+            }
+            if ("all".equals(type) || "liquids".equals(type)) {
+                Jval liquids = Jval.newArray();
+                for (Liquid liquid : Vars.content.liquids()) {
+                    liquids.add(Jval.newObject().put("name", liquid.name).put("id", liquid.id));
+                }
+                data.put("liquids", liquids);
+            }
+            reply(command, data);
             return;
         }
 
