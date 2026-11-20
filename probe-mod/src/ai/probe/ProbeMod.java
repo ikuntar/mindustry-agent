@@ -1432,6 +1432,10 @@ public class ProbeMod extends Mod {
                     .put("health", unit.health)
                     .put("maxHealth", unit.maxHealth)
                     .put("dead", unit.dead)
+                    .put("isAI", unit.isAI())
+                    .put("isPlayer", unit.isPlayer())
+                    .put("playerControllable", unit.type.playerControllable)
+                    .put("controller", unit.controller() == null ? "" : unit.controller().getClass().getSimpleName())
                     .put("item", unit.item() == null ? "" : unit.item().name)
                     .put("itemAmount", unit.stack == null ? 0 : unit.stack.amount));
             return;

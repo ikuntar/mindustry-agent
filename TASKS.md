@@ -69,7 +69,8 @@
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
 - [x] 多核心 fixture：probe 调试 op `spawn_ally_core` 创建同队核心；Fortress 场景已验证从第二个核心重生（home body id 变化、坐标在第二个核心附近）
-- [ ] 借体解控：`resetController()`，不消失；命令恢复
+- [x] 借体解控基本验证：`release` 后目标 dagger 控制器恢复为 `CommandAI`（非 ProbeController），单位未消失
+- [ ] 借体解控后的命令恢复/复杂 AI 状态
 - [ ] 人口绕过只限重生/默认身体
 - [ ] 团队规则：全程 `assistant.team`；`team.rules()` / `state.rules`
 - [x] 附身基本校验：同队（敌方单位 `wrong_team`）、非助手自己身体（`bad_target`）；`isAI`/`playerControllable`/玩家身体仍待补

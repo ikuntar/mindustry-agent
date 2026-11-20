@@ -456,6 +456,12 @@ async function main(): Promise<void> {
     check("possess completed", possessed.status === "done" && possessed.data?.unitId, JSON.stringify(possessed));
     const release = await tool("release");
     check("release completed", release.status === "done", JSON.stringify(release));
+    const releasedInfo = await rawProbe("get_unit", { unitId: release.data?.releasedUnitId });
+    check(
+      "release restores non-probe controller",
+      releasedInfo?.controller && releasedInfo.controller !== "ProbeController",
+      JSON.stringify(releasedInfo),
+    );
     await rawProbe("set_possession_allowed", { allowed: false });
     await expectToolError("possess", { unitId: seed.ally.id }, "possession_disabled");
     await rawProbe("set_possession_allowed", { allowed: true });
