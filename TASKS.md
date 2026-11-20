@@ -93,7 +93,8 @@
 - [ ] harness：完整铺带、供弹、防守 N 波、换核心重生
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
 - [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、26 tools、1 次工具调用、24/12 tokens
-- [ ] LLM harness：接真实模型并跑固定任务（真实供应商 endpoint 未验收）
+- [x] LLM harness 真实本地模型：Ollama `lfm3:latest` 经 `/v1` 在 mock adapter 和真实 Fortress probe 上都调用 `get_context`；真实 probe 26 tools、6237/426 tokens、2.4s
+- [ ] LLM harness：接外部供应商 endpoint 并跑固定动作任务
 - [ ] 指标：任务成功率、动作失败率、响应延迟、token/分钟、误伤玩家资产、助手死亡（harness 已记录基础计数）
 - [ ] 失败注入：越界、资源不足、错队、不可附身、无核心、LLM 超时
 

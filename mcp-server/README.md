@@ -27,6 +27,8 @@ LLM_MOCK=1 MINDUSTRY_AI_ADAPTER=mock npm run llm-harness
 # local HTTP mock endpoint (second terminal)
 node harness/mock-openai-server.mjs
 MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-harness
+# local Ollama (OpenAI-compatible)
+MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest npm run llm-harness
 ```
 
 Implemented: `get_context`, `get_capabilities`, `get_content` (static registry),

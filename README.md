@@ -63,6 +63,8 @@ npm run harness # stdio harness（构建后运行）
 LLM_MOCK=1 MINDUSTRY_AI_ADAPTER=mock npm run llm-harness # 无凭证工具循环 dry run
 node harness/mock-openai-server.mjs # 另一个终端：本地 mock OpenAI endpoint
 MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-harness
+# local Ollama OpenAI-compatible endpoint
+MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest npm run llm-harness
 ```
 
 ## 备注

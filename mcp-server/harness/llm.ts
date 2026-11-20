@@ -137,6 +137,7 @@ async function main(): Promise<void> {
   let toolCalls = 0;
   let promptTokens = 0;
   let completionTokens = 0;
+  let finalContent = "";
   const toolLog: { name: string; ok: boolean; elapsedMs: number; result: string }[] = [];
 
   for (let step = 0; step < maxSteps; step++) {
@@ -146,7 +147,10 @@ async function main(): Promise<void> {
     messages.push(message);
 
     const calls = message.tool_calls ?? [];
-    if (!calls.length) break;
+    if (!calls.length) {
+      finalContent = message.content ?? "";
+      break;
+    }
     for (const call of calls) {
       let args: Record<string, unknown> = {};
       try {
@@ -181,6 +185,7 @@ async function main(): Promise<void> {
         toolCalls,
         promptTokens,
         completionTokens,
+        finalContent,
         elapsedMs: Date.now() - started,
         toolLog,
       },
