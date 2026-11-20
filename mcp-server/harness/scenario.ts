@@ -187,6 +187,12 @@ async function main(): Promise<void> {
   const tileWindow = await tool("get_area", { x: core.x, y: core.y, radius: 2 });
   check("bounded area is available", tileWindow.tiles?.length === 25, String(tileWindow.tiles?.length));
   check("bounded area reports no truncation", tileWindow.truncated === false);
+  const truncatedWindow = await tool("get_area", { x: core.x, y: core.y, radius: 24, maxTiles: 10 });
+  check(
+    "bounded area truncates at maxTiles",
+    truncatedWindow.tiles?.length === 10 && truncatedWindow.truncated === true,
+    JSON.stringify({ tiles: truncatedWindow.tiles?.length, truncated: truncatedWindow.truncated }),
+  );
 
   // Supply loop: build a turret, load it from the core, and prove it can fire.
   let turretPlacement: any;
