@@ -33,7 +33,7 @@
 - [x] respawn：kill 后 `assistant.dead=true`，`respawn` 在核心生成新 alpha（id 变化、health 150）
 - [x] Probe/真实 adapter 动作：deconstruct/repair/cancel/follow 均有入口和实测；follow 语义仍简化
 - [x] 真实 adapter 事件日志：事件环已接，见 `get_events`
-- [ ] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
+- [x] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
 - [x] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手：`/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol/version，`PROBE_REQUIRE_AUTH=1` 时校验 token
 - [x] 游戏线程动作队列 + 每帧预算：socket 只入队，游戏 `update` 每帧最多处理 50 条；LLM 调用不在游戏线程
 - [x] 心跳与连接重试：probe `ping`；adapter 每 `PROBE_HEARTBEAT_MS`（默认 15s）发心跳，连接失败重试 3 次；`PROBE_HEARTBEAT_MS=200` 固定场景通过
@@ -120,14 +120,14 @@
 
 ## M4：运行时/安全/多人
 
-- [ ] 本地 socket 鉴权、localhost only、token
+- [x] 本地 socket 鉴权、localhost only、token（probe 绑定 127.0.0.1；`PROBE_REQUIRE_AUTH=1` 时校验 discovery token）
 - [x] 动作 allowlist：`MCP_ALLOWED_TOOLS`/`MCP_DENIED_TOOLS` 在注册阶段过滤工具；`MCP_ALLOWED_TOOLS=get_context` 实测只暴露 1 个工具，`move_to` 调用被拒绝
 - [x] 写动作速率限制：`MCP_WRITE_RATE_LIMIT`（每秒）；limit=1 时首个写成功，第二个返回 `rate_limited`（retryable=true）
 - [ ] API key 只在伴生进程；日志脱敏
 - [ ] 存档/读档记忆处理
 - [ ] 跨区块/跨地图重生
 - [ ] 本地主机/专用服/其他玩家可见性
-- [ ] 重连、版本握手
+- [x] 重连、版本握手
 - [x] 动作幂等：MCP 工具接受可选 `idempotencyKey`；成功结果在进程内缓存（最多 256 个），重复 key 返回同一 `opId`，固定场景实测两次 `move_to` 返回同一动作
 
 ## 未决项
