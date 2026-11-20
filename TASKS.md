@@ -89,7 +89,7 @@
 
 - [x] `get_context` 摘要 + 局部窗口（radius，tile）+ 团队取 assistant.team + `since` 事件增量摘要 + `includeEnemies` 的 `threats`（最多 16 个）+ `maxUnits`（1–64，默认 20，返回 `unitsTruncated`）+ `maxBytes`（有界裁剪，返回 `bytesTruncated`）+ 粗略 `bytes`
 - [ ] token 预算、detail/radius/since 的完整分页/resource
-- [x] `configure` 端到端：固定场景建 sorter 并配置 `copper`，`get_tile.config="copper"`；建 switch 并配置 `true`，回读 `"true"`；同时覆盖 sorter/unloader/switch/message/processor schema
+- [x] `configure` 端到端：固定场景建 sorter 并配置 `copper`，`get_tile.config="copper"`；建 switch 并配置 `true/false`，回读 `"true"/"false"`；同时覆盖 sorter/unloader/switch/message/processor schema
 - [ ] 可指挥单位 + stance + 命令队列
 - [ ] 玩家上下文：当前选择/镜头/当前工具（如果后续做对话/指令）
 - [ ] 事件合并与 dropped 检测

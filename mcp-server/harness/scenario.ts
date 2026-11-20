@@ -454,6 +454,13 @@ async function main(): Promise<void> {
       switchTile.config === "true",
       JSON.stringify({ config: switchTile.config }),
     );
+    await tool("configure", { x: switchBuilding.tileX, y: switchBuilding.tileY, value: false });
+    const switchOffTile = await rawProbe("get_tile", { x: switchBuilding.tileX, y: switchBuilding.tileY });
+    check(
+      "switch config false round-trips",
+      switchOffTile.config === "false",
+      JSON.stringify({ config: switchOffTile.config }),
+    );
   }
 
   let feeder: any;
