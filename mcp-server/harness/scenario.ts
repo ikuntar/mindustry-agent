@@ -420,6 +420,42 @@ async function main(): Promise<void> {
     );
   }
 
+  let switchBuilding: any;
+  const switchErrors: string[] = [];
+  for (const [dx, dy] of [[5, 5], [5, -5], [-5, 5], [-5, -5], [6, 0], [0, 6], [-6, 0], [0, -6]]) {
+    const tile = { x: baseX + dx, y: baseY + dy };
+    const attemptedSwitch = parse(
+      await client.callTool({
+        name: "build_plan",
+        arguments: { placements: [{ block: "switch", ...tile }] },
+      }),
+    );
+    if (!attemptedSwitch.ok) {
+      switchErrors.push(`${tile.x},${tile.y}: ${attemptedSwitch.error?.code ?? "error"}`);
+      continue;
+    }
+    for (let poll = 0; poll < 20 && !switchBuilding; poll++) {
+      const area = await tool("query_area", { x: core.x, y: core.y, radius: 48 });
+      switchBuilding = area.buildings?.find(
+        (building: { block: string; tileX: number; tileY: number }) =>
+          building.block === "switch" && building.tileX === tile.x && building.tileY === tile.y,
+      );
+      if (!switchBuilding) await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    if (switchBuilding) break;
+    switchErrors.push(`${tile.x},${tile.y}: not visible`);
+  }
+  check("switch built", switchBuilding?.buildingId ?? switchBuilding?.id, switchErrors.join("; "));
+  if (switchBuilding) {
+    await tool("configure", { x: switchBuilding.tileX, y: switchBuilding.tileY, value: true });
+    const switchTile = await rawProbe("get_tile", { x: switchBuilding.tileX, y: switchBuilding.tileY });
+    check(
+      "get_tile reads switch config",
+      switchTile.config === "true",
+      JSON.stringify({ config: switchTile.config }),
+    );
+  }
+
   let feeder: any;
   let feederTile: { x: number; y: number } | undefined;
   const feederErrors: string[] = [];

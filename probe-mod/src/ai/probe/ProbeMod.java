@@ -1962,7 +1962,7 @@ public class ProbeMod extends Mod {
     private Object configValue(Jval value) {
         if (value == null || value.isNull()) return null;
         if (value.isString()) return value.asString();
-        if (value.isBoolean()) return value.asInt() != 0;
+        if (value.isBoolean()) return value.asBool();
         if (value.isNumber()) return value.asInt();
         if (value.isObject()) {
             Jval item = value.get("item");
