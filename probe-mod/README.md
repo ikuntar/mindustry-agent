@@ -56,5 +56,5 @@ node client/probe-client.mjs
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 209→62、敌方距离 63→84。
 - `deconstruct`/`repair` 已实现并实测：deconstruct 后建筑消失，repair conveyor 25→45。
 - `get_events` 事件环已接：unit_destroy/unit_create/block_destroy/block_build_end/build_damage/unit_damage，支持 since/limit/next/dropped。
-- 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`（port/token/protocol/version/pid）；`hello` 握手；`ping`/heartbeat；`PROBE_REQUIRE_AUTH=1` 启用 token 校验；socket 命令入队，游戏每帧最多处理 50 条。
+- 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`（port/token/protocol/version/pid）；`hello` 握手；`ping`/heartbeat；`PROBE_REQUIRE_AUTH=1` 启用 token 校验；socket 命令入队，游戏每帧最多处理 50 条。adapter 重连已有 fake probe 单测。
 - `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`spawn_ally`/`spawn_enemy`/`spawn_ally_core`/`destroy_core`/`give`/`get_unit`/`kill_assistant`/`damage_building` 是测试辅助，不是 MCP 工具。
