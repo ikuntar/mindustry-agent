@@ -135,6 +135,68 @@ async function main(): Promise<void> {
   check("map summary has no tiles", !("tiles" in summary));
 
   const core = context.cores[0];
+  const baseX = Math.floor(core.x / 8);
+  const baseY = Math.floor(core.y / 8);
+
+  // Supply loop: build a turret, load it from the core, and prove it can fire.
+  let turretPlacement: any;
+  const turretErrors: string[] = [];
+  for (const [dx, dy] of [[-3, 2], [3, 2], [-3, -2], [3, -2], [2, 3], [-2, 3], [4, 2], [-4, 2]]) {
+    const attempted = parse(
+      await client.callTool({
+        name: "build_plan",
+        arguments: { placements: [{ block: "duo", x: baseX + dx, y: baseY + dy }] },
+      }),
+    );
+    if (attempted.ok) {
+      turretPlacement = { ...attempted.data, tile: { x: baseX + dx, y: baseY + dy } };
+      break;
+    }
+    turretErrors.push(`${dx},${dy}: ${attempted.error?.code ?? "error"}`);
+  }
+  check("turret built", turretPlacement, turretErrors.join("; "));
+  await waitAction(turretPlacement.opId);
+  let turret: any;
+  let turretArea: any;
+  for (let attempt = 0; attempt < 20 && !turret; attempt++) {
+    turretArea = await tool("query_area", { x: core.x, y: core.y, radius: 96 });
+    turret = turretArea.buildings?.find(
+      (building: { block: string; tileX: number; tileY: number }) =>
+        building.block === "duo" &&
+        building.tileX === turretPlacement.tile.x &&
+        building.tileY === turretPlacement.tile.y,
+    );
+    if (!turret) await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  check("turret visible", turret?.buildingId ?? turret?.id, JSON.stringify(turretArea?.buildings));
+
+  const withdrawnForTurret = await tool("withdraw", {
+    target: { buildingId: core.id },
+    item: "copper",
+    amount: 5,
+  });
+  check("withdraw for turret", withdrawnForTurret.data?.amount === 5, JSON.stringify(withdrawnForTurret));
+  const depositedToTurret = await tool("deposit", {
+    target: { buildingId: turret.buildingId ?? turret.id },
+    item: "copper",
+    amount: 5,
+  });
+  check("deposit to turret", depositedToTurret.data?.amount === 5, JSON.stringify(depositedToTurret));
+
+  const turretEnemy = await rawProbe("spawn_enemy", {
+    type: "dagger",
+    x: turret.tileX * 8 + 64,
+    y: turret.tileY * 8 + 4,
+  });
+  const turretEnemyBefore = await rawProbe("get_unit", { unitId: turretEnemy.id });
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const turretEnemyAfter = await rawProbe("get_unit", { unitId: turretEnemy.id });
+  check(
+    "turret damages enemy",
+    turretEnemyAfter?.dead === true || turretEnemyAfter.health < turretEnemyBefore.health,
+    JSON.stringify({ before: turretEnemyBefore.health, after: turretEnemyAfter.health, dead: turretEnemyAfter.dead }),
+  );
+
   const target = { x: core.x + 24, y: core.y };
   const moved = await tool("move_to", { ...target, arriveRadius: 12 });
   await waitAction(moved.opId);
@@ -145,8 +207,6 @@ async function main(): Promise<void> {
     `${afterMove.assistant.x},${afterMove.assistant.y}`,
   );
 
-  const baseX = Math.floor(core.x / 8);
-  const baseY = Math.floor(core.y / 8);
   let placement: any;
   let placementTiles: { x: number; y: number }[] = [];
   let multiBuilt = false;
