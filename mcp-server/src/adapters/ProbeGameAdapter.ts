@@ -1,4 +1,7 @@
+import fs from "node:fs";
 import net from "node:net";
+import os from "node:os";
+import path from "node:path";
 
 import {
   ActionError,
@@ -45,29 +48,41 @@ export interface ProbeAdapterOptions {
   host?: string;
   port?: number;
   timeoutMs?: number;
+  token?: string;
 }
 
 /**
  * Real-game adapter for probe-mod.
  *
- * The probe only implements a subset: get_context, get_capabilities, get_tile,
- * move_to, build, get_action_result. Everything else fails with
- * `not_implemented` rather than pretending to work.
+ * Connects to the local probe socket, performs a `hello` protocol handshake,
+ * and maps the 24 MCP tools to real game operations where the probe supports
+ * them. Unsupported operations fail explicitly rather than pretending to work.
  */
 export class ProbeGameAdapter implements GameAdapter {
   private readonly host: string;
   private readonly port: number;
   private readonly timeoutMs: number;
+  private readonly token?: string;
   private socket?: net.Socket;
   private buffer = "";
   private nextId = 1;
   private actionSeq = 0;
+  private handshaken = false;
   private pending = new Map<number, Pending>();
 
   constructor(options: ProbeAdapterOptions = {}) {
+    let discovery: { port?: number; token?: string } | undefined;
+    try {
+      const discoveryPath =
+        process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+      discovery = JSON.parse(fs.readFileSync(discoveryPath, "utf8"));
+    } catch {
+      discovery = undefined;
+    }
     this.host = options.host ?? process.env.PROBE_HOST ?? "127.0.0.1";
-    this.port = options.port ?? Number(process.env.PROBE_PORT ?? 46500);
+    this.port = options.port ?? Number(process.env.PROBE_PORT ?? discovery?.port ?? 46500);
     this.timeoutMs = options.timeoutMs ?? 5000;
+    this.token = options.token ?? process.env.PROBE_TOKEN ?? discovery?.token;
   }
 
   // ---------------------------------------------------------------- transport
@@ -93,6 +108,7 @@ export class ProbeGameAdapter implements GameAdapter {
       socket.on("data", (chunk) => this.handleData(chunk));
       socket.on("close", () => {
         this.socket = undefined;
+        this.handshaken = false;
         this.rejectAll(new GameError("probe_closed", "Probe socket closed"));
       });
     });
@@ -137,16 +153,28 @@ export class ProbeGameAdapter implements GameAdapter {
 
   private async call(op: string, args: Record<string, unknown> = {}): Promise<any> {
     await this.connect();
+    if (!this.handshaken) {
+      this.handshaken = true;
+      const hello = await this.send("hello", { token: this.token });
+      if (Number(hello?.protocol ?? 0) !== 1) {
+        throw new GameError("probe_incompatible", `Unsupported probe protocol: ${String(hello?.protocol)}`);
+      }
+    }
+    return await this.send(op, args);
+  }
+
+  private async send(op: string, args: Record<string, unknown> = {}): Promise<any> {
     const socket = this.socket;
     if (!socket || socket.destroyed) throw new GameError("probe_unavailable", "Probe socket is not connected");
     const id = this.nextId++;
+    const payload = { id, op, ...args, ...(this.token ? { token: this.token } : {}) };
     return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new GameError("probe_timeout", `Probe request timed out: ${op}`));
       }, this.timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
-      socket.write(JSON.stringify({ id, op, ...args }) + "\n");
+      socket.write(JSON.stringify(payload) + "\n");
     });
   }
 

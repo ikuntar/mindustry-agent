@@ -40,8 +40,11 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -55,6 +58,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class ProbeMod extends Mod {
     private static final int PORT = 46500;
+    private static final int PROTOCOL_VERSION = 1;
+    private static final String VERSION = "0.1.0";
+
+    private final String token = UUID.randomUUID().toString();
+    private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
 
     private final ConcurrentLinkedQueue<Command> queue = new ConcurrentLinkedQueue<>();
     private final Map<String, Op> ops = new HashMap<>();
@@ -311,6 +319,20 @@ public class ProbeMod extends Mod {
     private void handle(Command command) {
         Jval request = command.request;
         String op = request.getString("op", "");
+
+        if (requireAuth && !"hello".equals(op) && !token.equals(request.getString("token", ""))) {
+            replyError(command, "unauthorized", "Missing or invalid probe token");
+            return;
+        }
+
+        if ("hello".equals(op)) {
+            reply(command, Jval.newObject()
+                    .put("protocol", PROTOCOL_VERSION)
+                    .put("version", VERSION)
+                    .put("port", PORT)
+                    .put("requireAuth", requireAuth));
+            return;
+        }
 
         if ("get_context".equals(op)) {
             reply(command, context());
@@ -1412,6 +1434,7 @@ public class ProbeMod extends Mod {
     private void startSocket() {
         Thread thread = new Thread(() -> {
             try (ServerSocket server = new ServerSocket(PORT, 50, InetAddress.getByName("127.0.0.1"))) {
+                writeDiscovery();
                 while (true) {
                     Socket socket = server.accept();
                     Thread client = new Thread(() -> clientLoop(socket), "ai-probe-client");
@@ -1424,6 +1447,26 @@ public class ProbeMod extends Mod {
         }, "ai-probe-socket");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    private void writeDiscovery() {
+        try {
+            Path directory = Path.of(System.getProperty("java.io.tmpdir"), "mindustry-ai-probe");
+            Files.createDirectories(directory);
+            Path file = directory.resolve("bridge-info.json");
+            String json = Jval.newObject()
+                    .put("port", PORT)
+                    .put("token", token)
+                    .put("protocol", PROTOCOL_VERSION)
+                    .put("version", VERSION)
+                    .put("requireAuth", requireAuth)
+                    .put("pid", ProcessHandle.current().pid())
+                    .toString(Jval.Jformat.plain);
+            Files.writeString(file, json, StandardCharsets.UTF_8);
+            Log.info("[ai-probe] discovery written: " + file);
+        } catch (IOException error) {
+            Log.err("[ai-probe] failed to write discovery file", error);
+        }
     }
 
     private void clientLoop(Socket socket) {

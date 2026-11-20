@@ -268,9 +268,9 @@ MCP server（Node/TypeScript）
 - 已验证附身/释放：home body despawn、目标 dagger 接管、release 后新 alpha 在核心生成；`isHome/possessing` 读回正确；`respawn` 死亡后 id 211→212、health 150。`mine` 实测 sand 1，`attack` 实测 220→0。
 
 待实现：
-- 本地 socket 协议、发现文件、token、版本握手、重连。
-- 游戏线程动作队列 + 每帧预算；LLM 调用离线程。
-- `get_context` 的真实数据（单位/建筑/核心/资源/波次）。
+- 重连、心跳、多客户端互斥、token 轮换。
+- 游戏线程动作队列 + 每帧预算；LLM 调用离线程（probe 已有每帧 50 条上限，正式 adapter 还需要更细预算/背压）。
+- `get_context` 的真实数据（单位/建筑/核心/资源/波次）；`get_content` 仍静态。
 - 真实 `build_plan`：逐块 `Build.validPlace` + `Build.beginPlace(assistantUnit, ...)` + 物品/时间；不允许 `constructFinish`。
 - 真实 `withdraw/deposit`：`interactable` + 220 范围 + `maxAccepted`；不用 `Vars.player`。
 - 真实 `configure`：`build.configured(assistantUnit, value)`；逻辑代码校验。

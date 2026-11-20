@@ -1,4 +1,15 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import net from "node:net";
+
+const discoveryPath = process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+let token;
+try {
+  token = JSON.parse(fs.readFileSync(discoveryPath, "utf8")).token;
+} catch {
+  token = undefined;
+}
 
 const socket = net.createConnection({ host: "127.0.0.1", port: Number(process.env.PROBE_PORT ?? 46500) });
 const pending = new Map();
@@ -31,7 +42,7 @@ function call(op, args = {}, timeoutMs = 5000) {
       clearTimeout(timer);
       resolve(response);
     });
-    socket.write(JSON.stringify({ id, op, ...args }) + "\n");
+    socket.write(JSON.stringify({ id, op, ...args, ...(token ? { token } : {}) }) + "\n");
   });
 }
 

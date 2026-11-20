@@ -30,12 +30,13 @@
 - [x] mine：probe op + adapter 已接；在挖矿可达的 sand tile 上实测 `get_action_result` done，助手获得 sand 1
 - [x] possess / release：同队 dagger 附身、原 home body despawn、release 后在核心生成新 alpha；`isHome/possessing` 读回正确
 - [x] respawn：kill 后 `assistant.dead=true`，`respawn` 在核心生成新 alpha（id 变化、health 150）
-- [ ] Probe/真实 adapter 剩余动作：deconstruct/repair/cancel、follow 稳定性
-- [ ] 真实 adapter 事件日志（当前 `get_events` 空页）
+- [x] Probe/真实 adapter 动作：deconstruct/repair/cancel/follow 均有入口和实测；follow 语义仍简化
+- [x] 真实 adapter 事件日志：事件环已接，见 `get_events`
 - [ ] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
-- [ ] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手
-- [ ] 游戏线程动作队列 + 每帧预算；LLM 调用离线程
-- [ ] `get_context` / `get_capabilities` / `get_content` / `query_area` 真实数据
+- [x] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手：`/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol/version，`PROBE_REQUIRE_AUTH=1` 时校验 token
+- [x] 游戏线程动作队列 + 每帧预算：socket 只入队，游戏 `update` 每帧最多处理 50 条；LLM 调用不在游戏线程
+- [ ] 重连、心跳、多客户端互斥、token 轮换
+- [ ] `get_context` / `get_capabilities` / `get_content` / `query_area` 真实数据（get_content 仍静态）
 - [x] `build_plan`：单块已验证；adapter 已支持多 placement/deconstruct 顺序提交，多块未单独验收
 - [x] `deconstruct` / `repair`：probe 已实现；deconstruct 在 MCP 侧实测建筑消失，repair 在 probe 侧实测 25→45
 - [x] `withdraw` / `deposit`：核心取放 5 copper 已验证
