@@ -1666,6 +1666,7 @@ public class ProbeMod extends Mod {
                     .put("isAI", unit.isAI())
                     .put("isPlayer", unit.isPlayer())
                     .put("playerControllable", unit.type.playerControllable)
+                    .put("flying", unit.type.flying)
                     .put("controller", unit.controller() == null ? "" : unit.controller().getClass().getSimpleName())
                     .put("item", unit.item() == null ? "" : unit.item().name)
                     .put("itemAmount", unit.stack == null ? 0 : unit.stack.amount));

@@ -16,6 +16,7 @@ const INPUT = new Set([
   "invalid_placement",
   "out_of_bounds",
   "bad_target",
+  "unreachable",
 ]);
 
 const RULE = new Set([

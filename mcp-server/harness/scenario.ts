@@ -515,6 +515,15 @@ async function main(): Promise<void> {
   if (seed?.ally?.id) {
     const possessed = await tool("possess", { unitId: seed.ally.id });
     check("possess completed", possessed.status === "done" && possessed.data?.unitId, JSON.stringify(possessed));
+    const possessedUnit = await rawProbe("get_unit", { unitId: seed.ally.id });
+    if (possessedUnit?.flying === false && context.cores?.[0]) {
+      await expectToolError(
+        "move_to",
+        { x: context.cores[0].x, y: context.cores[0].y },
+        "solid for a ground unit",
+        "possessed ground move_to rejects solid",
+      );
+    }
     const release = await tool("release");
     check("release completed", release.status === "done", JSON.stringify(release));
     const releasedInfo = await rawProbe("get_unit", { unitId: release.data?.releasedUnitId });
