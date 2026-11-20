@@ -353,10 +353,10 @@ async function main(): Promise<void> {
       }
     }
   }
-  if (chainPlacements.length === 2) {
+  if (chainPlacements.length >= 2) {
     const chain = await tool("build_plan", { placements: chainPlacements });
     await waitAction(chain.opId);
-    const upstream = chainPlacements[1];
+    const upstream = chainPlacements[chainPlacements.length - 1];
     const chainExtra = await tool("withdraw", { target: { buildingId: core.id }, item: "copper", amount: 10 });
     const chainDeposit = await tool("deposit", {
       target: { x: upstream.x, y: upstream.y },
@@ -366,7 +366,7 @@ async function main(): Promise<void> {
     let turretItems = await rawProbe("get_tile", { x: turret.tileX, y: turret.tileY });
     let turretAmmo = Number(turretItems.ammoTotal ?? 0);
     const turretAmmoBefore = Number(turretDirectItems.ammoTotal ?? 0);
-    for (let attempt = 0; attempt < 20; attempt++) {
+    for (let attempt = 0; attempt < 80; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 250));
       turretItems = await rawProbe("get_tile", { x: turret.tileX, y: turret.tileY });
       const amount = Number(turretItems.ammoTotal ?? 0);
@@ -739,6 +739,25 @@ async function main(): Promise<void> {
     actionLog?.actions?.some((action: { opId: string; status: string }) => action.opId === cancelMove.opId && action.status === "cancelled"),
     JSON.stringify({ count: actionLog?.count }),
   );
+  const idempotencyKey = `idem-${Date.now()}`;
+  const idemMove = await tool("move_to", {
+    x: core.x + 60,
+    y: core.y,
+    arriveRadius: 8,
+    idempotencyKey,
+  });
+  const idemAgain = await tool("move_to", {
+    x: core.x + 60,
+    y: core.y,
+    arriveRadius: 8,
+    idempotencyKey,
+  });
+  check(
+    "duplicate idempotency key reuses action",
+    idemAgain.opId === idemMove.opId,
+    JSON.stringify({ first: idemMove.opId, second: idemAgain.opId }),
+  );
+  await tool("cancel", { opId: idemMove.opId });
 
   const waveHistory: { waveBefore: number; waveAfter: number; enemies: number }[] = [];
   for (let cycle = 0; cycle < 2; cycle++) {

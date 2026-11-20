@@ -91,6 +91,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 `ammoTotal=6`；再建 2 段上游 conveyor，向最上游存入 2 copper 后炮塔 `ammoTotal=8`；连续 spawn 4 个敌人均被命中（150→141）。完整 survival wave 未做。
 - 失败注入：固定场景验证 `withdraw` 未知物品返回 `not_found/Unknown item`、`possess` 自己返回 `bad_target/Cannot possess the assistant's own body`、`deposit` 不存在建筑返回 `building_not_found/No target building`；越界 `mine`/`build_plan` 返回 `out_of_bounds/Tile is outside the map`，越界 `move_to` 返回 `out_of_bounds/Target is outside the map`；`attack` 同队单位返回 `wrong_team/Refusing to attack a unit`；资源清零后 `build_plan` 返回 `insufficient_resources/Missing copper 0/1`。
 - 定向 `cancel`：`move_to` 后 `cancel {opId}` 返回 `cancelled=1`，对应 `get_action_result` 状态为 `cancelled`。
+- 幂等：MCP 工具可选 `idempotencyKey`；固定场景两次相同 `move_to` key 返回同一个 `opId`（`op-12`），第二次不创建新动作。
 - 借体解控：`release` 后 released dagger 的 `get_unit.controller` 为 `CommandAI`，不是 `ProbeController`；单位未消失。
 - `possessionAllowed`：规则关闭时 `possess` 返回 `possession_disabled/Possession is disabled in the current rules`。
 - 附身校验：敌方 dagger `possess` 返回 `wrong_team/Target unit is not on the assistant's team`；助手自己身体返回 `bad_target`；临时把 dagger 类型的 `playerControllable` 设为 false 后返回 `not_possessable/Target unit type is not player-controllable`。
