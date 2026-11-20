@@ -58,7 +58,7 @@
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
-- [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}` 已实测；无核心、核心被拆仍待补
+- [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
 - [x] 多核心 fixture：probe 调试 op `spawn_ally_core` 创建同队核心；Fortress 场景已验证从第二个核心重生（home body id 变化、坐标在第二个核心附近）
 - [ ] 借体解控：`resetController()`，不消失；命令恢复
 - [ ] 人口绕过只限重生/默认身体

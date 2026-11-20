@@ -83,7 +83,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `mine`：在可达的 sand tile 上实测完成，assistant 获得 sand 1。
 - `possess` / `release`：同队 dagger 附身后 `assistant.id` 变为 dagger，`isHome=false/possessing=true`；原 home body 被 despawn；release 后 dagger 恢复控制器，核心生成新 alpha，`isHome=true`。
 - `attack` 支持三种目标：`unitId`（单位）、`buildingId`（建筑）和 `x,y`（坐标）；建筑实测 220→0，坐标实测 done/inRange。单位目标入口已接，但独立伤害验收受测试单位消失影响。
-- `respawn`：probe 接受 `coreId`，只在目标核心属于助手队伍且 `allowSpawn` 时生成；MCP 固定场景实测从第二个核心重生，坐标 `968,584`、coreId `228`，home body id 变化。
+- `respawn`：probe 接受 `coreId`，只在目标核心属于助手队伍且 `allowSpawn` 时生成；MCP 固定场景实测从第二个核心重生，坐标 `968,584`、coreId `228`，home body id 变化。无核心时返回 `no_core`；核心重建后自动生成新 home body（id `247`，坐标 `972,582`）。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
 - `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。
 - `follow`：MCP follow 后助手位置变化；`cancel` 成功取消 follow。

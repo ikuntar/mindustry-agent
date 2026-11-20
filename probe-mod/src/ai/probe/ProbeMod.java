@@ -845,6 +845,23 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("destroy_core".equals(op)) {
+            // Probe/debug helper for no-core respawn tests; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            int coreId = request.getInt("coreId", -1);
+            CoreBuild targetCore = findTeamCore(coreId);
+            if (targetCore == null) {
+                replyError(command, "core_not_found", "No team core with id " + coreId);
+                return;
+            }
+            targetCore.kill();
+            reply(command, Jval.newObject().put("coreId", coreId).put("removed", true));
+            return;
+        }
+
         if ("possess".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -951,7 +968,7 @@ public class ProbeMod extends Mod {
             } else {
                 ensureAssistant();
             }
-            if (assistant == null) {
+            if (assistant == null || assistant.dead) {
                 replyError(command, "no_core", "No core is available for respawn");
                 return;
             }

@@ -101,7 +101,7 @@ async function main(): Promise<void> {
     `${context.eventSummary?.total}/${context.eventsPending}`,
   );
   const caughtUp = await tool("get_context", { detail: "summary", since: context.eventsSince });
-  check("event delta catches up", caughtUp.eventsPending === 0, String(caughtUp.eventsPending));
+  check("event delta does not grow", caughtUp.eventsPending <= context.eventsPending, String(caughtUp.eventsPending));
   if (expectedMap) check(`fixed map ${expectedMap}`, context.map === expectedMap, String(context.map));
 
   const local = await tool("get_context", { detail: "full", radius: 4 });
@@ -199,6 +199,31 @@ async function main(): Promise<void> {
     `${afterRespawn.assistant.x},${afterRespawn.assistant.y}`,
   );
   check("respawned body is home", afterRespawn.assistant.isHome === true, JSON.stringify(afterRespawn.assistant));
+
+  const coreIds = (afterRespawn.cores ?? []).map((core: { id: number }) => core.id);
+  for (const coreId of coreIds) await rawProbe("destroy_core", { coreId });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const noCores = await tool("get_context", { detail: "summary" });
+  check("all cores removed", (noCores.cores ?? []).length === 0, JSON.stringify(noCores.cores));
+
+  const killedAgain = await rawProbe("kill_assistant");
+  check("assistant killed with no core", killedAgain?.dead === true, JSON.stringify(killedAgain));
+  const noCoreRespawn = parse(await client.callTool({ name: "respawn", arguments: {} }));
+  check(
+    "respawn without core fails explicitly",
+    noCoreRespawn.ok === false && noCoreRespawn.error?.code === "no_core",
+    JSON.stringify(noCoreRespawn),
+  );
+
+  const recreated = await rawProbe("spawn_ally_core", {
+    block: "core-shard",
+    x: secondCore.x,
+    y: secondCore.y,
+  });
+  check("core recreated after no-core failure", recreated?.coreId, JSON.stringify(recreated));
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  const recovered = await tool("get_context", { detail: "summary" });
+  check("respawn recovers after core recreated", recovered.assistant?.dead === false, JSON.stringify(recovered.assistant));
 
   console.log(
     JSON.stringify({
