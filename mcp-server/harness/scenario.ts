@@ -153,6 +153,12 @@ async function main(): Promise<void> {
   } finally {
     await rawProbe("set_core_items", { item: "copper", amount: copperForFixture });
   }
+  const enemyForPossession = await rawProbe("spawn_enemy", {
+    type: "dagger",
+    x: context.cores[0].x + 200,
+    y: context.cores[0].y,
+  });
+  await expectToolError("possess", { unitId: enemyForPossession.id }, "not on the assistant's team");
   if (seed?.ally?.id) {
     await expectToolError("attack", { target: { unitId: seed.ally.id } }, "Refusing to attack a unit");
   }
