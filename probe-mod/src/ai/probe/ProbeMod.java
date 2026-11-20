@@ -1712,6 +1712,13 @@ public class ProbeMod extends Mod {
                 replyError(command, "no_assistant", "Assistant is not spawned");
                 return;
             }
+            if (!assistant.type.flying) {
+                Tile targetTile = Vars.world.tile(World.toTile(x), World.toTile(y));
+                if (targetTile == null || targetTile.solid()) {
+                    replyError(command, "unreachable", "Target tile is solid for a ground unit");
+                    return;
+                }
+            }
 
             Op result = newOp("move");
             result.arriveRadius = arriveRadius;
