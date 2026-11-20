@@ -524,10 +524,14 @@ public class ProbeMod extends Mod {
 
         if ("get_content".equals(op)) {
             String type = request.getString("type", "all");
+            String query = request.getString("query", "").toLowerCase();
+            int limit = Math.max(0, Math.min(500, request.getInt("limit", 0)));
             Jval data = Jval.newObject();
             if ("all".equals(type) || "blocks".equals(type)) {
                 Jval blocks = Jval.newArray();
                 for (Block block : Vars.content.blocks()) {
+                    if (!matches(block.name, query)) continue;
+                    if (limit > 0 && blocks.asArray().size >= limit) break;
                     Jval requirements = Jval.newArray();
                     for (ItemStack stack : block.requirements) {
                         requirements.add(Jval.newObject()
@@ -545,6 +549,8 @@ public class ProbeMod extends Mod {
             if ("all".equals(type) || "units".equals(type)) {
                 Jval units = Jval.newArray();
                 for (UnitType unit : Vars.content.units()) {
+                    if (!matches(unit.name, query)) continue;
+                    if (limit > 0 && units.asArray().size >= limit) break;
                     units.add(Jval.newObject()
                             .put("name", unit.name)
                             .put("health", unit.health)
@@ -556,6 +562,8 @@ public class ProbeMod extends Mod {
             if ("all".equals(type) || "items".equals(type)) {
                 Jval items = Jval.newArray();
                 for (Item item : Vars.content.items()) {
+                    if (!matches(item.name, query)) continue;
+                    if (limit > 0 && items.asArray().size >= limit) break;
                     items.add(Jval.newObject().put("name", item.name).put("id", item.id));
                 }
                 data.put("items", items);
@@ -563,6 +571,8 @@ public class ProbeMod extends Mod {
             if ("all".equals(type) || "liquids".equals(type)) {
                 Jval liquids = Jval.newArray();
                 for (Liquid liquid : Vars.content.liquids()) {
+                    if (!matches(liquid.name, query)) continue;
+                    if (limit > 0 && liquids.asArray().size >= limit) break;
                     liquids.add(Jval.newObject().put("name", liquid.name).put("id", liquid.id));
                 }
                 data.put("liquids", liquids);
@@ -1684,6 +1694,10 @@ public class ProbeMod extends Mod {
             if (unit.id == id) return unit;
         }
         return null;
+    }
+
+    private boolean matches(String name, String query) {
+        return query == null || query.isEmpty() || name.toLowerCase().contains(query);
     }
 
     private UnitStance findStance(String name) {

@@ -125,6 +125,14 @@ async function main(): Promise<void> {
     content.units?.some((unit: { name: string }) => unit.name === "dagger") && content.units.length > 4,
     String(content.units?.length),
   );
+  const filteredContent = await tool("get_content", { type: "units", query: "dag", limit: 5 });
+  check(
+    "content query and limit filter units",
+    filteredContent.units?.length > 0 &&
+      filteredContent.units.length <= 5 &&
+      filteredContent.units.some((unit: { name: string }) => unit.name === "dagger"),
+    JSON.stringify(filteredContent.units?.map((unit: { name: string }) => unit.name)),
+  );
   if (expectedMap) check(`fixed map ${expectedMap}`, context.map === expectedMap, String(context.map));
 
   const coreId = context.cores?.[0]?.id;

@@ -326,8 +326,8 @@ export class ProbeGameAdapter implements GameAdapter {
     };
   }
 
-  async getContent(type: ContentType = "all"): Promise<ContentSnapshot> {
-    return (await this.call("get_content", { type })) as ContentSnapshot;
+  async getContent(type: ContentType = "all", query = "", limit = 0): Promise<ContentSnapshot> {
+    return (await this.call("get_content", { type, query, limit })) as ContentSnapshot;
   }
 
   async getMapSummary(): Promise<MapSummary> {

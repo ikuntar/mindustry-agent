@@ -324,7 +324,7 @@ export interface MapSummary extends DatasetRef {
 export interface GameAdapter {
   getContext(options?: ContextOptions): Promise<GameContext>;
   getCapabilities(): Promise<Capabilities>;
-  getContent(type?: ContentType): Promise<ContentSnapshot>;
+  getContent(type?: ContentType, query?: string, limit?: number): Promise<ContentSnapshot>;
   getMapSummary(): Promise<MapSummary>;
   getEvents(since: number, limit: number, summary?: boolean, types?: string[]): Promise<EventPage>;
   getActionLog(limit?: number): Promise<ActionLog>;

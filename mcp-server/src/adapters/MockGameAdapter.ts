@@ -384,8 +384,13 @@ export class MockGameAdapter implements GameAdapter {
     };
   }
 
-  async getContent(type: ContentType = "all"): Promise<ContentSnapshot> {
-    const blocks = [
+  async getContent(type: ContentType = "all", query = "", limit = 0): Promise<ContentSnapshot> {
+    const match = <T extends { name: string }>(items: T[]): T[] => {
+      const normalized = query.toLowerCase();
+      const filtered = normalized ? items.filter((item) => item.name.toLowerCase().includes(normalized)) : items;
+      return limit > 0 ? filtered.slice(0, limit) : filtered;
+    };
+    const blocks = match([
       { name: "core-shard", localizedName: "Core: Shard", size: 3, rotate: false },
       { name: "conveyor", localizedName: "Conveyor", size: 1, rotate: true },
       { name: "router", localizedName: "Router", size: 1, rotate: false },
@@ -395,16 +400,16 @@ export class MockGameAdapter implements GameAdapter {
       { name: "message", localizedName: "Message", size: 1, rotate: false },
       { name: "switch", localizedName: "Switch", size: 1, rotate: false },
       { name: "duo", localizedName: "Duo", size: 1, rotate: true },
-    ];
-    const units = [
+    ]);
+    const units = match([
       { name: "alpha", localizedName: "Alpha", flying: true, health: 200, speed: 1 },
       { name: "dagger", localizedName: "Dagger", flying: true, health: 120, speed: 1.3 },
-    ];
-    const items = ["copper", "lead", "graphite", "silicon", "titanium"].map((name) => ({
+    ]);
+    const items = match(["copper", "lead", "graphite", "silicon", "titanium"].map((name) => ({
       name,
       localizedName: name,
-    }));
-    const liquids = [{ name: "water", localizedName: "Water" }];
+    })));
+    const liquids = match([{ name: "water", localizedName: "Water" }]);
 
     if (type === "blocks") return { blocks };
     if (type === "units") return { units };

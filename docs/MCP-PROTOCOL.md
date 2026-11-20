@@ -135,7 +135,7 @@ MCP server（Node/TypeScript）
 
 ### `get_content`
 
-参数：`{ "type": "all" | "blocks" | "units" | "items" | "liquids" }`。
+参数：`{ "type": "all" | "blocks" | "units" | "items" | "liquids", "query": "dag", "limit": 20 }`。`query` 按名称子串过滤，`limit` 限制每类返回条目数（最大 500）。
 返回真实游戏注册表条目；blocks 含 `name/size/health/requirements`，units 含 `name/health/flying/playerControllable`。
 
 ### `get_map_summary`

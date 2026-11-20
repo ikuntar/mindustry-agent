@@ -126,10 +126,14 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
     "get_content",
     {
       description: "Read the content registry for blocks, units, items, or liquids.",
-      inputSchema: { type: contentSchema.optional() },
+      inputSchema: {
+        type: contentSchema.optional(),
+        query: z.string().max(64).optional(),
+        limit: z.number().int().positive().max(500).optional(),
+      },
       annotations: readOnly,
     },
-    async (args) => run(() => adapter.getContent(args.type)),
+    async (args) => run(() => adapter.getContent(args.type, args.query, args.limit)),
   );
 
   server.registerTool(
