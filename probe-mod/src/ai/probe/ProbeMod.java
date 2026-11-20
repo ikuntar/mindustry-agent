@@ -397,7 +397,8 @@ public class ProbeMod extends Mod {
         }
 
         if ("get_context".equals(op)) {
-            reply(command, context());
+            int radius = Math.max(0, request.getInt("radius", 0));
+            reply(command, context(radius));
             return;
         }
 
@@ -1486,8 +1487,8 @@ public class ProbeMod extends Mod {
         return op;
     }
 
-    private Jval context() {
-        Team team = Vars.state.rules.defaultTeam;
+    private Jval context(int radius) {
+        Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         Jval data = Jval.newObject()
                 .put("tick", Vars.state.tick)
                 .put("timeMs", Time.millis())
@@ -1548,6 +1549,8 @@ public class ProbeMod extends Mod {
         Seq<Unit> teamUnits = team.data().units;
         for (int i = 0; i < teamUnits.size && i < 20; i++) {
             Unit unit = teamUnits.get(i);
+            if (radius > 0 && assistant != null
+                    && Math.hypot(unit.x - assistant.x, unit.y - assistant.y) > radius * 8f) continue;
             units.add(Jval.newObject()
                     .put("id", unit.id)
                     .put("type", unit.type.name)

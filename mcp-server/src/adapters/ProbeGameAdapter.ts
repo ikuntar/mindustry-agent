@@ -182,7 +182,10 @@ export class ProbeGameAdapter implements GameAdapter {
   // ---------------------------------------------------------------- read
 
   async getContext(options: ContextOptions = {}): Promise<GameContext> {
-    const raw = await this.call("get_context");
+    const raw = await this.call("get_context", {
+      radius: options.radius ?? 0,
+      since: options.since ?? 0,
+    });
     const assistantRaw = raw.assistant ?? {};
     const units: UnitSnapshot[] = (raw.units ?? []).map((unit: any) => this.mapUnit(unit));
     const assistant: AssistantSnapshot = {

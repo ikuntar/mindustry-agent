@@ -94,7 +94,27 @@ async function main(): Promise<void> {
   check("assistant exists", context.assistant?.id, JSON.stringify(context.assistant));
   check("assistant alive", !context.assistant.dead);
   check("assistant has core", context.cores?.length > 0);
+  check("context uses assistant team", context.team === context.assistant.team, `${context.team}/${context.assistant.team}`);
   if (expectedMap) check(`fixed map ${expectedMap}`, context.map === expectedMap, String(context.map));
+
+  const local = await tool("get_context", { detail: "full", radius: 4 });
+  const localUnits = local.nearby?.units ?? [];
+  check(
+    "context radius is bounded",
+    localUnits.every(
+      (unit: { x: number; y: number }) =>
+        Math.hypot(unit.x - local.assistant.x, unit.y - local.assistant.y) <= 32.001,
+    ),
+    JSON.stringify(localUnits.map((unit: { x: number; y: number }) => [unit.x, unit.y])),
+  );
+  if (seed?.ally?.id) {
+    const wide = await tool("get_context", { detail: "full", radius: 15 });
+    check(
+      "context radius includes nearby ally",
+      wide.nearby?.units?.some((unit: { id: number }) => unit.id === seed.ally.id),
+      JSON.stringify(wide.nearby?.units?.map((unit: { id: number }) => unit.id)),
+    );
+  }
 
   const summary = await tool("get_map_summary");
   check("map summary is a ref", typeof summary.ref === "string" && summary.ref.startsWith("obs://"));
