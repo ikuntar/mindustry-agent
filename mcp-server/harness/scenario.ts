@@ -350,6 +350,7 @@ async function main(): Promise<void> {
       type: "dagger",
       x: turret.tileX * 8 + dx,
       y: turret.tileY * 8 + dy,
+      ai: true,
     });
     const turretEnemyBefore = await rawProbe("get_unit", { unitId: turretEnemy.id });
     let turretEnemyAfter = turretEnemyBefore;

@@ -52,7 +52,7 @@ node client/probe-client.mjs
 - `follow` 已有 MCP 入口和移动跟随验证；`cancel` 支持全量取消和按 opId 定向取消。固定场景让 ally 移动后助手追到 30px 内，目标死亡/复杂避障仍简化。
 - `move_to` 对地面单位使用 BFS 路径，避免 solid tile 并禁止对角切角；飞行单位仍直接移动。路径在目标变化时计算一次，不每 tick 寻路；`follow`/`attack` 的接近移动也走同一 helper，attack 绕障接近已用墙后容器验收。
 - 空闲控制：每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 dagger 被命中，health 150→123。
-- 供弹防守：固定场景建 `duo` 炮塔和 feeder conveyor，从核心取 5 copper，炮塔 ammoTotal 6；连续 spawn 4 个敌人均被命中（150→141），弹药实际消耗到 0。
+- 供弹防守：固定场景建 `duo` 炮塔和 feeder conveyor，从核心取 5 copper，炮塔 ammoTotal 6；4 个启用真实 AI 的敌方 dagger 连续进攻，均被命中（150→141），弹药实际消耗到 0。
 - 数据 token 轮换：probe `rotate_data_token` 更新 discovery；旧 token 401，新 token 200。
 - 多客户端写互斥：`PROBE_REQUIRE_WRITER=1` 时先 `claim_writer`，写操作带 `writerToken`；第二个客户端 claim 得到 `writer_held`，无 token 写入得到 `writer_required`；`renew_writer` 续期，1s TTL 过期后新客户端可 claim。`scripts/run-writer-lock.sh` 验证 raw 客户端和 MCP adapter（`writer-harness`）两条路径。
 - `get_tile` 现在返回建筑的 `items` 和炮塔 `ammoTotal`；`get_area` tile 也带同样的有限字段。
