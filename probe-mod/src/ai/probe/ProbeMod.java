@@ -325,10 +325,11 @@ public class ProbeMod extends Mod {
                             .put("maxHealth", op.targetBuilding.block.health);
                 }
             } else if ("follow".equals(op.kind)) {
-                if (op.targetUnit == null || op.targetUnit.dead) {
+                if (op.targetUnit == null || op.targetUnit.dead || !op.targetUnit.isValid()) {
                     op.status = "done";
                     op.progress = 1f;
                     op.data = Jval.newObject().put("reason", "target_gone");
+                    if (op.targetUnit != null && controller.followTarget == op.targetUnit) controller.followTarget = null;
                 }
             }
         }
@@ -1186,6 +1187,19 @@ public class ProbeMod extends Mod {
             int amount = request.getInt("amount", 0);
             core.items.add(item, amount);
             reply(command, Jval.newObject().put("item", item.name).put("amount", amount));
+            return;
+        }
+
+        if ("remove_unit".equals(op)) {
+            // Probe/debug helper for follow target tests; not part of the MCP surface.
+            Unit targetUnit = findUnit(request);
+            if (targetUnit == null) {
+                replyError(command, "unit_not_found", "Target unit not found");
+                return;
+            }
+            int id = targetUnit.id;
+            targetUnit.remove();
+            reply(command, Jval.newObject().put("unitId", id).put("removed", true));
             return;
         }
 

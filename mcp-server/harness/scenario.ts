@@ -284,6 +284,21 @@ async function main(): Promise<void> {
     JSON.stringify(timeoutAttackResult),
   );
 
+  const removedFollowTarget = await rawProbe("spawn_enemy", {
+    type: "dagger",
+    x: context.assistant.x + 80,
+    y: context.assistant.y,
+  });
+  const removedFollow = await tool("follow", { unitId: removedFollowTarget.id });
+  await rawProbe("remove_unit", { unitId: removedFollowTarget.id });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const removedFollowResult = await tool("get_action_result", { opId: removedFollow.opId });
+  check(
+    "follow target removed marks done",
+    removedFollowResult.status === "done" && removedFollowResult.data?.reason === "target_gone",
+    JSON.stringify(removedFollowResult),
+  );
+
   const core = context.cores[0];
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);

@@ -114,7 +114,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 27 tools、1 次 `get_context`、token/latency 记录。多步 mock 任务（withdraw/deposit）实测 toolCalls=3、`LLM_REQUIRE_TOOLS` 通过。真实本地 `qwen3.5:4b` + `LLM_TOOL_FILTER=get_context,withdraw,deposit` 在真实 probe 上完成 `get_context → withdraw → deposit`，toolCalls=3 并报告成功；未过滤工具的 lfm3/qwen3.5/ornith 容易选错动作。外部供应商 endpoint 未验收。固定移动任务仍由 lfm3 完成：`get_context → move_to(952,584)`，最终 `x=944.95`；自算 `core.x+24` 最终 `x=944.92`。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
 - `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。
-- `follow`：MCP follow 后助手位置变化；固定场景实测 ally 移动后助手追到 30.38px 内并 `cancel`；目标死亡/复杂避障仍简化。
+- `follow`：MCP follow 后助手位置变化；固定场景实测 ally 移动后助手追到 30.38px 内并 `cancel`；目标被 `remove_unit` 移除后 follow 动作 `done`、`data.reason=target_gone`，控制器 `followTarget` 清空。
 - `get_events`：probe 事件环已接，实测能读到 `unit_destroy`、`build_damage`、`block_build_end` 等；`get_context.eventsSince` 为真实序号。
 - `get_events` 摘要模式已接：`summary=true` 返回 `byType` 计数 + `ref`，可加 `types` 在游戏侧过滤；原始页仍保留。
 - `get_context`：队伍字段改为 `assistant.team`，`radius` 以 tile 为单位过滤 near units；固定场景实测 `radius=4` 无邻近单位，`radius=15` 包含 ally 226。`since` 事件增量摘要实测 `eventsPending=4`/`byType.total=4`，推进到 `eventsSince` 后为 0。`maxUnits`（1–64，默认 20）限制单位列表并返回 `unitsTruncated`；固定场景 `maxUnits=1` 时 nearby units `1→0`。`maxBytes=900` 时上下文裁剪到 895 字节；`bytes` 实测 1167（未裁剪）。
