@@ -88,7 +88,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `move_to`：地面单位新增 BFS 路径（solid tile 规避、对角不切角）；Fortress 场景 5 个 container 墙后目标 `(1084,588)`，助手到达 `(1089,588)`，`get_action_result=done`。`follow`/`attack` 的接近移动也走同一 helper；attack 用墙后目标容器验收，接近到 150px 内并 `cancel`。移动完成或取消目标时会清零速度，避免惯性漂移。
 - 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 spawn dagger 后 health `150→123`。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。
-- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，核心取 15 copper 分批存入传送带，连续 spawn 2 个敌人，炮塔分别造成伤害（150→132、150→141）。
+- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 30 copper，传送带接收 19，连续 spawn 4 个敌人，炮塔分别造成伤害（150→123、150→141、150→141、150→141）；完整 survival wave 未做。
 - 失败注入：固定场景验证 `withdraw` 未知物品返回 `not_found/Unknown item`、`possess` 自己返回 `bad_target/Cannot possess the assistant's own body`、`deposit` 不存在建筑返回 `building_not_found/No target building`；越界 `mine`/`build_plan` 返回 `out_of_bounds/Tile is outside the map`，越界 `move_to` 返回 `out_of_bounds/Target is outside the map`；`attack` 同队单位返回 `wrong_team/Refusing to attack a unit`；资源清零后 `build_plan` 返回 `insufficient_resources/Missing copper 0/1`。
 - LLM 超时：`LLM_REQUEST_TIMEOUT_MS=150` 配合延迟 mock endpoint 实测退出码 1，错误为 `LLM request timed out after 150ms`；重试未做。
 - LLM 重试：`LLM_MAX_RETRIES=1` + mock endpoint 首次 503，实测第二次成功，`llmRetries=1`；重试耗尽时退出码 1、错误 `LLM request failed: 503 mock transient failure`。

@@ -260,33 +260,33 @@ async function main(): Promise<void> {
   const withdrawnForTurret = await tool("withdraw", {
     target: { buildingId: core.id },
     item: "copper",
-    amount: 15,
+    amount: 30,
   });
-  check("withdraw for turret", withdrawnForTurret.data?.amount === 15, JSON.stringify(withdrawnForTurret));
+  check("withdraw for turret", withdrawnForTurret.data?.amount === 30, JSON.stringify(withdrawnForTurret));
   const depositedToTurret = await tool("deposit", {
     target: { buildingId: feeder.buildingId ?? feeder.id },
     item: "copper",
-    amount: 15,
+    amount: 30,
   });
   let feederMoved = Number(depositedToTurret.data?.amount ?? 0);
-  for (let attempt = 0; attempt < 20 && feederMoved < 15; attempt++) {
+  for (let attempt = 0; attempt < 40 && feederMoved < 30; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 250));
     try {
       const next = await tool("deposit", {
         target: { buildingId: feeder.buildingId ?? feeder.id },
         item: "copper",
-        amount: 15 - feederMoved,
+        amount: 30 - feederMoved,
       });
       feederMoved += Number(next.data?.amount ?? 0);
     } catch {
       // Feeder is still moving its current stack.
     }
   }
-  check("feeder accepts copper", feederMoved >= 10, JSON.stringify({ feederMoved }));
+  check("feeder accepts copper", feederMoved >= 15, JSON.stringify({ feederMoved }));
   await new Promise((resolve) => setTimeout(resolve, 900));
 
   const defenseWaves: { before: number; after: number; dead: boolean }[] = [];
-  for (const [dx, dy] of [[64, 0], [64, 24]]) {
+  for (const [dx, dy] of [[64, 0], [64, 24], [64, 48], [64, 72]]) {
     const turretEnemy = await rawProbe("spawn_enemy", {
       type: "dagger",
       x: turret.tileX * 8 + dx,
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
       dead: turretEnemyAfter.dead,
     });
   }
-  check("turret defends multiple waves", defenseWaves.length === 2, JSON.stringify(defenseWaves));
+  check("turret defends multiple waves", defenseWaves.length === 4, JSON.stringify(defenseWaves));
 
   const target = { x: core.x + 24, y: core.y };
   const moved = await tool("move_to", { ...target, arriveRadius: 12 });
