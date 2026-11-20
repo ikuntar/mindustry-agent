@@ -42,6 +42,7 @@ mindustry-ai/
 - [x] ProbeGameAdapter：MCP 25 工具中的 context/capabilities/content/map_summary/query_area/move/build/attack/mine/follow/withdraw/deposit/configure/command_units/set_stance/stop/possess/release/respawn/deconstruct/repair/cancel 接真实游戏
 - [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance、附身/释放、sand 挖矿、死亡重生、攻击容器、deconstruct、repair
 - [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
+- [x] `get_events` 摘要模式：`summary=true` 返回 `byType` 计数 + `ref`，高频事件不占页
 - [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权
 - [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、`mindustry_data` SDK、`get_map_summary`
 - [ ] Parquet 事件、revision/TTL 压测、远端 baseUrl 配置

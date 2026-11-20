@@ -149,10 +149,13 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
       inputSchema: {
         since: z.number().int().nonnegative().optional(),
         limit: z.number().int().positive().max(200).optional(),
+        summary: z.boolean().optional(),
+        types: z.array(z.string()).max(32).optional(),
       },
       annotations: readOnly,
     },
-    async (args) => run(() => adapter.getEvents(args.since ?? 0, args.limit ?? 50)),
+    async (args) =>
+      run(() => adapter.getEvents(args.since ?? 0, args.limit ?? 50, args.summary ?? false, args.types)),
   );
 
   server.registerTool(

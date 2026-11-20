@@ -400,21 +400,63 @@ public class ProbeMod extends Mod {
         if ("get_events".equals(op)) {
             int since = request.getInt("since", 0);
             int limit = Math.max(1, Math.min(200, request.getInt("limit", 50)));
+            boolean summary = request.getBool("summary", false);
+            Jval types = request.get("types");
             Jval events = Jval.newArray();
+            Jval byType = Jval.newObject();
+            int total = 0;
             long next = since;
-            long oldest = eventLog.isEmpty() ? 0 : eventLog.first().getInt("id", 0);
-            for (Jval event : eventLog) {
-                int id = event.getInt("id", 0);
-                if (id <= since) continue;
-                if (events.asArray().size >= limit) break;
-                events.add(event);
-                next = id;
+            long oldest;
+            boolean hasMore = false;
+            synchronized (eventLog) {
+                oldest = eventLog.isEmpty() ? 0 : eventLog.first().getInt("id", 0);
+                for (Jval event : eventLog) {
+                    int id = event.getInt("id", 0);
+                    if (id <= since) continue;
+                    if (types != null && types.isArray()) {
+                        String eventType = event.get("type") == null ? "" : event.get("type").asString();
+                        boolean allowed = false;
+                        for (Jval type : types.asArray()) {
+                            if (eventType.equals(type.asString())) {
+                                allowed = true;
+                                break;
+                            }
+                        }
+                        if (!allowed) continue;
+                    }
+                    if (summary) {
+                        total++;
+                        String eventType = event.get("type") == null ? "unknown" : event.get("type").asString();
+                        Jval count = byType.get(eventType);
+                        byType.put(eventType, (count == null ? 0 : count.asInt()) + 1);
+                        next = id;
+                    } else {
+                        if (events.asArray().size >= limit) {
+                            hasMore = true;
+                            break;
+                        }
+                        events.add(event);
+                        next = id;
+                    }
+                }
             }
             int dropped = since < oldest - 1 ? (int) (oldest - 1 - since) : 0;
-            reply(command, Jval.newObject()
-                    .put("events", events)
-                    .put("next", next)
-                    .put("dropped", dropped));
+            if (summary) {
+                Jval data = Jval.newObject()
+                        .put("summary", Jval.newObject().put("total", total).put("byType", byType))
+                        .put("next", next)
+                        .put("dropped", dropped)
+                        .put("ref", "obs://events/rev/" + next)
+                        .put("hasMore", false);
+                data.put("bytes", data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length);
+                reply(command, data);
+            } else {
+                reply(command, Jval.newObject()
+                        .put("events", events)
+                        .put("next", next)
+                        .put("dropped", dropped)
+                        .put("hasMore", hasMore));
+            }
             return;
         }
 

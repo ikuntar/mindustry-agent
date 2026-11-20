@@ -45,6 +45,14 @@ async function main(): Promise<void> {
   const mapSummary = parse(await client.callTool({ name: "get_map_summary", arguments: {} }));
   console.log("map summary:", mapSummary);
 
+  const earlyEventSummary = parse(
+    await client.callTool({
+      name: "get_events",
+      arguments: { since: 0, summary: true, types: ["unit_destroy", "build_damage"] },
+    }),
+  );
+  console.log("event summary:", earlyEventSummary.data);
+
   const core = context.data.cores?.[0];
   const moveTarget = probeMode && core
     ? { x: core.x + 24, y: core.y }

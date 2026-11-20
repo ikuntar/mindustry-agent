@@ -317,8 +317,8 @@ export class ProbeGameAdapter implements GameAdapter {
     };
   }
 
-  async getEvents(since: number, limit = 50): Promise<EventPage> {
-    const raw = await this.call("get_events", { since, limit });
+  async getEvents(since: number, limit = 50, summary = false, types?: string[]): Promise<EventPage> {
+    const raw = await this.call("get_events", { since, limit, summary, types });
     return {
       events: (raw.events ?? []).map((event: any) => ({
         id: Number(event.id),
@@ -329,6 +329,15 @@ export class ProbeGameAdapter implements GameAdapter {
       })),
       next: Number(raw.next ?? since),
       dropped: Number(raw.dropped ?? 0),
+      summary: raw.summary
+        ? {
+            total: Number(raw.summary.total ?? 0),
+            byType: (raw.summary.byType ?? {}) as Record<string, number>,
+          }
+        : undefined,
+      ref: raw.ref == null ? undefined : String(raw.ref),
+      hasMore: !!raw.hasMore,
+      bytes: raw.bytes == null ? undefined : Number(raw.bytes),
     };
   }
 

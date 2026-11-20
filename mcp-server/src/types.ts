@@ -127,6 +127,13 @@ export interface EventPage {
   events: GameEvent[];
   next: number;
   dropped: number;
+  summary?: {
+    total: number;
+    byType: Record<string, number>;
+  };
+  ref?: string;
+  hasMore?: boolean;
+  bytes?: number;
 }
 
 export interface AreaQuery {
@@ -277,7 +284,7 @@ export interface GameAdapter {
   getCapabilities(): Promise<Capabilities>;
   getContent(type?: ContentType): Promise<ContentSnapshot>;
   getMapSummary(): Promise<MapSummary>;
-  getEvents(since: number, limit: number): Promise<EventPage>;
+  getEvents(since: number, limit: number, summary?: boolean, types?: string[]): Promise<EventPage>;
   queryArea(query: AreaQuery): Promise<AreaSnapshot>;
   getConfigSchema(block: string): Promise<ConfigSchema>;
   getActionResult(opId: string, waitMs: number): Promise<ActionResult>;

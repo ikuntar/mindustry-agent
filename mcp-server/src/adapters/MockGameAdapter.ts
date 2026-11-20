@@ -427,12 +427,28 @@ export class MockGameAdapter implements GameAdapter {
     };
   }
 
-  async getEvents(since: number, limit = 50): Promise<EventPage> {
-    const events = this.events.filter((e) => e.id > since).slice(0, Math.max(1, limit));
+  async getEvents(since: number, limit = 50, summary = false, types?: string[]): Promise<EventPage> {
+    const filtered = this.events.filter(
+      (event) => event.id > since && (!types?.length || types.includes(event.type)),
+    );
+    if (summary) {
+      const byType: Record<string, number> = {};
+      for (const event of filtered) byType[event.type] = (byType[event.type] ?? 0) + 1;
+      return {
+        events: [],
+        next: filtered.length ? filtered[filtered.length - 1].id : since,
+        dropped: this.droppedEvents,
+        summary: { total: filtered.length, byType },
+        ref: `obs://events/rev/${filtered.length ? filtered[filtered.length - 1].id : since}`,
+        hasMore: false,
+      };
+    }
+    const events = filtered.slice(0, Math.max(1, limit));
     return {
       events,
       next: events.length ? events[events.length - 1].id : since,
       dropped: this.droppedEvents,
+      hasMore: filtered.length > events.length,
     };
   }
 

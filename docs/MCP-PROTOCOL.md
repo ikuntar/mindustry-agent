@@ -168,8 +168,18 @@ MCP server（Node/TypeScript）
 
 ### `get_events`
 
-参数：`{ "since": 0, "limit": 50 }`。
-返回 `{events, next, dropped}`；事件结构：
+参数：
+
+```json
+{ "since": 0, "limit": 50, "summary": false, "types": ["unit_destroy"] }
+```
+
+- `summary=false`：返回 `{events, next, dropped, hasMore}` 原始事件页。
+- `summary=true`：返回 `{summary:{total,byType}, next, dropped, ref, hasMore, bytes}`，不返回事件数组；`ref` 指向只读事件快照。
+- `types` 在游戏侧过滤，避免高频 `build_damage` 淹没决策事件。
+- 完整事件数据仍由只读数据面 `/data/events/{revision}` 提供，不进入 MCP 上下文。
+
+事件结构：
 
 ```json
 {

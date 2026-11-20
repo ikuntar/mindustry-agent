@@ -90,7 +90,7 @@ async function main() {
   let ore = null;
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);
-  for (let radius = 2; radius <= 12 && !ore; radius++) {
+  for (let radius = 2; radius <= 4 && !ore; radius++) {
     for (let dx = -radius; dx <= radius && !ore; dx++) {
       for (let dy = -radius; dy <= radius && !ore; dy++) {
         const tile = requireOk(await call("get_tile", { x: baseX + dx, y: baseY + dy }), "get_tile");
