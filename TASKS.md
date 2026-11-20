@@ -120,7 +120,7 @@
 
 ## M4：运行时/安全/多人
 
-- [x] 本地 socket 鉴权、localhost only、token（probe 绑定 127.0.0.1；`PROBE_REQUIRE_AUTH=1` 时校验 discovery token）
+- [x] 本地 socket 鉴权、localhost only、token（probe 绑定 127.0.0.1；`PROBE_REQUIRE_AUTH=1` 时校验 discovery token；固定场景已在该模式下全链路通过）
 - [x] 动作 allowlist：`MCP_ALLOWED_TOOLS`/`MCP_DENIED_TOOLS` 在注册阶段过滤工具；`MCP_ALLOWED_TOOLS=get_context` 实测只暴露 1 个工具，`move_to` 调用被拒绝
 - [x] 写动作速率限制：`MCP_WRITE_RATE_LIMIT`（每秒）；limit=1 时首个写成功，第二个返回 `rate_limited`（retryable=true）
 - [ ] API key 只在伴生进程；日志脱敏

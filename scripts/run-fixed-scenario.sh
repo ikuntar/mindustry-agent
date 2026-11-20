@@ -21,7 +21,7 @@ cd "$SERVER_DIR"
 (
   printf 'host fortress\n'
   sleep 150
-) | PROBE_DATA_RATE_LIMIT_PER_SEC=10 timeout 160 java -jar server-release.jar > "$SERVER_LOG" 2>&1 &
+) | PROBE_DATA_RATE_LIMIT_PER_SEC=10 PROBE_REQUIRE_AUTH=1 timeout 160 java -jar server-release.jar > "$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
 for _ in $(seq 1 30); do
