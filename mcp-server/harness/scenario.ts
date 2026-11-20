@@ -159,6 +159,18 @@ async function main(): Promise<void> {
     switchSchema.configurable === true && switchSchema.fields?.[0]?.type === "boolean",
     JSON.stringify(switchSchema),
   );
+  const messageSchema = await tool("get_config_schema", { block: "message" });
+  check(
+    "message config schema",
+    messageSchema.configurable === true && messageSchema.fields?.[0]?.type === "string",
+    JSON.stringify(messageSchema),
+  );
+  const processorSchema = await tool("get_config_schema", { block: "micro-processor" });
+  check(
+    "processor config schema",
+    processorSchema.configurable === true && processorSchema.fields?.[0]?.type === "string",
+    JSON.stringify(processorSchema),
+  );
 
   const coreId = context.cores?.[0]?.id;
   if (coreId != null) {
