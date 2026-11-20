@@ -23,6 +23,8 @@ const RULE = new Set([
   "possession_disabled",
   "writes_disabled",
   "not_possessable",
+  "writer_required",
+  "writer_held",
 ]);
 
 const WORLD = new Set(["no_assistant", "no_core", "cannot_build", "stuck"]);

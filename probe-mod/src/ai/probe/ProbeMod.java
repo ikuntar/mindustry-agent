@@ -87,6 +87,10 @@ public class ProbeMod extends Mod {
     private long dataTokenExpires = System.currentTimeMillis()
             + Long.parseLong(System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
     private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
+    private final boolean requireWriter = "1".equals(System.getenv("PROBE_REQUIRE_WRITER"));
+    private String writerToken = "";
+    private String writerClient = "";
+    private long writerExpires = 0;
     private final Map<Long, MapSnapshot> mapSnapshots = new LinkedHashMap<>();
     private long mapRevision = 0;
     private long lastMapCaptureTick = -1;
@@ -386,6 +390,51 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("claim_writer".equals(op)) {
+            String clientId = request.getString("clientId", "");
+            if (clientId.isBlank()) {
+                replyError(command, "bad_request", "Missing clientId");
+                return;
+            }
+            long now = System.currentTimeMillis();
+            if (!writerToken.isEmpty() && now < writerExpires && !clientId.equals(writerClient)) {
+                replyError(command, "writer_held", "Another client holds the writer lease");
+                return;
+            }
+            if (writerToken.isEmpty() || now >= writerExpires || clientId.equals(writerClient)) {
+                writerToken = UUID.randomUUID().toString();
+                writerClient = clientId;
+            }
+            long ttl = Math.max(1000L, Math.min(300000L, request.getInt("ttlMs", 30000)));
+            writerExpires = now + ttl;
+            reply(command, Jval.newObject()
+                    .put("writerToken", writerToken)
+                    .put("clientId", writerClient)
+                    .put("expires", writerExpires));
+            return;
+        }
+
+        if ("release_writer".equals(op)) {
+            String supplied = request.getString("writerToken", "");
+            if (writerToken.isEmpty() || !writerToken.equals(supplied)) {
+                replyError(command, "writer_required", "Invalid writer lease token");
+                return;
+            }
+            writerToken = "";
+            writerClient = "";
+            writerExpires = 0;
+            reply(command, Jval.newObject().put("released", true));
+            return;
+        }
+
+        if (requireWriter && !isReadOnlyOp(op) && !"set_writes_enabled".equals(op)) {
+            String supplied = request.getString("writerToken", "");
+            if (writerToken.isEmpty() || !writerToken.equals(supplied) || System.currentTimeMillis() >= writerExpires) {
+                replyError(command, "writer_required", "A writer lease is required for this operation");
+                return;
+            }
+        }
+
         if ("set_writes_enabled".equals(op)) {
             // Probe/debug helper for the stop switch; not part of the MCP surface.
             writesEnabled = request.getBool("enabled", true);
@@ -405,7 +454,8 @@ public class ProbeMod extends Mod {
                     .put("port", PORT)
                     .put("dataPort", DATA_PORT)
                     .put("dataBaseUrl", dataBaseUrl)
-                    .put("requireAuth", requireAuth));
+                    .put("requireAuth", requireAuth)
+                    .put("requireWriter", requireWriter));
             return;
         }
 

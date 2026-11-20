@@ -75,6 +75,7 @@ export class ProbeGameAdapter implements GameAdapter {
   private nextId = 1;
   private actionSeq = 0;
   private handshaken = false;
+  private writerToken?: string;
   private heartbeat?: NodeJS.Timeout;
   private pending = new Map<number, Pending>();
 
@@ -203,6 +204,12 @@ export class ProbeGameAdapter implements GameAdapter {
         this.socket?.destroy();
         throw new GameError("probe_incompatible", `Unsupported probe protocol: ${String(hello?.protocol)}`);
       }
+      if (hello?.requireWriter) {
+        const claimed = await this.send("claim_writer", {
+          clientId: `mcp-${process.pid}-${Date.now()}`,
+        });
+        this.writerToken = String(claimed?.writerToken ?? "");
+      }
       this.handshaken = true;
       this.startHeartbeat();
     }
@@ -213,7 +220,13 @@ export class ProbeGameAdapter implements GameAdapter {
     const socket = this.socket;
     if (!socket || socket.destroyed) throw new GameError("probe_unavailable", "Probe socket is not connected");
     const id = this.nextId++;
-    const payload = { id, op, ...args, ...(this.token ? { token: this.token } : {}) };
+    const payload = {
+      id,
+      op,
+      ...args,
+      ...(this.token ? { token: this.token } : {}),
+      ...(this.writerToken ? { writerToken: this.writerToken } : {}),
+    };
     return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
@@ -595,6 +608,14 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async close(): Promise<void> {
+    if (this.writerToken) {
+      try {
+        await this.send("release_writer", { writerToken: this.writerToken });
+      } catch {
+        // Lease has a TTL; release is best effort.
+      }
+      this.writerToken = undefined;
+    }
     this.stopHeartbeat();
     this.rejectAll(new GameError("probe_closed", "Probe adapter closed"));
     this.socket?.destroy();

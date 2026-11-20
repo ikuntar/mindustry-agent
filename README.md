@@ -43,10 +43,10 @@ mindustry-ai/
 - [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance、附身/释放、sand 挖矿、死亡重生、攻击容器、deconstruct、repair
 - [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
 - [x] `get_events` 摘要模式：`summary=true` 返回 `byType` 计数 + `ref`，高频事件不占页
-- [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权
-- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、事件分页、token TTL、`mindustry_data` SDK、`get_map_summary`
+- [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权；`PROBE_REQUIRE_WRITER=1` 启用 writer lease
+- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、事件分页、token TTL、`rotate_data_token`、`mindustry_data` SDK、`get_map_summary`
 - [ ] Parquet 事件、revision 淘汰压测、远端 baseUrl 配置
-- [ ] 真实 Mindustry mod adapter 生产化（多客户端互斥、token 轮换；重连已做）
+- [ ] 真实 Mindustry mod adapter 生产化（多客户端写互斥已实现 lease，token 轮换已做；重连已做）
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
 - [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔+传送带供弹防守；真实本地 LLM 固定移动任务已跑通
