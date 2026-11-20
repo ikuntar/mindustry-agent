@@ -67,6 +67,9 @@ MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-har
 MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest npm run llm-harness
 # 真实本地模型 + 最终位置验收（需要已启动 Fortress 服务端和 probe）
 MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest LLM_FINAL_CONTEXT=1 LLM_EXPECT_NEAR_X=952 LLM_EXPECT_NEAR_Y=584 LLM_TASK='Call get_context, move to core.x+24 and report.' npm run llm-harness
+# 超时验证：本地延迟 mock endpoint + 150ms 超时
+MOCK_LLM_PORT=18081 MOCK_LLM_DELAY_MS=1000 node harness/mock-openai-server.mjs &
+MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18081/v1 LLM_REQUEST_TIMEOUT_MS=150 npm run llm-harness
 ```
 
 ## 备注

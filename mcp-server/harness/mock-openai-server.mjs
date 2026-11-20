@@ -1,6 +1,7 @@
 import http from "node:http";
 
 const port = Number(process.env.MOCK_LLM_PORT ?? 18080);
+const delayMs = Number(process.env.MOCK_LLM_DELAY_MS ?? 0);
 let requests = 0;
 
 const server = http.createServer((request, response) => {
@@ -38,8 +39,12 @@ const server = http.createServer((request, response) => {
       choices: [{ index: 0, message, finish_reason: "stop" }],
       usage: { prompt_tokens: 12, completion_tokens: 6, total_tokens: 18 },
     };
-    response.writeHead(200, { "Content-Type": "application/json" });
-    response.end(JSON.stringify(result));
+    const respond = () => {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify(result));
+    };
+    if (delayMs > 0) setTimeout(respond, delayMs);
+    else respond();
   });
 });
 

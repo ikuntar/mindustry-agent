@@ -28,6 +28,7 @@ const model = process.env.LLM_MODEL ?? "mock-model";
 const task = process.env.LLM_TASK ?? "Read the game context, summarize the assistant's situation, and report one safe next action. Do not mutate the world.";
 const mock = process.env.LLM_MOCK === "1";
 const maxSteps = Number(process.env.LLM_MAX_STEPS ?? 6);
+const requestTimeoutMs = Number(process.env.LLM_REQUEST_TIMEOUT_MS ?? 120000);
 
 const childEnv = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
@@ -95,19 +96,28 @@ async function callModel(messages: ChatMessage[], tools: Tool[]): Promise<{
     };
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(process.env.LLM_API_KEY ? { Authorization: `Bearer ${process.env.LLM_API_KEY}` } : {}),
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      tools: toOpenAITools(tools),
-      tool_choice: "auto",
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      signal: AbortSignal.timeout(requestTimeoutMs),
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.LLM_API_KEY ? { Authorization: `Bearer ${process.env.LLM_API_KEY}` } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        tools: toOpenAITools(tools),
+        tool_choice: "auto",
+      }),
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
+      throw new Error(`LLM request timed out after ${requestTimeoutMs}ms`);
+    }
+    throw error;
+  }
   if (!response.ok) {
     throw new Error(`LLM request failed: ${response.status} ${await response.text()}`);
   }
