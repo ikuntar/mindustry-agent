@@ -142,34 +142,71 @@ async function main(): Promise<void> {
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);
   let placement: any;
-  let placementTile: { x: number; y: number } | undefined;
+  let placementTiles: { x: number; y: number }[] = [];
+  let multiBuilt = false;
   const placementErrors: string[] = [];
-  for (const [dx, dy] of [[4, 0], [-4, 0], [0, 4], [0, -4], [5, 0], [-5, 0], [0, 5], [0, -5]]) {
+
+  // First prove a multi-placement build plan is atomic and builds every tile.
+  for (const [dx, dy] of [
+    [-4, 0],
+    [-5, 0],
+    [-4, 1],
+    [4, 0],
+    [5, 0],
+    [0, 4],
+    [0, -4],
+    [4, 4],
+    [-4, -4],
+  ]) {
+    const tiles = [
+      { x: baseX + dx, y: baseY + dy },
+      { x: baseX + dx + 1, y: baseY + dy },
+    ];
     const attempted = parse(
       await client.callTool({
         name: "build_plan",
-        arguments: { placements: [{ block: "conveyor", x: baseX + dx, y: baseY + dy }] },
+        arguments: { placements: tiles.map((tile) => ({ block: "conveyor", ...tile })) },
       }),
     );
     if (attempted.ok) {
       placement = attempted.data;
-      placementTile = { x: baseX + dx, y: baseY + dy };
+      placementTiles = tiles;
+      multiBuilt = true;
       break;
     }
-    placementErrors.push(`${dx},${dy}: ${attempted.error?.code ?? "error"}`);
+    placementErrors.push(`multi ${dx},${dy}: ${attempted.error?.code ?? "error"}`);
+  }
+
+  if (!placement) {
+    for (const [dx, dy] of [[4, 0], [-4, 0], [0, 4], [0, -4], [5, 0], [-5, 0], [0, 5], [0, -5]]) {
+      const tile = { x: baseX + dx, y: baseY + dy };
+      const attempted = parse(
+        await client.callTool({
+          name: "build_plan",
+          arguments: { placements: [{ block: "conveyor", ...tile }] },
+        }),
+      );
+      if (attempted.ok) {
+        placement = attempted.data;
+        placementTiles = [tile];
+        break;
+      }
+      placementErrors.push(`${dx},${dy}: ${attempted.error?.code ?? "error"}`);
+    }
   }
   check("build queued", placement, placementErrors.join("; "));
+  check("multi-block build plan", multiBuilt, `multiBuilt=${multiBuilt}`);
   await waitAction(placement.opId);
   const area = await tool("query_area", { x: core.x, y: core.y, radius: 96 });
   check(
-    "built conveyor visible",
-    area.buildings?.some(
-      (building: { block: string; tileX: number; tileY: number }) =>
-        building.block === "conveyor" &&
-        building.tileX === placementTile?.x &&
-        building.tileY === placementTile?.y,
+    "all planned conveyors visible",
+    placementTiles.every((tile) =>
+      area.buildings?.some(
+        (building: { block: string; tileX: number; tileY: number }) =>
+          building.block === "conveyor" && building.tileX === tile.x && building.tileY === tile.y,
+      ),
     ),
-    JSON.stringify(placementTile),
+    JSON.stringify(placementTiles),
   );
 
   const events = await tool("get_events", { since: 0, summary: true, types: ["unit_destroy", "build_damage"] });

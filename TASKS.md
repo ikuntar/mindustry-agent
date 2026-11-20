@@ -38,7 +38,7 @@
 - [x] 游戏线程动作队列 + 每帧预算：socket 只入队，游戏 `update` 每帧最多处理 50 条；LLM 调用不在游戏线程
 - [ ] 重连、心跳、多客户端互斥、token 轮换
 - [ ] `get_context` / `get_capabilities` / `get_content` / `query_area` 真实数据（get_content 仍静态）
-- [x] `build_plan`：单块已验证；adapter 已支持多 placement/deconstruct 顺序提交，多块未单独验收
+- [x] `build_plan`：单块和多块 placement 均已实测；Fortress 场景一次提交 2 个 conveyor，query_area 两个 tile 都出现
 - [x] `deconstruct` / `repair`：probe 已实现；deconstruct 在 MCP 侧实测建筑消失，repair 在 probe 侧实测 25→45
 - [x] `withdraw` / `deposit`：核心取放 5 copper 已验证
 - [x] `configure`：sorter 配置已验证
@@ -79,7 +79,7 @@
 
 ## M3：Harness / LLM 测试
 
-- [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（移动/建造/事件摘要/附身/释放/指定核心重生）
+- [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（上下文/事件增量/移动/多块建造/事件摘要/附身/释放/指定核心重生/无核心恢复）
 - [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
 - [ ] harness：完整铺带、供弹、防守 N 波、换核心重生
 - [ ] LLM harness：接真实模型，记录工具调用、token、延迟
