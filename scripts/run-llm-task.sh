@@ -50,6 +50,7 @@ LLM_MAX_STEPS="${LLM_MAX_STEPS:-8}" \
 LLM_FINAL_CONTEXT=1 \
 LLM_REQUIRE_TOOLS="withdraw,deposit" \
 LLM_TOOL_CHOICE="${LLM_TOOL_CHOICE:-required}" \
+LLM_TOOL_FILTER="${LLM_TOOL_FILTER:-get_context,withdraw,deposit}" \
 LLM_TASK="${LLM_TASK:-Use get_context once. Then withdraw 5 copper from the assistant core into your body with the withdraw tool, using the core id from context. Then deposit the 5 copper back into the same core with the deposit tool. You must call withdraw and deposit; do not call any other action tool.}" \
 npm run llm-harness 2>&1 | tee "$LLM_LOG"
 

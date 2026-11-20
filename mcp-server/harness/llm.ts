@@ -196,7 +196,8 @@ async function main(): Promise<void> {
   const started = Date.now();
   await client.connect(transport);
   const listed = await client.listTools();
-  const tools = listed.tools as Tool[];
+  const toolFilter = (process.env.LLM_TOOL_FILTER ?? "").split(",").map((name) => name.trim()).filter(Boolean);
+  const tools = (listed.tools as Tool[]).filter((tool) => !toolFilter.length || toolFilter.includes(tool.name));
   const messages: ChatMessage[] = [
     {
       role: "system",

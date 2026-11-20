@@ -101,7 +101,7 @@
 - [ ] harness：完整 survival 多波防守、长线铺带
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
 - [x] LLM harness 多步 mock：`LLM_TASK` 含 withdraw/deposit 时 mock planner 依次调用 context/withdraw/deposit；`LLM_REQUIRE_TOOLS` 验收通过
-- [ ] LLM harness 真实多步任务：lfm3/qwen3.5/ornith 本地模型只调用 context 或错误动作，未完成 withdraw/deposit 序列
+- [x] LLM harness 真实多步任务：`qwen3.5:4b` + `LLM_TOOL_FILTER=get_context,withdraw,deposit` 完成 `get_context → withdraw → deposit`，toolCalls=3，最终报告成功
 - [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、27 tools、1 次工具调用、24/12 tokens
 - [x] LLM harness 真实本地模型：Ollama `lfm3:latest` 经 `/v1` 在 mock adapter 和真实 Fortress probe 上都调用 `get_context`；真实 probe 27 tools、6237/426 tokens、2.4s
 - [x] LLM 固定动作任务：真实 Fortress 上 `get_context` → `move_to(952,584)` → `get_action_result` 返回 done，最终 assistant `x=944.95`；toolLog 记录参数
