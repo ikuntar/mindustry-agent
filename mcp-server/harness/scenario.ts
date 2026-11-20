@@ -167,6 +167,12 @@ async function main(): Promise<void> {
   await rawProbe("set_type_player_controllable", { name: "dagger", allowed: false });
   await expectToolError("possess", { unitId: nonControllable.id }, "not player-controllable");
   await rawProbe("set_type_player_controllable", { name: "dagger", allowed: true });
+  await rawProbe("set_writes_enabled", { enabled: false });
+  try {
+    await expectToolError("move_to", { x: context.cores[0].x + 32, y: context.cores[0].y }, "writes_disabled");
+  } finally {
+    await rawProbe("set_writes_enabled", { enabled: true });
+  }
   if (seed?.ally?.id) {
     await expectToolError("attack", { target: { unitId: seed.ally.id } }, "Refusing to attack a unit");
   }

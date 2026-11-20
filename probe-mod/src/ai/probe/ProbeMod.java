@@ -99,6 +99,7 @@ public class ProbeMod extends Mod {
     private UnitController savedController;
     private boolean possessing;
     private boolean autoRespawn = true;
+    private boolean writesEnabled = true;
     private ProbeController controller;
     private long opSeq = 0;
 
@@ -379,6 +380,18 @@ public class ProbeMod extends Mod {
 
         if (requireAuth && !"hello".equals(op) && !token.equals(request.getString("token", ""))) {
             replyError(command, "unauthorized", "Missing or invalid probe token");
+            return;
+        }
+
+        if ("set_writes_enabled".equals(op)) {
+            // Probe/debug helper for the stop switch; not part of the MCP surface.
+            writesEnabled = request.getBool("enabled", true);
+            reply(command, Jval.newObject().put("writesEnabled", writesEnabled));
+            return;
+        }
+
+        if (!writesEnabled && !isReadOnlyOp(op)) {
+            replyError(command, "writes_disabled", "Probe writes are disabled");
             return;
         }
 
@@ -1573,6 +1586,26 @@ public class ProbeMod extends Mod {
         }
 
         replyError(command, "bad_request", "Unknown op " + op);
+    }
+
+    private boolean isReadOnlyOp(String op) {
+        switch (op) {
+            case "hello":
+            case "ping":
+            case "get_context":
+            case "get_capabilities":
+            case "get_content":
+            case "get_map_manifest":
+            case "get_events":
+            case "get_tile":
+            case "get_unit":
+            case "list_unit_types":
+            case "query_area":
+            case "get_action_result":
+                return true;
+            default:
+                return false;
+        }
     }
 
     private Unit findUnit(Jval target) {

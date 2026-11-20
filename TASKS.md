@@ -76,7 +76,8 @@
 - [x] 附身基本校验：同队（敌方单位 `wrong_team`）、非助手自己身体（`bad_target`）、非 `playerControllable`（`not_possessable`）；玩家身体仍待补
 - [x] `possessionAllowed` 规则：规则关闭时 `possess` 返回 `possession_disabled`
 - [x] 助手身体不可附身：非 `AIController` 控制器 + 显式拒绝
-- [ ] 动作日志 / 失败原因 / 停机开关
+- [x] 停机开关：probe `set_writes_enabled(enabled=false)` 时 `move_to` 返回 `writes_disabled/Probe writes are disabled`，读操作仍可用
+- [ ] 动作日志 / 结构化失败原因
 
 ## M2：观测与上下文
 

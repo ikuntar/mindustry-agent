@@ -94,6 +94,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 借体解控：`release` 后 released dagger 的 `get_unit.controller` 为 `CommandAI`，不是 `ProbeController`；单位未消失。
 - `possessionAllowed`：规则关闭时 `possess` 返回 `possession_disabled/Possession is disabled in the current rules`。
 - 附身校验：敌方 dagger `possess` 返回 `wrong_team/Target unit is not on the assistant's team`；助手自己身体返回 `bad_target`；临时把 dagger 类型的 `playerControllable` 设为 false 后返回 `not_possessable/Target unit type is not player-controllable`。
+- 停机开关：probe `set_writes_enabled(enabled=false)` 后 `move_to` 返回 `writes_disabled/Probe writes are disabled`。
 - `get_events` 类型过滤：固定场景 `summary=true, types=['unit_destroy','build_damage']` 实测 `byType={unit_destroy:4,build_damage:25}`；`summary=true` 时 events 为空、`hasMore=false`。
 - 真实 survival wave：末尾连续两次 `start_wave`，wave `1→2→3`，分别生成 3/5 个敌人、每次 27 个 spawn group；只验证生成和连续推进，未验证多波持续防守/核心受击。
 - LLM 超时：`LLM_REQUEST_TIMEOUT_MS=150` 配合延迟 mock endpoint 实测退出码 1，错误为 `LLM request timed out after 150ms`；重试未做。
