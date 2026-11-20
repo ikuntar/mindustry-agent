@@ -365,6 +365,8 @@ public class ProbeMod extends Mod {
                         .put("x", assistant.x)
                         .put("y", assistant.y);
                 controller.target = null;
+                assistant.moveAt(new Vec2());
+                assistant.vel.setZero();
             }
         }
     }
@@ -2275,6 +2277,8 @@ public class ProbeMod extends Mod {
             if (target == null) {
                 maybeAutoTarget();
                 clearPath();
+                unit.moveAt(new Vec2());
+                unit.vel.setZero();
                 return;
             }
             moveToward(target);

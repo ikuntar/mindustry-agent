@@ -138,7 +138,8 @@ async function main(): Promise<void> {
   let promptTokens = 0;
   let completionTokens = 0;
   let finalContent = "";
-  const toolLog: { name: string; ok: boolean; elapsedMs: number; result: string }[] = [];
+  let finalContext: unknown;
+  const toolLog: { name: string; arguments?: Record<string, unknown>; ok: boolean; elapsedMs: number; result: string }[] = [];
 
   for (let step = 0; step < maxSteps; step++) {
     const { message, usage } = await callModel(messages, tools);
@@ -163,15 +164,21 @@ async function main(): Promise<void> {
         const result = await client.callTool({ name: call.function.name, arguments: args });
         const { text } = parse(result);
         toolCalls++;
-        toolLog.push({ name: call.function.name, ok: true, elapsedMs: Date.now() - callStarted, result: text.slice(0, 500) });
+        toolLog.push({ name: call.function.name, arguments: args, ok: true, elapsedMs: Date.now() - callStarted, result: text.slice(0, 500) });
         messages.push({ role: "tool", tool_call_id: call.id, content: text });
       } catch (error) {
         toolCalls++;
         const text = String(error);
-        toolLog.push({ name: call.function.name, ok: false, elapsedMs: Date.now() - callStarted, result: text });
+        toolLog.push({ name: call.function.name, arguments: args, ok: false, elapsedMs: Date.now() - callStarted, result: text });
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ ok: false, error: text }) });
       }
     }
+  }
+
+  if (process.env.LLM_FINAL_CONTEXT === "1") {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const result = await client.callTool({ name: "get_context", arguments: { detail: "summary" } });
+    finalContext = parse(result).parsed;
   }
 
   console.log(
@@ -186,6 +193,7 @@ async function main(): Promise<void> {
         promptTokens,
         completionTokens,
         finalContent,
+        finalContext,
         elapsedMs: Date.now() - started,
         toolLog,
       },
