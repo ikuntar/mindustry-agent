@@ -311,6 +311,7 @@ export class ProbeGameAdapter implements GameAdapter {
             },
       threats: Array.isArray(raw.threats) ? raw.threats.map((unit: any) => this.mapUnit(unit)) : undefined,
       unitsTruncated: !!raw.unitsTruncated,
+      bytes: raw.bytes == null ? undefined : Number(raw.bytes),
       eventsSince: Number(raw.eventsSince ?? 0),
       eventsPending: Number(raw.eventsPending ?? 0),
       eventSummary: raw.eventSummary

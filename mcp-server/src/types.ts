@@ -78,6 +78,7 @@ export interface GameContext {
   };
   threats?: UnitSnapshot[];
   unitsTruncated?: boolean;
+  bytes?: number;
   eventsSince?: number;
   eventsPending?: number;
   eventSummary?: {

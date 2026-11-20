@@ -111,6 +111,7 @@ async function main(): Promise<void> {
   const context = await tool("get_context", { detail: "full" });
   check("assistant exists", context.assistant?.id, JSON.stringify(context.assistant));
   check("assistant alive", !context.assistant.dead);
+  check("context reports byte size", Number(context.bytes ?? 0) > 0, String(context.bytes));
   check("assistant has core", context.cores?.length > 0);
   check("context uses assistant team", context.team === context.assistant.team, `${context.team}/${context.assistant.team}`);
   check(

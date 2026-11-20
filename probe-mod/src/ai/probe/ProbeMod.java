@@ -2026,6 +2026,7 @@ public class ProbeMod extends Mod {
             }
         }
         data.put("threats", threats);
+        data.put("bytes", data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length);
 
         return data;
     }
