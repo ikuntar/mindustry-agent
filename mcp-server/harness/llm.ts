@@ -29,6 +29,9 @@ const task = process.env.LLM_TASK ?? "Read the game context, summarize the assis
 const mock = process.env.LLM_MOCK === "1";
 const maxSteps = Number(process.env.LLM_MAX_STEPS ?? 6);
 const requestTimeoutMs = Number(process.env.LLM_REQUEST_TIMEOUT_MS ?? 120000);
+const maxRetries = Number(process.env.LLM_MAX_RETRIES ?? 1);
+const retryBackoffMs = Number(process.env.LLM_RETRY_BACKOFF_MS ?? 500);
+let llmRetries = 0;
 
 const childEnv = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
@@ -97,30 +100,50 @@ async function callModel(messages: ChatMessage[], tools: Tool[]): Promise<{
   }
 
   let response: Response;
-  try {
-    response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      signal: AbortSignal.timeout(requestTimeoutMs),
-      headers: {
-        "Content-Type": "application/json",
-        ...(process.env.LLM_API_KEY ? { Authorization: `Bearer ${process.env.LLM_API_KEY}` } : {}),
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        tools: toOpenAITools(tools),
-        tool_choice: "auto",
-      }),
-    });
-  } catch (error) {
-    if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
-      throw new Error(`LLM request timed out after ${requestTimeoutMs}ms`);
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      response = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        signal: AbortSignal.timeout(requestTimeoutMs),
+        headers: {
+          "Content-Type": "application/json",
+          ...(process.env.LLM_API_KEY ? { Authorization: `Bearer ${process.env.LLM_API_KEY}` } : {}),
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          tools: toOpenAITools(tools),
+          tool_choice: "auto",
+        }),
+      });
+    } catch (error) {
+      lastError =
+        error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")
+          ? new Error(`LLM request timed out after ${requestTimeoutMs}ms`)
+          : error instanceof Error
+            ? error
+            : new Error(String(error));
+      if (attempt < maxRetries) {
+        llmRetries++;
+        await new Promise((resolve) => setTimeout(resolve, retryBackoffMs));
+        continue;
+      }
+      throw lastError;
     }
-    throw error;
+    if (!response.ok) {
+      const text = await response.text();
+      lastError = new Error(`LLM request failed: ${response.status} ${text}`);
+      if (attempt < maxRetries && (response.status >= 500 || response.status === 429)) {
+        llmRetries++;
+        await new Promise((resolve) => setTimeout(resolve, retryBackoffMs));
+        continue;
+      }
+      throw lastError;
+    }
+    break;
   }
-  if (!response.ok) {
-    throw new Error(`LLM request failed: ${response.status} ${await response.text()}`);
-  }
+  if (!response!) throw lastError ?? new Error("LLM request failed without response");
   const payload = (await response.json()) as {
     choices?: { message?: ChatMessage }[];
     usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
@@ -218,6 +241,7 @@ async function main(): Promise<void> {
         toolCalls,
         promptTokens,
         completionTokens,
+        llmRetries,
         finalContent,
         finalContext,
         verification,

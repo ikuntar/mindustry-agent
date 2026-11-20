@@ -2,7 +2,9 @@ import http from "node:http";
 
 const port = Number(process.env.MOCK_LLM_PORT ?? 18080);
 const delayMs = Number(process.env.MOCK_LLM_DELAY_MS ?? 0);
+const failTimes = Number(process.env.MOCK_LLM_FAIL_TIMES ?? 0);
 let requests = 0;
+let failures = 0;
 
 const server = http.createServer((request, response) => {
   if (request.method !== "POST" || request.url !== "/v1/chat/completions") {
@@ -16,6 +18,12 @@ const server = http.createServer((request, response) => {
   });
   request.on("end", () => {
     requests++;
+    if (failures < failTimes) {
+      failures++;
+      response.writeHead(503, { "Content-Type": "text/plain" });
+      response.end("mock transient failure");
+      return;
+    }
     const payload = JSON.parse(body);
     const messages = payload.messages ?? [];
     const hasToolResult = messages.some((message) => message.role === "tool");

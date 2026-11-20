@@ -99,8 +99,9 @@
 - [ ] LLM harness：接外部供应商 endpoint 并跑固定动作任务
 - [ ] 指标：任务成功率、动作失败率、响应延迟、token/分钟、误伤玩家资产、助手死亡（harness 已记录基础计数）
 - [x] 失败注入：固定场景验证未知物品 `withdraw`、附身自己 `possess`、不存在建筑 `deposit`、越界 `mine`/`move_to`/`build_plan`、攻击同队单位都返回明确错误
-- [x] 失败注入：LLM 请求超时返回明确 `LLM request timed out after Nms` 并以非零退出
-- [ ] 失败注入：LLM 重试、资源不足
+- [x] 失败注入：LLM 超时返回明确 `LLM request timed out after Nms` 并以非零退出
+- [x] LLM 重试：503 首次失败后重试成功（`llmRetries=1`）；重试耗尽时以 `LLM request failed: 503 ...` 退出 1
+- [ ] 失败注入：资源不足
 
 ## M4：运行时/安全/多人
 

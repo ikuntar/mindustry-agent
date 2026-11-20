@@ -70,6 +70,9 @@ MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3
 # 超时验证：本地延迟 mock endpoint + 150ms 超时
 MOCK_LLM_PORT=18081 MOCK_LLM_DELAY_MS=1000 node harness/mock-openai-server.mjs &
 MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18081/v1 LLM_REQUEST_TIMEOUT_MS=150 npm run llm-harness
+# 重试验证：首次 503，第二次成功
+MOCK_LLM_PORT=18082 MOCK_LLM_FAIL_TIMES=1 node harness/mock-openai-server.mjs &
+MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18082/v1 LLM_MAX_RETRIES=1 LLM_RETRY_BACKOFF_MS=10 npm run llm-harness
 ```
 
 ## 备注
