@@ -136,6 +136,7 @@ async function main(): Promise<void> {
     "No target building",
   );
   await expectToolError("mine", { x: -1, y: -1 }, "outside the map");
+  await expectToolError("move_to", { x: -999, y: -999 }, "outside the map");
   await expectToolError(
     "build_plan",
     { placements: [{ block: "conveyor", x: -1, y: -1 }] },

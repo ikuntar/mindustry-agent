@@ -26,6 +26,7 @@ import mindustry.type.Item;
 import mindustry.type.UnitType;
 import mindustry.world.Block;
 import mindustry.world.Build;
+import mindustry.core.World;
 import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.CoreBlock.CoreBuild;
@@ -1422,6 +1423,11 @@ public class ProbeMod extends Mod {
             float arriveRadius = request.getFloat("arriveRadius", 8f);
             if (Float.isNaN(x) || Float.isNaN(y)) {
                 replyError(command, "bad_request", "Missing x/y");
+                return;
+            }
+            if (Float.isInfinite(x) || Float.isInfinite(y) ||
+                    !Vars.world.tiles.in(World.toTile(x), World.toTile(y))) {
+                replyError(command, "out_of_bounds", "Target is outside the map");
                 return;
             }
             if (assistant == null) {
