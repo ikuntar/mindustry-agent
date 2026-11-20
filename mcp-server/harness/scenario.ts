@@ -614,22 +614,31 @@ async function main(): Promise<void> {
     `${beforeCoreDistance} -> ${afterCoreDistance}`,
   );
 
-  const waveBefore = (await tool("get_context", { detail: "summary" })).wave;
-  const waveStart = await rawProbe("start_wave");
-  check("survival wave fixture has spawn groups", waveStart?.spawnGroups > 0, JSON.stringify(waveStart));
-  let survivalWave = waveBefore;
-  let survivalEnemies = 0;
-  for (let i = 0; i < 20; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    const snapshot = await tool("get_context", { detail: "summary" });
-    survivalWave = snapshot.wave;
-    survivalEnemies = snapshot.counts?.enemyUnits ?? snapshot.enemies ?? 0;
-    if (survivalWave > waveBefore && survivalEnemies > 0) break;
+  const waveHistory: { waveBefore: number; waveAfter: number; enemies: number }[] = [];
+  for (let cycle = 0; cycle < 2; cycle++) {
+    const waveBefore = (await tool("get_context", { detail: "summary" })).wave;
+    const waveStart = await rawProbe("start_wave");
+    check("survival wave fixture has spawn groups", waveStart?.spawnGroups > 0, JSON.stringify(waveStart));
+    let survivalWave = waveBefore;
+    let survivalEnemies = 0;
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const snapshot = await tool("get_context", { detail: "summary" });
+      survivalWave = snapshot.wave;
+      survivalEnemies = snapshot.counts?.enemyUnits ?? snapshot.enemies ?? 0;
+      if (survivalWave > waveBefore && survivalEnemies > 0) break;
+    }
+    check(
+      `survival wave ${cycle + 1} advances and spawns enemies`,
+      survivalWave > waveBefore && survivalEnemies > 0,
+      JSON.stringify({ waveBefore, survivalWave, survivalEnemies }),
+    );
+    waveHistory.push({ waveBefore, waveAfter: survivalWave, enemies: survivalEnemies });
   }
   check(
-    "survival wave advances and spawns enemies",
-    survivalWave > waveBefore && survivalEnemies > 0,
-    JSON.stringify({ waveBefore, survivalWave, survivalEnemies }),
+    "survival waves advance consecutively",
+    waveHistory[1].waveAfter > waveHistory[0].waveAfter,
+    JSON.stringify(waveHistory),
   );
 
   console.log(
