@@ -82,7 +82,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `stop` 清理移动/攻击目标。
 - `mine`：在可达的 sand tile 上实测完成，assistant 获得 sand 1。
 - `possess` / `release`：同队 dagger 附身后 `assistant.id` 变为 dagger，`isHome=false/possessing=true`；原 home body 被 despawn；release 后 dagger 恢复控制器，核心生成新 alpha，`isHome=true`。
-- `attack` 支持三种目标：`unitId`（单位）、`buildingId`（建筑）和 `x,y`（坐标）；建筑实测 220→0，坐标实测 done/inRange。单位目标入口已接，但独立伤害验收受测试单位消失影响。
+- `attack` 支持三种目标：`unitId`（单位）、`buildingId`（建筑）和 `x,y`（坐标）；建筑实测 220→0，坐标实测 done/inRange，`unitId` 实测 dagger health `150→141`。4 波后的低血助手不作为 unitId 验收路径。
 - `build_plan`：固定场景一次提交 2 个 conveyor `(112,73)`/`(113,73)`，op 完成且 `query_area` 两个 tile 都存在；多块提交路径已验收。
 - `respawn`：probe 接受 `coreId`，只在目标核心属于助手队伍且 `allowSpawn` 时生成；MCP 固定场景实测从第二个核心重生，坐标 `968,584`、coreId `228`，home body id 变化。无核心时返回 `no_core`；核心重建后自动生成新 home body（id `247`，坐标 `972,582`）。
 - `move_to`：地面单位新增 BFS 路径（solid tile 规避、对角不切角）；Fortress 场景 5 个 container 墙后目标 `(1084,588)`，助手到达 `(1089,588)`，`get_action_result=done`。`follow`/`attack` 的接近移动也走同一 helper；attack 用墙后目标容器验收，接近到 150px 内并 `cancel`。移动完成或取消目标时会清零速度，避免惯性漂移。

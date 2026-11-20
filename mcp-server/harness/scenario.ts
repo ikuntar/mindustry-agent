@@ -235,6 +235,31 @@ async function main(): Promise<void> {
   check("map summary has schema", summary.schema?.width > 0 && summary.schema?.height > 0);
   check("map summary has no tiles", !("tiles" in summary));
 
+  const attackUnit = await rawProbe("spawn_enemy", {
+    type: "dagger",
+    x: context.assistant.x + 80,
+    y: context.assistant.y,
+  });
+  const attackUnitBefore = await rawProbe("get_unit", { unitId: attackUnit.id });
+  await tool("attack", { target: { unitId: attackUnit.id } });
+  let attackUnitAfter = attackUnitBefore;
+  let attackUnitGone = false;
+  for (let i = 0; i < 40; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    try {
+      attackUnitAfter = await rawProbe("get_unit", { unitId: attackUnit.id });
+    } catch {
+      attackUnitGone = true;
+      break;
+    }
+    if (attackUnitAfter.dead || attackUnitAfter.health < attackUnitBefore.health) break;
+  }
+  check(
+    "attack unitId damages target",
+    attackUnitGone || attackUnitAfter.dead || attackUnitAfter.health < attackUnitBefore.health,
+    JSON.stringify({ before: attackUnitBefore.health, after: attackUnitAfter.health, dead: attackUnitAfter.dead, gone: attackUnitGone }),
+  );
+
   const core = context.cores[0];
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);
