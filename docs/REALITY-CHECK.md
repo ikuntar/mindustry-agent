@@ -84,6 +84,9 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `possess` / `release`：同队 dagger 附身后 `assistant.id` 变为 dagger，`isHome=false/possessing=true`；原 home body 被 despawn；release 后 dagger 恢复控制器，核心生成新 alpha，`isHome=true`。
 - `attack` 支持三种目标：`unitId`（单位）、`buildingId`（建筑）和 `x,y`（坐标）；建筑实测 220→0，坐标实测 done/inRange。单位目标入口已接，但独立伤害验收受测试单位消失影响。
 - `respawn`：`kill_assistant` 后 `dead=true`，`respawn` 在核心生成新 alpha（id 211→212，health 150）。
+- `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
+- `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。
+- `follow`：MCP follow 后助手位置变化；`cancel` 成功取消 follow。
 - 失败会返回错误或保持 running，不是假成功。
 
 限制：

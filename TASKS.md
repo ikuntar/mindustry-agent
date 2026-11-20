@@ -23,7 +23,7 @@
 - [x] Probe mod：v160.8 服务端加载、`get_context`/`get_tile`/`get_capabilities`/`query_area`/`move_to`/`build` 验证
 - [x] Probe mod 发现：`spawnedByCore=true` 的非 Player 会被每帧 despawn；助手用 `isHome`
 - [x] Probe 建造完成：`BuildPlan` + `BuilderComp`，MCP `query_area` 读回 conveyor
-- [x] `ProbeGameAdapter`：MCP 的 `get_context`/`get_capabilities`/`query_area`/`move_to`/`build`/`attack`/`mine`/`follow`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop`/`possess`/`release`/`respawn` 接真实游戏
+- [x] `ProbeGameAdapter`：MCP 的 `get_context`/`get_capabilities`/`query_area`/`move_to`/`build`/`attack`/`mine`/`follow`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop`/`possess`/`release`/`respawn`/`deconstruct`/`repair`/`cancel` 接真实游戏
 - [x] 真实物流/配置/指挥验证：核心取放 5 copper、sorter 配置、dagger `move` 命令、`holdPosition` stance、`stop`
 - [x] `query_area` 建筑读取改为按世界 tile 扫描；`Groups.build.getByID` 在服务端不可用
 - [x] attack：支持 `unitId` / `buildingId` / `x,y` 三种目标；敌方 container 实测 `targetHealth 220→0`，position 目标实测 done/inRange=true；unit 目标的独立伤害验收仍受测试单位消失影响
@@ -36,14 +36,15 @@
 - [ ] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手
 - [ ] 游戏线程动作队列 + 每帧预算；LLM 调用离线程
 - [ ] `get_context` / `get_capabilities` / `get_content` / `query_area` 真实数据
-- [ ] `get_events`：官方 `Events` + 轮询补足
-- [ ] `move_to` / `attack` / `follow` / `mine` / `stop`
-- [ ] `build_plan`：`Build.validPlace` + `Build.beginPlace(assistantUnit, ...)` + 物品/时间
-- [ ] `deconstruct` / `repair`
-- [ ] `withdraw` / `deposit`：`interactable` + 220 范围 + `maxAccepted`
-- [ ] `configure`：`build.configured(assistantUnit, value)`；逻辑代码校验
-- [ ] `command_units` / `set_stance`：直接操作 `CommandAI`
-- [ ] `possess` / `release` / `respawn` 状态机
+- [x] `build_plan`：单块已验证；adapter 已支持多 placement/deconstruct 顺序提交，多块未单独验收
+- [x] `deconstruct` / `repair`：probe 已实现；deconstruct 在 MCP 侧实测建筑消失，repair 在 probe 侧实测 25→45
+- [x] `withdraw` / `deposit`：核心取放 5 copper 已验证
+- [x] `configure`：sorter 配置已验证
+- [x] `command_units` / `set_stance`：dagger move 与 holdPosition 已验证
+- [x] `possess` / `release` / `respawn`：基本状态机已验证
+- [ ] `follow`：入口与移动跟随已验证，但持续跟随/目标死亡语义未定
+- [ ] `cancel`：已实现并实测取消 follow；更细的 opId 定向取消未做
+- [ ] `get_events`：真实事件日志
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
 - [ ] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [ ] 死亡/重生：`Player.deathDelay`、任意核心、无核心、核心被拆

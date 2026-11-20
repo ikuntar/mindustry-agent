@@ -146,6 +146,36 @@ public class ProbeMod extends Mod {
                             .put("amount", assistant.stack.amount);
                     assistant.mineTile = null;
                 }
+            } else if ("deconstruct".equals(op.kind)) {
+                boolean remaining = false;
+                if (op.targetTiles != null) {
+                    for (Jval target : op.targetTiles.asArray()) {
+                        int x = target.get("x").asInt();
+                        int y = target.get("y").asInt();
+                        if (Vars.world.tiles.in(x, y) && Vars.world.tile(x, y).build != null) {
+                            remaining = true;
+                            break;
+                        }
+                    }
+                }
+                if (!remaining) {
+                    op.status = "done";
+                    op.progress = 1f;
+                    op.data = Jval.newObject().put("deconstructed", true);
+                }
+            } else if ("repair".equals(op.kind)) {
+                if (op.targetBuilding == null || op.targetBuilding.health >= op.targetBuilding.block.health) {
+                    op.status = "done";
+                    op.progress = 1f;
+                    op.data = Jval.newObject().put("health", op.targetBuilding == null ? 0 : op.targetBuilding.health);
+                } else {
+                    op.targetBuilding.heal(Time.delta * Math.max(1f, assistant.type.buildSpeed) * 10f);
+                    op.data = Jval.newObject()
+                            .put("x", op.targetBuilding.tile.x)
+                            .put("y", op.targetBuilding.tile.y)
+                            .put("health", op.targetBuilding.health)
+                            .put("maxHealth", op.targetBuilding.block.health);
+                }
             }
         }
     }
@@ -718,6 +748,125 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("deconstruct".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Jval targets = request.get("targets");
+            if (targets == null && request.get("x") != null && request.get("y") != null) {
+                targets = Jval.newArray().add(Jval.newObject()
+                        .put("x", request.getInt("x", 0))
+                        .put("y", request.getInt("y", 0)));
+            }
+            if (targets == null || !targets.isArray() || targets.asArray().isEmpty()) {
+                replyError(command, "bad_request", "deconstruct requires targets[]");
+                return;
+            }
+            Jval planned = Jval.newArray();
+            for (Jval target : targets.asArray()) {
+                int x = target.get("x").asInt();
+                int y = target.get("y").asInt();
+                if (!Vars.world.tiles.in(x, y) || Vars.world.tile(x, y).build == null) {
+                    replyError(command, "building_not_found", "No building at " + x + "," + y);
+                    return;
+                }
+                if (!Build.validBreak(assistant.team, x, y)) {
+                    replyError(command, "invalid_deconstruct", "Build.validBreak returned false at " + x + "," + y);
+                    return;
+                }
+                assistant.addBuild(new BuildPlan(x, y));
+                planned.add(Jval.newObject().put("x", x).put("y", y));
+            }
+            Op result = newOp("deconstruct");
+            result.status = "running";
+            result.targetTiles = targets;
+            result.data = Jval.newObject().put("targets", planned);
+            reply(command, result.toJson());
+            return;
+        }
+
+        if ("repair".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Building building = findBuilding(request);
+            if (building == null) {
+                replyError(command, "building_not_found", "No target building");
+                return;
+            }
+            if (building.team != assistant.team) {
+                replyError(command, "wrong_team", "Target building is not on the assistant's team");
+                return;
+            }
+            if (building.health >= building.block.health) {
+                replyError(command, "already_full", "Target building is already at full health");
+                return;
+            }
+            if (Math.hypot(building.x - assistant.x, building.y - assistant.y) > assistant.type.buildRange) {
+                replyError(command, "out_of_range", "Target building is outside buildRange");
+                return;
+            }
+            Op result = newOp("repair");
+            result.status = "running";
+            result.targetBuilding = building;
+            result.targetPosition = new Vec2(building.x, building.y);
+            result.data = Jval.newObject()
+                    .put("x", building.tile.x)
+                    .put("y", building.tile.y)
+                    .put("health", building.health)
+                    .put("maxHealth", building.block.health);
+            reply(command, result.toJson());
+            return;
+        }
+
+        if ("cancel".equals(op)) {
+            int cancelled = 0;
+            for (Op result : ops.values()) {
+                if ("running".equals(result.status) || "queued".equals(result.status)) {
+                    result.status = "cancelled";
+                    result.progress = 0f;
+                    cancelled++;
+                }
+            }
+            if (assistant != null) {
+                assistant.clearBuilding();
+            }
+            if (controller != null) {
+                controller.target = null;
+                controller.attackEntity = null;
+                controller.attackPosition = null;
+                controller.followTarget = null;
+            }
+            reply(command, Jval.newObject().put("cancelled", cancelled));
+            return;
+        }
+
+        if ("damage_building".equals(op)) {
+            // Probe/debug helper for repair tests; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Building building = findBuilding(request);
+            if (building == null) {
+                replyError(command, "building_not_found", "No target building");
+                return;
+            }
+            if (building.team != assistant.team) {
+                replyError(command, "wrong_team", "Target building is not on the assistant's team");
+                return;
+            }
+            float amount = request.getFloat("amount", 10f);
+            building.damage(amount);
+            reply(command, Jval.newObject()
+                    .put("buildingId", building.id)
+                    .put("health", building.health)
+                    .put("maxHealth", building.block.health));
+            return;
+        }
+
         if ("attack".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -1218,6 +1367,7 @@ public class ProbeMod extends Mod {
         Unit targetUnit;
         Building targetBuilding;
         Vec2 targetPosition;
+        Jval targetTiles;
 
         Jval toJson() {
             Jval json = Jval.newObject()

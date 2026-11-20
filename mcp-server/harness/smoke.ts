@@ -261,6 +261,50 @@ async function main(): Promise<void> {
       const afterMine = parse(await client.callTool({ name: "get_context", arguments: { detail: "summary" } }));
       console.log("carry after mine:", afterMine.data.assistant.item, afterMine.data.assistant.itemAmount);
     }
+
+    if (built) {
+      const builtCenter = { x: built.x * 8 + 4, y: built.y * 8 + 4 };
+      const toBuilt = parse(await client.callTool({ name: "move_to", arguments: builtCenter }));
+      await client.callTool({ name: "get_action_result", arguments: { opId: toBuilt.data?.opId, waitMs: 5000 } });
+      const deconstructed = parse(
+        await client.callTool({ name: "deconstruct", arguments: { targets: [{ x: built.x, y: built.y }] } }),
+      );
+      console.log("deconstruct:", deconstructed);
+      let deconstructResult: any = deconstructed;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        deconstructResult = parse(
+          await client.callTool({
+            name: "get_action_result",
+            arguments: { opId: deconstructed.data?.opId, waitMs: 500 },
+          }),
+        );
+        if (deconstructResult.data?.status !== "running") break;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      console.log("deconstruct result:", deconstructResult);
+      const afterDeconstruct = parse(
+        await client.callTool({
+          name: "query_area",
+          arguments: { x: builtCenter.x, y: builtCenter.y, radius: 12, includeBuildings: true },
+        }),
+      );
+      const remains = afterDeconstruct.data?.buildings?.some(
+        (building: { tileX: number; tileY: number }) => building.tileX === built.x && building.tileY === built.y,
+      );
+      console.log("building remains after deconstruct:", remains);
+    }
+
+    if (ally) {
+      const followed = parse(await client.callTool({ name: "follow", arguments: { unitId: ally.id, distance: 32 } }));
+      console.log("follow:", followed);
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const followedContext = parse(
+        await client.callTool({ name: "get_context", arguments: { detail: "summary" } }),
+      );
+      console.log("assistant after follow:", followedContext.data.assistant);
+      const cancelled = parse(await client.callTool({ name: "cancel", arguments: {} }));
+      console.log("cancel follow:", cancelled);
+    }
   }
 
   const events = parse(await client.callTool({ name: "get_events", arguments: { since: 0, limit: 20 } }));

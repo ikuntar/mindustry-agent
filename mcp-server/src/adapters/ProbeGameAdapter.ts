@@ -351,26 +351,46 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async buildPlan(request: BuildPlanRequest): Promise<ActionResult> {
-    if (request.placements.length !== 1 || request.deconstruct?.length) {
-      throw new GameError("not_implemented", "Probe adapter only supports a single placement without deconstruct");
+    const results: ActionResult[] = [];
+    if (request.deconstruct?.length) {
+      results.push(await this.deconstruct(request.deconstruct));
     }
-    const placement = request.placements[0];
-    return this.mapResult(
-      await this.call("build", {
-        block: placement.block,
-        x: placement.x,
-        y: placement.y,
-        rotation: placement.rotation ?? 0,
+    for (const placement of request.placements) {
+      results.push(
+        this.mapResult(
+          await this.call("build", {
+            block: placement.block,
+            x: placement.x,
+            y: placement.y,
+            rotation: placement.rotation ?? 0,
+          }),
+        ),
+      );
+    }
+    if (results.length === 0) {
+      throw new GameError("bad_request", "build_plan has no placements or deconstruct targets");
+    }
+    const failed = results.find((result) => result.error);
+    const last = results[results.length - 1];
+    return {
+      opId: last.opId,
+      status: failed ? "failed" : "queued",
+      progress: 0,
+      data: { results },
+      error: failed?.error,
+    };
+  }
+
+  async deconstruct(targets: Vec2[]): Promise<ActionResult> {
+    return this.immediate(
+      await this.call("deconstruct", {
+        targets: targets.map((target) => ({ x: target.x, y: target.y })),
       }),
     );
   }
 
-  async deconstruct(_targets: Vec2[]): Promise<ActionResult> {
-    throw this.notImplemented("deconstruct");
-  }
-
-  async repair(_target: Vec2): Promise<ActionResult> {
-    throw this.notImplemented("repair");
+  async repair(target: Vec2): Promise<ActionResult> {
+    return this.immediate(await this.call("repair", { x: target.x, y: target.y }));
   }
 
   async withdraw(
@@ -414,7 +434,7 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async cancel(_opId?: string): Promise<ActionResult> {
-    throw this.notImplemented("cancel");
+    return this.immediate(await this.call("cancel", { opId: _opId }));
   }
 
   async close(): Promise<void> {

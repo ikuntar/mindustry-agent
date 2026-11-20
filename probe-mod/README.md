@@ -49,4 +49,6 @@ node client/probe-client.mjs
 - `withdraw`/`deposit`、`configure`、`command_units`、`set_stance`、`stop` 已在 probe 实现并实测；物流使用 220 范围与 `maxAccepted`。
 - `mine` 在可达 sand tile 上实测完成；`attack` 支持 `unitId`/`buildingId`/`x,y`，建筑实测 220→0、坐标实测 done/inRange，单位目标仍缺独立验收；`follow` 仍缺稳定验收。
 - `possess`/`release` 已实现：附身时 despawn home body，release 恢复目标控制器并在核心生成新身体；`respawn` 的死亡路径已实测（kill → dead → 新身体）。
-- `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`spawn_ally`/`spawn_enemy`/`give`/`get_unit`/`kill_assistant` 是测试辅助，不是 MCP 工具。
+- `follow` 已有 MCP 入口和移动跟随验证；`cancel` 已实现并实测取消 follow。
+- `deconstruct`/`repair` 已实现并实测：deconstruct 后建筑消失，repair conveyor 25→45。
+- `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`spawn_ally`/`spawn_enemy`/`give`/`get_unit`/`kill_assistant`/`damage_building` 是测试辅助，不是 MCP 工具。
