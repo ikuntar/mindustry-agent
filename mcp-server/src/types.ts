@@ -78,6 +78,8 @@ export interface GameContext {
   };
   threats?: UnitSnapshot[];
   unitsTruncated?: boolean;
+  threatsTruncated?: boolean;
+  bytesTruncated?: boolean;
   bytes?: number;
   eventsSince?: number;
   eventsPending?: number;
@@ -297,6 +299,7 @@ export interface ContextOptions {
   since?: number;
   includeEnemies?: boolean;
   maxUnits?: number;
+  maxBytes?: number;
 }
 
 export interface DatasetSchema {

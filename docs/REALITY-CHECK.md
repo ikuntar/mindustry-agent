@@ -113,7 +113,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `follow`：MCP follow 后助手位置变化；固定场景实测 ally 移动后助手追到 30.38px 内并 `cancel`；目标死亡/复杂避障仍简化。
 - `get_events`：probe 事件环已接，实测能读到 `unit_destroy`、`build_damage`、`block_build_end` 等；`get_context.eventsSince` 为真实序号。
 - `get_events` 摘要模式已接：`summary=true` 返回 `byType` 计数 + `ref`，可加 `types` 在游戏侧过滤；原始页仍保留。
-- `get_context`：队伍字段改为 `assistant.team`，`radius` 以 tile 为单位过滤 near units；固定场景实测 `radius=4` 无邻近单位，`radius=15` 包含 ally 226。`since` 事件增量摘要实测 `eventsPending=4`/`byType.total=4`，推进到 `eventsSince` 后为 0。`maxUnits`（1–64，默认 20）限制单位列表并返回 `unitsTruncated`；固定场景 `maxUnits=1` 时 nearby units `1→0`。`bytes` 实测 1167（粗略序列化字节数）。
+- `get_context`：队伍字段改为 `assistant.team`，`radius` 以 tile 为单位过滤 near units；固定场景实测 `radius=4` 无邻近单位，`radius=15` 包含 ally 226。`since` 事件增量摘要实测 `eventsPending=4`/`byType.total=4`，推进到 `eventsSince` 后为 0。`maxUnits`（1–64，默认 20）限制单位列表并返回 `unitsTruncated`；固定场景 `maxUnits=1` 时 nearby units `1→0`。`maxBytes=900` 时上下文裁剪到 895 字节；`bytes` 实测 1167（未裁剪）。
 - `get_area`：固定场景半径 2 读回 25 个 tile，`truncated=false`；工具只返回 bounded window，不返回全图。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
 - 失败会返回错误或保持 running，不是假成功。

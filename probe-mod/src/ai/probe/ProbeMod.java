@@ -507,7 +507,8 @@ public class ProbeMod extends Mod {
             int since = Math.max(0, request.getInt("since", 0));
             boolean includeEnemies = request.getBool("includeEnemies", false);
             int maxUnits = Math.max(1, Math.min(64, request.getInt("maxUnits", 20)));
-            reply(command, context(radius, since, includeEnemies, maxUnits));
+            int maxBytes = Math.max(0, Math.min(65536, request.getInt("maxBytes", 0)));
+            reply(command, context(radius, since, includeEnemies, maxUnits, maxBytes));
             return;
         }
 
@@ -1908,7 +1909,7 @@ public class ProbeMod extends Mod {
         }
     }
 
-    private Jval context(int radius, int since, boolean includeEnemies, int maxUnits) {
+    private Jval context(int radius, int since, boolean includeEnemies, int maxUnits, int maxBytes) {
         Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         Jval data = Jval.newObject()
                 .put("tick", Vars.state.tick)
@@ -2029,7 +2030,25 @@ public class ProbeMod extends Mod {
             }
         }
         data.put("threats", threats);
-        data.put("bytes", data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length);
+        int bytes = data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length;
+        boolean threatsTruncated = false;
+        if (maxBytes > 0) {
+            while (bytes > maxBytes && units.asArray().size > 0) {
+                units.asArray().remove(units.asArray().size - 1);
+                data.put("units", units);
+                data.put("unitsTruncated", true);
+                bytes = data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length;
+            }
+            while (bytes > maxBytes && threats.asArray().size > 0) {
+                threats.asArray().remove(threats.asArray().size - 1);
+                data.put("threats", threats);
+                threatsTruncated = true;
+                bytes = data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length;
+            }
+            data.put("threatsTruncated", threatsTruncated);
+            data.put("bytesTruncated", bytes > maxBytes);
+        }
+        data.put("bytes", bytes);
 
         return data;
     }

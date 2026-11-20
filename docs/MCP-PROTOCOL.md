@@ -122,13 +122,14 @@ MCP server（Node/TypeScript）
   "radius": 15,           // 附近实体半径（tile）
   "since": 0,             // 可选：附带事件起点
   "includeEnemies": false, // 可选：额外返回 threats
-  "maxUnits": 20           // 可选：单位列表上限，1–64
+  "maxUnits": 20,          // 可选：单位列表上限，1–64
+  "maxBytes": 0            // 可选：上下文字节预算，0=不限
 }
 ```
 
-返回 `GameContext`：tick、timeMs、paused、gameOver、map、mode、wave、enemies、team、teamName、player、assistant、resources、cores、counts、nearby、threats、unitsTruncated、bytes、eventsSince、eventsPending、eventSummary。
+返回 `GameContext`：tick、timeMs、paused、gameOver、map、mode、wave、enemies、team、teamName、player、assistant、resources、cores、counts、nearby、threats、unitsTruncated、threatsTruncated、bytesTruncated、bytes、eventsSince、eventsPending、eventSummary。
 
-`bytes` 是序列化后的大致字节数，用于发现上下文膨胀；不是 token 数。
+`maxBytes` 会优先裁剪 units/threats；若固定字段仍超预算，`bytesTruncated=true`。`bytes` 是序列化后的大致字节数，不是 token 数。
 
 `detail=summary` 不带 nearby；`full` 可扩大实体和字段；`radius` 以 tile 为单位；`includeEnemies=true` 时 `threats` 最多 16 个敌军。
 

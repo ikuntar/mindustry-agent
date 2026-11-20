@@ -222,6 +222,12 @@ async function main(): Promise<void> {
         (limited.nearby?.units?.length ?? 0) < (wide.nearby?.units?.length ?? 0),
       JSON.stringify({ limited: limited.nearby?.units?.length, wide: wide.nearby?.units?.length }),
     );
+    const capped = await tool("get_context", { detail: "full", maxBytes: 900 });
+    check(
+      "context maxBytes reports truncation",
+      capped.bytesTruncated === true || Number(capped.bytes ?? 0) <= 900,
+      JSON.stringify({ bytes: capped.bytes, truncated: capped.bytesTruncated }),
+    );
   }
 
   const summary = await tool("get_map_summary");
