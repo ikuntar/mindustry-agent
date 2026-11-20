@@ -354,6 +354,47 @@ async function main(): Promise<void> {
   }
   check("turret visible", turret?.buildingId ?? turret?.id, JSON.stringify(turretArea?.buildings));
 
+  let sorter: any;
+  const sorterErrors: string[] = [];
+  for (const [dx, dy] of [[3, 3], [3, -3], [-3, 3], [-3, -3], [4, 0], [0, 4], [-4, 0], [0, -4]]) {
+    const tile = { x: baseX + dx, y: baseY + dy };
+    const attemptedSorter = parse(
+      await client.callTool({
+        name: "build_plan",
+        arguments: { placements: [{ block: "sorter", ...tile }] },
+      }),
+    );
+    if (!attemptedSorter.ok) {
+      sorterErrors.push(`${tile.x},${tile.y}: ${attemptedSorter.error?.code ?? "error"}`);
+      continue;
+    }
+    for (let poll = 0; poll < 20 && !sorter; poll++) {
+      const area = await tool("query_area", { x: core.x, y: core.y, radius: 48 });
+      sorter = area.buildings?.find(
+        (building: { block: string; tileX: number; tileY: number }) =>
+          building.block === "sorter" && building.tileX === tile.x && building.tileY === tile.y,
+      );
+      if (!sorter) await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    if (sorter) break;
+    sorterErrors.push(`${tile.x},${tile.y}: not visible`);
+  }
+  check("sorter built", sorter?.buildingId ?? sorter?.id, sorterErrors.join("; "));
+  if (sorter) {
+    const configured = await tool("configure", {
+      x: sorter.tileX,
+      y: sorter.tileY,
+      value: { item: "copper" },
+    });
+    check("sorter configure accepted", configured.data?.block === "sorter", JSON.stringify(configured));
+    const sorterTile = await rawProbe("get_tile", { x: sorter.tileX, y: sorter.tileY });
+    check(
+      "get_tile reads sorter config",
+      sorterTile.config === "copper",
+      JSON.stringify({ config: sorterTile.config }),
+    );
+  }
+
   let feeder: any;
   let feederTile: { x: number; y: number } | undefined;
   const feederErrors: string[] = [];
