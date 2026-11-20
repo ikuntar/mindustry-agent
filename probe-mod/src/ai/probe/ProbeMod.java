@@ -83,8 +83,8 @@ public class ProbeMod extends Mod {
     private static final int MAX_OPS = 256;
 
     private final String token = UUID.randomUUID().toString();
-    private final String dataToken = UUID.randomUUID().toString();
-    private final long dataTokenExpires = System.currentTimeMillis()
+    private String dataToken = UUID.randomUUID().toString();
+    private long dataTokenExpires = System.currentTimeMillis()
             + Long.parseLong(System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
     private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
     private final Map<Long, MapSnapshot> mapSnapshots = new LinkedHashMap<>();
@@ -1010,6 +1010,20 @@ public class ProbeMod extends Mod {
             // Probe/debug helper for rule-guard tests; not part of the MCP surface.
             Vars.state.rules.possessionAllowed = request.getBool("allowed", true);
             reply(command, Jval.newObject().put("possessionAllowed", Vars.state.rules.possessionAllowed));
+            return;
+        }
+
+        if ("rotate_data_token".equals(op)) {
+            // Debug/security helper: invalidate the old read-only data token and
+            // publish the new one through the 0600 discovery file.
+            dataToken = UUID.randomUUID().toString();
+            dataTokenExpires = System.currentTimeMillis()
+                    + Long.parseLong(System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
+            writeDiscovery();
+            reply(command, Jval.newObject()
+                    .put("dataToken", dataToken)
+                    .put("dataTokenExpires", dataTokenExpires)
+                    .put("dataBaseUrl", dataBaseUrl));
             return;
         }
 

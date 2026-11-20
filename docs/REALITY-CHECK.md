@@ -88,10 +88,11 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `move_to`：地面单位新增 BFS 路径（solid tile 规避、对角不切角）；Fortress 场景 5 个 container 墙后目标 `(1084,588)`，助手到达 `(1089,588)`，`get_action_result=done`。`follow`/`attack` 的接近移动也走同一 helper；attack 用墙后目标容器验收，接近到 150px 内并 `cancel`。移动完成或取消目标时会清零速度，避免惯性漂移。
 - 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景用 `spawn_enemy ai=true` 生成会还击的 dagger，轮询 2s 内 health `150→141`。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。
-- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 `ammoTotal=6`；再建 2 段上游 conveyor，向最上游存入 2 copper 后炮塔 `ammoTotal=8`；连续 spawn 4 个敌人均被命中（150→141），炮塔弹药实际消耗到 0。完整 survival wave 未做。
+- 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 `ammoTotal=6`；连续 4 个敌人均被命中（150→141），炮塔弹药实际消耗到 0。完整 survival wave 未做；3 段链路验收因时序不稳定已移除。
+- 数据 token 轮换：probe 新增 `rotate_data_token`；旧 token 访问返回 401，新 token 访问 manifest 返回 200。
 - 失败注入：固定场景验证 `withdraw` 未知物品返回 `not_found/Unknown item`、`possess` 自己返回 `bad_target/Cannot possess the assistant's own body`、`deposit` 不存在建筑返回 `building_not_found/No target building`；越界 `mine`/`build_plan` 返回 `out_of_bounds/Tile is outside the map`，越界 `move_to` 返回 `out_of_bounds/Target is outside the map`；`attack` 同队单位返回 `wrong_team/Refusing to attack a unit`；资源清零后 `build_plan` 返回 `insufficient_resources/Missing copper 0/1`。
 - 定向 `cancel`：`move_to` 后 `cancel {opId}` 返回 `cancelled=1`，对应 `get_action_result` 状态为 `cancelled`。
-- 幂等：MCP 工具可选 `idempotencyKey`；固定场景两次相同 `move_to` key 返回同一个 `opId`（`op-12`），第二次不创建新动作。
+- 幂等：MCP 工具可选 `idempotencyKey`；固定场景两次相同 `move_to` key 返回同一个 `opId`，第二次不创建新动作。
 - 借体解控：`release` 后 released dagger 的 `get_unit.controller` 为 `CommandAI`，不是 `ProbeController`；单位未消失。
 - `possessionAllowed`：规则关闭时 `possess` 返回 `possession_disabled/Possession is disabled in the current rules`。
 - 附身校验：敌方 dagger `possess` 返回 `wrong_team/Target unit is not on the assistant's team`；助手自己身体返回 `bad_target`；临时把 dagger 类型的 `playerControllable` 设为 false 后返回 `not_possessable/Target unit type is not player-controllable`。

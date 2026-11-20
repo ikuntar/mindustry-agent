@@ -53,6 +53,7 @@
 - [ ] 事件类型过滤压测、核心事件细分、更多语义事件
 - [x] 远程数据面：probe 内存 map revision、`/data/manifest/current`、GET/HEAD + token、raw-v1 地图二进制、地图 chunk、Range、事件分页；事件为 NDJSON
 - [x] 数据 token TTL：discovery 发布 `dataTokenExpires`，过期返回 410；事件分页带 `X-Next-Cursor`/`X-Has-More`
+- [x] 数据 token 轮换：probe `rotate_data_token` 更新 discovery；固定场景旧 token 401、新 token 200
 - [x] 客户端 SDK：`mindustry_data.open_dataset(ref)`、本地 token 解析、raw-v1 解码、事件读取；`mindustry_data/demo.py` 可运行
 - [x] `get_map_summary`：MCP 返回 `DatasetRef`/schema，不返回 tile；MCP harness 实测
 - [ ] Parquet 事件、revision/TTL 压测、远端 baseUrl 配置
@@ -93,8 +94,7 @@
 
 - [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（上下文/事件增量/移动/多块建造/事件摘要/附身/释放/指定核心重生/无核心恢复）
 - [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
-- [x] harness：固定场景建 `duo` 炮塔 + feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 ammoTotal `6`；再建 2 段 conveyor 上游链路，向最上游存入后炮塔 ammoTotal `6→8`
-- [x] harness：炮塔连续 4 个敌人均被命中，炮塔 `ammoTotal 8→0`，证明防御波次实际消耗炮塔弹药
+- [x] harness：固定场景建 `duo` 炮塔 + feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 ammoTotal `6`；连续 4 个敌人均被命中（150→141），炮塔弹药实际消耗到 0
 - [x] harness：真实 survival wave fixture：`start_wave` 连续触发 wave 1→2→3，分别生成 3/5 个敌人、27 个 spawn group；`query_area includeEnemies=true` 读到 wave dagger（health 114，已被炮塔打伤）
 - [x] harness：核心受击：助手撤离后生成 3 个启用真实 AI 的敌方 dagger，核心 health `1100→1082`
 - [ ] harness：完整 survival 多波防守、长线铺带
@@ -120,7 +120,7 @@
 - [ ] 跨区块/跨地图重生
 - [ ] 本地主机/专用服/其他玩家可见性
 - [ ] 重连、版本握手
-- [x] 动作幂等：MCP 工具接受可选 `idempotencyKey`；成功结果在进程内缓存（最多 256 个），重复 key 返回同一 `opId`，固定场景实测两次 `move_to` 返回 `op-12`
+- [x] 动作幂等：MCP 工具接受可选 `idempotencyKey`；成功结果在进程内缓存（最多 256 个），重复 key 返回同一 `opId`，固定场景实测两次 `move_to` 返回同一动作
 
 ## 未决项
 

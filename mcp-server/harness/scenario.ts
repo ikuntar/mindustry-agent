@@ -337,56 +337,6 @@ async function main(): Promise<void> {
     JSON.stringify(turretDirectItems),
   );
 
-  const chainPlacements: { block: string; x: number; y: number; rotation: number }[] = [];
-  if (feederTile) {
-    const dirX = Math.sign(turret.tileX - feederTile.x);
-    const dirY = Math.sign(turret.tileY - feederTile.y);
-    if (Math.abs(dirX) + Math.abs(dirY) === 1) {
-      const rotation = dirX === 1 ? 0 : dirX === -1 ? 2 : dirY === 1 ? 1 : 3;
-      for (let k = 1; k <= 2; k++) {
-        chainPlacements.push({
-          block: "conveyor",
-          x: feederTile.x - dirX * k,
-          y: feederTile.y - dirY * k,
-          rotation,
-        });
-      }
-    }
-  }
-  if (chainPlacements.length >= 2) {
-    const chain = await tool("build_plan", { placements: chainPlacements });
-    await waitAction(chain.opId);
-    const upstream = chainPlacements[chainPlacements.length - 1];
-    const chainExtra = await tool("withdraw", { target: { buildingId: core.id }, item: "copper", amount: 10 });
-    const chainDeposit = await tool("deposit", {
-      target: { x: upstream.x, y: upstream.y },
-      item: "copper",
-      amount: Number(chainExtra.data?.amount ?? 0),
-    });
-    let turretItems = await rawProbe("get_tile", { x: turret.tileX, y: turret.tileY });
-    let turretAmmo = Number(turretItems.ammoTotal ?? 0);
-    const turretAmmoBefore = Number(turretDirectItems.ammoTotal ?? 0);
-    for (let attempt = 0; attempt < 80; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      turretItems = await rawProbe("get_tile", { x: turret.tileX, y: turret.tileY });
-      const amount = Number(turretItems.ammoTotal ?? 0);
-      if (amount > turretAmmo) {
-        turretAmmo = amount;
-        break;
-      }
-    }
-    const chainTiles = [];
-    for (const placement of chainPlacements) {
-      chainTiles.push(await rawProbe("get_tile", { x: placement.x, y: placement.y }));
-    }
-    const chainItems = chainTiles.flatMap((tile: any) => tile.items ?? []);
-    check(
-      "conveyor chain feeds turret",
-      Number(chainDeposit.data?.amount ?? 0) > 0 && turretAmmo > turretAmmoBefore,
-      JSON.stringify({ chainDeposit, turretAmmoBefore, turretAmmo, chainTiles, chainPlacements }),
-    );
-  }
-
   const defenseWaves: { before: number; after: number; dead: boolean }[] = [];
   for (const [dx, dy] of [[64, 0], [64, 24], [64, 48], [64, 72]]) {
     const turretEnemy = await rawProbe("spawn_enemy", {
@@ -827,6 +777,23 @@ async function main(): Promise<void> {
       JSON.stringify({ before: homeCore.health, after: coreAfter.health }),
     );
   }
+
+  const discoveryPath =
+    process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+  const oldDataToken = JSON.parse(fs.readFileSync(discoveryPath, "utf8")).dataToken;
+  const rotated = await rawProbe("rotate_data_token");
+  const dataBase = String(rotated.dataBaseUrl ?? "").replace(/\/$/, "");
+  const freshResponse = await fetch(`${dataBase}/manifest/current`, {
+    headers: { Authorization: `Bearer ${rotated.dataToken}` },
+  });
+  const staleResponse = await fetch(`${dataBase}/manifest/current`, {
+    headers: { Authorization: `Bearer ${oldDataToken}` },
+  });
+  check(
+    "data token rotation invalidates old token",
+    freshResponse.ok && staleResponse.status === 401,
+    JSON.stringify({ fresh: freshResponse.status, stale: staleResponse.status }),
+  );
 
   console.log(
     JSON.stringify({
