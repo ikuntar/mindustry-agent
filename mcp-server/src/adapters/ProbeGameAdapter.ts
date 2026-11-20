@@ -8,6 +8,8 @@ import {
   ActionResult,
   AreaQuery,
   AreaSnapshot,
+  AreaTileQuery,
+  AreaTileSnapshot,
   AssistantSnapshot,
   BuildPlanRequest,
   BuildingSnapshot,
@@ -27,6 +29,7 @@ import {
   GameError,
   MapSummary,
   OpStatus,
+  TileSnapshot,
   UnitSnapshot,
   UnitStanceName,
   Vec2,
@@ -420,6 +423,30 @@ export class ProbeGameAdapter implements GameAdapter {
       radius: query.radius,
       units,
       buildings,
+    };
+  }
+
+  async getArea(query: AreaTileQuery): Promise<AreaTileSnapshot> {
+    const raw = await this.call("get_area", {
+      x: query.x,
+      y: query.y,
+      radius: query.radius,
+      maxTiles: query.maxTiles,
+    });
+    const tiles: TileSnapshot[] = (raw.tiles ?? []).map((tile: any) => ({
+      x: Number(tile.x ?? 0),
+      y: Number(tile.y ?? 0),
+      block: String(tile.block ?? ""),
+      team: Number(tile.team ?? 0),
+      drop: tile.drop == null ? undefined : String(tile.drop),
+      solid: !!tile.solid,
+    }));
+    return {
+      x: Number(raw.x ?? query.x),
+      y: Number(raw.y ?? query.y),
+      radius: Number(raw.radius ?? query.radius),
+      tiles,
+      truncated: !!raw.truncated,
     };
   }
 

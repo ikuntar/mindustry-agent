@@ -71,7 +71,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 
 实测：
 
-- 25 个 MCP 工具列表正常。
+- 26 个 MCP 工具列表正常。
 - `get_context` 返回真实助手/队伍/核心/资源。
 - `move_to` 返回 opId，`get_action_result` 为 `done`。
 - `build_plan`（单块）返回 opId，随后 `query_area` 读回真实 `conveyor`。
@@ -89,13 +89,14 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 spawn dagger 后 health `150→123`。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。
 - 供弹防守：固定场景建 `duo` 炮塔 `(113,75)`，核心取 5 copper 存入炮塔，spawn 敌人后 1.2s 内敌方 health `150→123`。
-- LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 25 tools、1 次 `get_context`、token/latency 记录。`harness/mock-openai-server.mjs` 已真实验证 HTTP 路径（`mock=false`、24/12 tokens）；真实供应商 endpoint 未验收。
+- LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 26 tools、1 次 `get_context`、token/latency 记录。`harness/mock-openai-server.mjs` 已真实验证 HTTP 路径（`mock=false`、24/12 tokens）；真实供应商 endpoint 未验收。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
 - `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。
 - `follow`：MCP follow 后助手位置变化；固定场景实测 ally 移动后助手追到 30.38px 内并 `cancel`；目标死亡/复杂避障仍简化。
 - `get_events`：probe 事件环已接，实测能读到 `unit_destroy`、`build_damage`、`block_build_end` 等；`get_context.eventsSince` 为真实序号。
 - `get_events` 摘要模式已接：`summary=true` 返回 `byType` 计数 + `ref`，可加 `types` 在游戏侧过滤；原始页仍保留。
 - `get_context`：队伍字段改为 `assistant.team`，`radius` 以 tile 为单位过滤 near units；固定场景实测 `radius=4` 无邻近单位，`radius=15` 包含 ally 226。`since` 事件增量摘要实测 `eventsPending=4`/`byType.total=4`，推进到 `eventsSince` 后为 0。
+- `get_area`：固定场景半径 2 读回 25 个 tile，`truncated=false`；工具只返回 bounded window，不返回全图。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
 - 失败会返回错误或保持 running，不是假成功。
 

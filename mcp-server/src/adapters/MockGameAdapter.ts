@@ -3,6 +3,8 @@ import {
   ActionResult,
   AreaQuery,
   AreaSnapshot,
+  AreaTileQuery,
+  AreaTileSnapshot,
   AssistantSnapshot,
   BuildPlacement,
   BuildPlanRequest,
@@ -475,6 +477,30 @@ export class MockGameAdapter implements GameAdapter {
             .filter((b) => this.distance(b, { x: query.x, y: query.y }) <= query.radius)
             .map((b) => this.snapshotBuilding(b));
     return { x: query.x, y: query.y, radius: query.radius, units, buildings };
+  }
+
+  async getArea(query: AreaTileQuery): Promise<AreaTileSnapshot> {
+    const tiles = [];
+    const centerX = Math.floor(query.x / 8);
+    const centerY = Math.floor(query.y / 8);
+    for (let dx = -query.radius; dx <= query.radius; dx++) {
+      for (let dy = -query.radius; dy <= query.radius; dy++) {
+        tiles.push({
+          x: centerX + dx,
+          y: centerY + dy,
+          block: "air",
+          team: 0,
+          solid: false,
+        });
+      }
+    }
+    return {
+      x: query.x,
+      y: query.y,
+      radius: query.radius,
+      tiles,
+      truncated: false,
+    };
   }
 
   async getConfigSchema(block: string): Promise<ConfigSchema> {

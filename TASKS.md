@@ -56,7 +56,8 @@
 - [x] 客户端 SDK：`mindustry_data.open_dataset(ref)`、本地 token 解析、raw-v1 解码、事件读取；`mindustry_data/demo.py` 可运行
 - [x] `get_map_summary`：MCP 返回 `DatasetRef`/schema，不返回 tile；MCP harness 实测
 - [ ] Parquet 事件、revision/TTL 压测、远端 baseUrl 配置
-- [ ] 无代码 host 的 `get_area` / `get_events` 有界查询 fallback
+- [x] 无代码 host 的 `get_area` 有界查询 fallback：半径上限 24 tiles、maxTiles 512；固定场景读回 25 个 tile
+- [ ] `get_events` 无代码 host 的更细过滤/分页组合
 - [ ] 数据面鉴权/TTL/路径白名单/速率限制与验收
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
@@ -91,7 +92,7 @@
 - [x] harness：固定场景建 `duo` 炮塔、从核心取 5 copper 装入、spawn 敌人后炮塔造成伤害（150→123）；完整 N 波防守仍待补
 - [ ] harness：完整铺带、供弹、防守 N 波、换核心重生
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
-- [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、25 tools、1 次工具调用、24/12 tokens
+- [x] LLM harness HTTP 路径：`harness/mock-openai-server.mjs` 本地 mock endpoint 实测 `mock=false`、26 tools、1 次工具调用、24/12 tokens
 - [ ] LLM harness：接真实模型并跑固定任务（真实供应商 endpoint 未验收）
 - [ ] 指标：任务成功率、动作失败率、响应延迟、token/分钟、误伤玩家资产、助手死亡（harness 已记录基础计数）
 - [ ] 失败注入：越界、资源不足、错队、不可附身、无核心、LLM 超时

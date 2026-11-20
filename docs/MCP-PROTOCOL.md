@@ -193,6 +193,16 @@ MCP server（Node/TypeScript）
 
 建议事件类型：`wave_start`、`wave_end`、`core_damage`、`building_destroyed`、`unit_destroyed`、`resource_low`、`resource_full`、`build_complete`、`player_damaged`、`assistant_damaged`、`action_done`、`action_failed`、`possessed`、`released`、`respawned`。
 
+### `get_area`
+
+参数：`{ "x": 20, "y": 20, "radius": 6, "maxTiles": 256 }`。
+
+只读 bounded tile window，供没有代码执行能力的 host 使用：
+- `radius` 以 tile 为单位，最大 24
+- 默认最多 256 个 tile，最大 512
+- 返回 `{x,y,radius,tiles:[{x,y,block,team,drop?,solid}],truncated}`
+- 不返回全图；需要大范围分析时用 `get_map_summary` + 数据面
+
 ### `query_area`
 
 参数：`{ "x": 20, "y": 20, "radius": 10, "includeUnits": true, "includeBuildings": true }`。
@@ -298,7 +308,7 @@ MCP server（Node/TypeScript）
 
 当前进度：
 
-- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `query_area` / `move_to` / `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `attack` / `mine` / `follow` / `possess` / `release` / `respawn` / `deconstruct` / `repair` / `cancel`；`get_content` 为静态注册表。
+- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `get_area` / `query_area` / `move_to` / `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `attack` / `mine` / `follow` / `possess` / `release` / `respawn` / `deconstruct` / `repair` / `cancel`；`get_content` 为静态注册表。
 - `get_events` 已接真实事件环；大体积地图/事件不通过 MCP 工具结果传输，见 `docs/REMOTE-DATA-PLANE.md`。
 `unit_destroy`/`unit_create`/`block_destroy`/`block_build_end`/`build_damage`/`unit_damage`，支持 `since/limit/next/dropped`；高频 `build_damage` 会占满页。
 - `attack` / `follow` 已接入口。`attack` 支持单位/建筑/坐标三种目标：建筑实测 `targetHealth 220→0`，坐标实测 done/inRange；单位目标未独立验收。`follow` 仍缺稳定验收。
@@ -308,7 +318,7 @@ MCP server（Node/TypeScript）
 - 已验证附身/释放：home body despawn、目标 dagger 接管、release 后新 alpha 在核心生成；`isHome/possessing` 读回正确；`respawn` 死亡后 id 211→212、health 150。`mine` 实测 sand 1，`attack` 实测 220→0。
 
 待实现：
-- 重连、心跳、多客户端互斥、token 轮换。
+- 重连、多客户端互斥、token 轮换（重连/心跳已有 fake probe 单测）。
 - 游戏线程动作队列 + 每帧预算；LLM 调用离线程（probe 已有每帧 50 条上限，正式 adapter 还需要更细预算/背压）。
 - `get_context` 的真实数据（单位/建筑/核心/资源/波次）；`get_content` 仍静态。
 - 真实 `build_plan`：逐块 `Build.validPlace` + `Build.beginPlace(assistantUnit, ...)` + 物品/时间；不允许 `constructFinish`。

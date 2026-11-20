@@ -175,6 +175,22 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   );
 
   server.registerTool(
+    "get_area",
+    {
+      description:
+        "Read a bounded tile window for hosts without code execution. Returns block/team/drop/solid per tile, never the full map.",
+      inputSchema: {
+        x: z.number(),
+        y: z.number(),
+        radius: z.number().int().positive().max(24),
+        maxTiles: z.number().int().positive().max(512).optional(),
+      },
+      annotations: readOnly,
+    },
+    async (args) => run(() => adapter.getArea(args)),
+  );
+
+  server.registerTool(
     "get_config_schema",
     {
       description: "Read the configuration value schema for a block.",

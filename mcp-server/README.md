@@ -37,7 +37,7 @@ Implemented: `get_context`, `get_capabilities`, `get_content` (static registry),
 
 ## Tools
 
-25 tools: 8 read + 17 action. See `../docs/MCP-PROTOCOL.md` for the contract.
+26 tools: 9 read + 17 action. See `../docs/MCP-PROTOCOL.md` for the contract.
 
 Read:
 `get_context`, `get_capabilities`, `get_content`, `get_map_summary`, `get_events`, `query_area`,

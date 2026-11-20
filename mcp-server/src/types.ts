@@ -157,6 +157,30 @@ export interface AreaSnapshot {
   buildings: BuildingSnapshot[];
 }
 
+export interface TileSnapshot {
+  x: number;
+  y: number;
+  block: string;
+  team: number;
+  drop?: string;
+  solid: boolean;
+}
+
+export interface AreaTileQuery {
+  x: number;
+  y: number;
+  radius: number;
+  maxTiles?: number;
+}
+
+export interface AreaTileSnapshot {
+  x: number;
+  y: number;
+  radius: number;
+  tiles: TileSnapshot[];
+  truncated: boolean;
+}
+
 export interface ConfigField {
   key: string;
   type: "item" | "liquid" | "block" | "unit" | "boolean" | "string" | "number" | "point";
@@ -291,6 +315,7 @@ export interface GameAdapter {
   getMapSummary(): Promise<MapSummary>;
   getEvents(since: number, limit: number, summary?: boolean, types?: string[]): Promise<EventPage>;
   queryArea(query: AreaQuery): Promise<AreaSnapshot>;
+  getArea(query: AreaTileQuery): Promise<AreaTileSnapshot>;
   getConfigSchema(block: string): Promise<ConfigSchema>;
   getActionResult(opId: string, waitMs: number): Promise<ActionResult>;
 

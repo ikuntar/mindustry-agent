@@ -562,7 +562,6 @@ public class ProbeMod extends Mod {
             boolean includeUnits = request.getBool("includeUnits", true);
             boolean includeBuildings = request.getBool("includeBuildings", true);
             Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
-
             Jval units = Jval.newArray();
             if (includeUnits) {
                 for (Unit unit : mindustry.gen.Groups.unit) {
@@ -613,6 +612,44 @@ public class ProbeMod extends Mod {
                     .put("radius", radius)
                     .put("units", units)
                     .put("buildings", buildings));
+            return;
+        }
+
+        if ("get_area".equals(op)) {
+            float x = request.getFloat("x", 0f);
+            float y = request.getFloat("y", 0f);
+            int radius = Math.max(1, Math.min(24, request.getInt("radius", 6)));
+            int maxTiles = Math.max(1, Math.min(512, request.getInt("maxTiles", 256)));
+            int tileX = Vars.world.toTile(x);
+            int tileY = Vars.world.toTile(y);
+            Jval tiles = Jval.newArray();
+            boolean truncated = false;
+            outer:
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dy = -radius; dy <= radius; dy++) {
+                    Tile tile = Vars.world.tile(tileX + dx, tileY + dy);
+                    if (tile == null) continue;
+                    if (tiles.asArray().size >= maxTiles) {
+                        truncated = true;
+                        break outer;
+                    }
+                    Item drop = tile.drop();
+                    Jval entry = Jval.newObject()
+                            .put("x", tile.x)
+                            .put("y", tile.y)
+                            .put("block", tile.block().name)
+                            .put("team", tile.team().id)
+                            .put("solid", tile.block().solid);
+                    if (drop != null) entry.put("drop", drop.name);
+                    tiles.add(entry);
+                }
+            }
+            reply(command, Jval.newObject()
+                    .put("x", x)
+                    .put("y", y)
+                    .put("radius", radius)
+                    .put("tiles", tiles)
+                    .put("truncated", truncated));
             return;
         }
 

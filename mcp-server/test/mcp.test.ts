@@ -74,6 +74,13 @@ test("mcp: context and capabilities are readable", async () => {
     assert.equal(caps.ok, true);
     assert.equal(caps.data.canBuild, true);
     assert.ok(caps.data.buildRange > 0);
+
+    const area = parse(
+      await c.client.callTool({ name: "get_area", arguments: { x: 20, y: 20, radius: 2 } }),
+    );
+    assert.equal(area.ok, true);
+    assert.equal(area.data.tiles.length, 25);
+    assert.equal(area.data.truncated, false);
   } finally {
     await c.close();
   }

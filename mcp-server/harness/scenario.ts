@@ -137,6 +137,9 @@ async function main(): Promise<void> {
   const core = context.cores[0];
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);
+  const tileWindow = await tool("get_area", { x: core.x, y: core.y, radius: 2 });
+  check("bounded area is available", tileWindow.tiles?.length === 25, String(tileWindow.tiles?.length));
+  check("bounded area reports no truncation", tileWindow.truncated === false);
 
   // Supply loop: build a turret, load it from the core, and prove it can fire.
   let turretPlacement: any;
