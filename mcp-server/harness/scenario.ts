@@ -399,6 +399,17 @@ async function main(): Promise<void> {
   const events = await tool("get_events", { since: 0, summary: true, types: ["unit_destroy", "build_damage"] });
   check("event summary is present", events.summary && events.summary.total >= 0);
   check("event summary has ref", typeof events.ref === "string" && events.ref.startsWith("obs://events/"));
+  check(
+    "event type filter is enforced",
+    Object.keys(events.summary?.byType ?? {}).every((type) => type === "unit_destroy" || type === "build_damage"),
+    JSON.stringify(events.summary?.byType),
+  );
+  const firstEventPage = await tool("get_events", { since: 0, limit: 1, summary: true });
+  check("event page has a cursor", !firstEventPage.hasMore || Number(firstEventPage.next) > 0, JSON.stringify(firstEventPage));
+  if (firstEventPage.hasMore) {
+    const secondEventPage = await tool("get_events", { since: firstEventPage.next, limit: 1, summary: true });
+    check("event page cursor advances", Number(secondEventPage.next) > Number(firstEventPage.next), JSON.stringify(secondEventPage));
+  }
 
   if (seed?.ally?.id) {
     const ally = { ...seed.ally, x: core.x + 80, y: core.y };
