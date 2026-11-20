@@ -50,6 +50,7 @@ export interface ProbeAdapterOptions {
   port?: number;
   timeoutMs?: number;
   token?: string;
+  heartbeatMs?: number;
 }
 
 /**
@@ -64,11 +65,13 @@ export class ProbeGameAdapter implements GameAdapter {
   private readonly port: number;
   private readonly timeoutMs: number;
   private readonly token?: string;
+  private readonly heartbeatMs: number;
   private socket?: net.Socket;
   private buffer = "";
   private nextId = 1;
   private actionSeq = 0;
   private handshaken = false;
+  private heartbeat?: NodeJS.Timeout;
   private pending = new Map<number, Pending>();
 
   constructor(options: ProbeAdapterOptions = {}) {
@@ -84,6 +87,7 @@ export class ProbeGameAdapter implements GameAdapter {
     this.port = options.port ?? Number(process.env.PROBE_PORT ?? discovery?.port ?? 46500);
     this.timeoutMs = options.timeoutMs ?? 5000;
     this.token = options.token ?? process.env.PROBE_TOKEN ?? discovery?.token;
+    this.heartbeatMs = options.heartbeatMs ?? Number(process.env.PROBE_HEARTBEAT_MS ?? 15000);
   }
 
   // ---------------------------------------------------------------- transport
@@ -110,9 +114,44 @@ export class ProbeGameAdapter implements GameAdapter {
       socket.on("close", () => {
         this.socket = undefined;
         this.handshaken = false;
+        this.stopHeartbeat();
         this.rejectAll(new GameError("probe_closed", "Probe socket closed"));
       });
     });
+  }
+
+  private async connectWithRetry(): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.connect();
+        return;
+      } catch (error) {
+        lastError = error;
+        await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+      }
+    }
+    throw lastError instanceof Error
+      ? lastError
+      : new GameError("probe_unavailable", "Probe connection failed");
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    if (this.heartbeatMs <= 0) return;
+    this.heartbeat = setInterval(() => {
+      this.send("ping", {}).catch(() => {
+        this.socket?.destroy();
+      });
+    }, this.heartbeatMs);
+    this.heartbeat.unref?.();
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeat) {
+      clearInterval(this.heartbeat);
+      this.heartbeat = undefined;
+    }
   }
 
   private handleData(chunk: Buffer): void {
@@ -153,13 +192,15 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   private async call(op: string, args: Record<string, unknown> = {}): Promise<any> {
-    await this.connect();
+    await this.connectWithRetry();
     if (!this.handshaken) {
-      this.handshaken = true;
       const hello = await this.send("hello", { token: this.token });
       if (Number(hello?.protocol ?? 0) !== 1) {
+        this.socket?.destroy();
         throw new GameError("probe_incompatible", `Unsupported probe protocol: ${String(hello?.protocol)}`);
       }
+      this.handshaken = true;
+      this.startHeartbeat();
     }
     return await this.send(op, args);
   }
@@ -523,6 +564,7 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async close(): Promise<void> {
+    this.stopHeartbeat();
     this.rejectAll(new GameError("probe_closed", "Probe adapter closed"));
     this.socket?.destroy();
     this.socket = undefined;

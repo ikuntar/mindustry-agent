@@ -46,7 +46,7 @@ mindustry-ai/
 - [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权
 - [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、事件分页、token TTL、`mindustry_data` SDK、`get_map_summary`
 - [ ] Parquet 事件、revision 淘汰压测、远端 baseUrl 配置
-- [ ] 真实 Mindustry mod adapter 生产化（重连、心跳、多客户端、token 轮换）
+- [ ] 真实 Mindustry mod adapter 生产化（运行中重连、多客户端互斥、token 轮换）
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
 - [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔供弹防守

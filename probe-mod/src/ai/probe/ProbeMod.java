@@ -389,6 +389,15 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("ping".equals(op)) {
+            reply(command, Jval.newObject()
+                    .put("pong", true)
+                    .put("protocol", PROTOCOL_VERSION)
+                    .put("version", VERSION)
+                    .put("tick", Vars.state.tick));
+            return;
+        }
+
         if ("get_map_manifest".equals(op)) {
             if (mapRevision == 0) captureMapSnapshot((long) Vars.state.tick);
             MapSnapshot snapshot = findMapSnapshot(mapRevision);
