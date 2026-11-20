@@ -44,8 +44,8 @@ mindustry-ai/
 - [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
 - [x] `get_events` 摘要模式：`summary=true` 返回 `byType` 计数 + `ref`，高频事件不占页
 - [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权
-- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、`mindustry_data` SDK、`get_map_summary`
-- [ ] Parquet 事件、revision/TTL 压测、远端 baseUrl 配置
+- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、事件分页、token TTL、`mindustry_data` SDK、`get_map_summary`
+- [ ] Parquet 事件、revision 淘汰压测、远端 baseUrl 配置
 - [ ] 真实 Mindustry mod adapter 生产化（重连、心跳、多客户端、token 轮换）
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）

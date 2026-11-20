@@ -259,8 +259,9 @@ print({
 ### Phase 2：probe 只读数据面（已实现）
 
 - 游戏侧生成地图快照 revision（内存，最多保留 8 个）。
-- HTTP GET/HEAD + token；`/data/manifest/current`、`/data/map/{rev}`、`/data/map/{rev}/chunk/{cx}/{cy}`、`/data/events/{rev}`。
-- 地图支持单段 `Range`（206/416），chunk 大小 32；事件暂未实现 Range。
+- HTTP GET/HEAD + token；`/data/manifest/current`、`/data/map/{rev}`、`/data/map/{rev}/chunk/{cx}/{cy}`、`/data/events/{rev}`、`/data/events/{rev}/page/{cursor}`。
+- 地图支持单段 `Range`（206/416），chunk 大小 32；事件支持 cursor 分页，响应头 `X-Next-Cursor`/`X-Has-More`，暂未实现 Range。
+- 数据 token 有 TTL；discovery 发布 `dataTokenExpires`，过期返回 410。
 - 当前 probe 格式为 **raw-v1**（`MND1` 头 + int16 层），不是最终 npz/zarr；事件为 NDJSON，不是最终 Parquet。
 - discovery/manifest 返回 `dataBaseUrl`/`dataToken`/ref。
 - 本地 dev 仍可用 `file://`，但标记为 dev-only。

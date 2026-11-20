@@ -48,7 +48,8 @@
 - [x] `cancel`：全量取消已实测；按 opId 定向取消已实现但未单独回放
 - [x] `get_events`：probe 事件环（unit_destroy / unit_create / block_destroy / block_build_end / build_damage / unit_damage），`since/limit/next/dropped`、`summary` 和 `types` 已接；MCP 实测 `byType` 摘要
 - [ ] 事件类型过滤压测、核心事件细分、更多语义事件
-- [x] 远程数据面：probe 内存 map revision、`/data/manifest/current`、GET/HEAD + token、raw-v1 地图二进制、地图 chunk、Range；事件为 NDJSON
+- [x] 远程数据面：probe 内存 map revision、`/data/manifest/current`、GET/HEAD + token、raw-v1 地图二进制、地图 chunk、Range、事件分页；事件为 NDJSON
+- [x] 数据 token TTL：discovery 发布 `dataTokenExpires`，过期返回 410；事件分页带 `X-Next-Cursor`/`X-Has-More`
 - [x] 客户端 SDK：`mindustry_data.open_dataset(ref)`、本地 token 解析、raw-v1 解码、事件读取；`mindustry_data/demo.py` 可运行
 - [x] `get_map_summary`：MCP 返回 `DatasetRef`/schema，不返回 tile；MCP harness 实测
 - [ ] Parquet 事件、revision/TTL 压测、远端 baseUrl 配置

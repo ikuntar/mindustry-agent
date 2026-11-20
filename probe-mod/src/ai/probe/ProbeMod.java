@@ -75,6 +75,8 @@ public class ProbeMod extends Mod {
 
     private final String token = UUID.randomUUID().toString();
     private final String dataToken = UUID.randomUUID().toString();
+    private final long dataTokenExpires = System.currentTimeMillis()
+            + Long.parseLong(System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
     private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
     private final Map<Long, MapSnapshot> mapSnapshots = new LinkedHashMap<>();
     private long mapRevision = 0;
@@ -1586,6 +1588,10 @@ public class ProbeMod extends Mod {
                 sendText(exchange, 401, "unauthorized", "text/plain", false);
                 return;
             }
+            if (System.currentTimeMillis() > dataTokenExpires) {
+                sendText(exchange, 410, "ref_expired", "text/plain", false);
+                return;
+            }
             String path = exchange.getRequestURI().getPath();
             if (!path.startsWith("/data/")) {
                 sendText(exchange, 404, "not found", "text/plain", false);
@@ -1689,6 +1695,52 @@ public class ProbeMod extends Mod {
                 return;
             }
             if ("events".equals(parts[0])) {
+                if (parts.length == 4 && "page".equals(parts[2])) {
+                    int cursor;
+                    try {
+                        cursor = Integer.parseInt(parts[3]);
+                    } catch (NumberFormatException error) {
+                        sendText(exchange, 400, "bad cursor", "text/plain", false);
+                        return;
+                    }
+                    int limit = 50;
+                    String query = exchange.getRequestURI().getQuery();
+                    if (query != null) {
+                        for (String pair : query.split("&")) {
+                            if (pair.startsWith("limit=")) {
+                                try {
+                                    limit = Math.max(1, Math.min(200, Integer.parseInt(pair.substring(6))));
+                                } catch (NumberFormatException ignored) {
+                                }
+                            }
+                        }
+                    }
+                    int next = cursor;
+                    boolean hasMore = false;
+                    StringBuilder output = new StringBuilder();
+                    synchronized (eventLog) {
+                        int count = 0;
+                        for (Jval event : eventLog) {
+                            int id = event.getInt("id", 0);
+                            if (id <= cursor || id > revision) continue;
+                            if (count >= limit) {
+                                hasMore = true;
+                                break;
+                            }
+                            output.append(event.toString(Jval.Jformat.plain)).append('\n');
+                            next = id;
+                            count++;
+                        }
+                    }
+                    exchange.getResponseHeaders().set("X-Next-Cursor", String.valueOf(next));
+                    exchange.getResponseHeaders().set("X-Has-More", String.valueOf(hasMore));
+                    sendBytes(exchange, 200, output.toString().getBytes(StandardCharsets.UTF_8), "application/x-ndjson", "\"events-" + revision + "-page-" + cursor + "\"", method.equals("HEAD"));
+                    return;
+                }
+                if (parts.length > 2) {
+                    sendText(exchange, 404, "not found", "text/plain", false);
+                    return;
+                }
                 synchronized (eventLog) {
                     StringBuilder output = new StringBuilder();
                     for (Jval event : eventLog) {
@@ -1764,6 +1816,7 @@ public class ProbeMod extends Mod {
                     .put("requireAuth", requireAuth)
                     .put("dataPort", DATA_PORT)
                     .put("dataToken", dataToken)
+                    .put("dataTokenExpires", dataTokenExpires)
                     .put("dataBaseUrl", dataBaseUrl)
                     .put("pid", ProcessHandle.current().pid())
                     .toString(Jval.Jformat.plain);

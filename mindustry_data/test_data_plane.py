@@ -90,6 +90,15 @@ class DataPlaneTest(unittest.TestCase):
         self.assertGreaterEqual(dataset.ref.revision, 0)
         self.assertIsInstance(dataset.events, list)
 
+        with self._request(f"/events/{dataset.ref.revision}/page/0?limit=1") as response:
+            page = [line for line in response.read().decode().splitlines() if line]
+            self.assertEqual(response.status, 200)
+            self.assertLessEqual(len(page), 1)
+            self.assertIn("X-Next-Cursor", response.headers)
+        if dataset.events:
+            self.assertEqual(len(page), 1)
+            self.assertEqual(json.loads(page[0])["id"], dataset.events[0]["id"])
+
 
 if __name__ == "__main__":
     unittest.main()
