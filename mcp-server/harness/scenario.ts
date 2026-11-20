@@ -413,6 +413,12 @@ async function main(): Promise<void> {
     });
   }
   check("turret defends multiple waves", defenseWaves.length === 4, JSON.stringify(defenseWaves));
+  const turretAfterDefense = await rawProbe("get_tile", { x: turret.tileX, y: turret.tileY });
+  check(
+    "turret consumes ammo during defense",
+    Number(turretAfterDefense.ammoTotal ?? 0) < 8,
+    JSON.stringify({ ammoTotal: turretAfterDefense.ammoTotal }),
+  );
 
   const target = { x: core.x + 24, y: core.y };
   const moved = await tool("move_to", { ...target, arriveRadius: 12 });
