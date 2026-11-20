@@ -365,6 +365,20 @@ async function main(): Promise<void> {
   check("attack approach crosses wall region", approached);
   await tool("cancel");
 
+  const autoEnemy = await rawProbe("spawn_enemy", {
+    type: "dagger",
+    x: afterPath.assistant.x + 30,
+    y: afterPath.assistant.y,
+  });
+  const autoBefore = await rawProbe("get_unit", { unitId: autoEnemy.id });
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  const autoAfter = await rawProbe("get_unit", { unitId: autoEnemy.id });
+  check(
+    "auto defense damages nearby enemy",
+    autoAfter?.dead === true || autoAfter.health < autoBefore.health,
+    JSON.stringify({ before: autoBefore.health, after: autoAfter.health, dead: autoAfter.dead }),
+  );
+
   console.log(
     JSON.stringify({
       ok: true,

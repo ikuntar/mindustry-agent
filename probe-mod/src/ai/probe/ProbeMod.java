@@ -2136,6 +2136,7 @@ public class ProbeMod extends Mod {
         private Vec2 pathTarget;
         private List<Vec2> path = List.of();
         private int pathIndex;
+        private double lastAutoScanTick = -1;
 
         @Override
         public void unit(Unit unit) {
@@ -2191,10 +2192,38 @@ public class ProbeMod extends Mod {
             }
 
             if (target == null) {
+                maybeAutoTarget();
                 clearPath();
                 return;
             }
             moveToward(target);
+        }
+
+        private void maybeAutoTarget() {
+            if (unit == null || unit.dead || unit.type.weapons.isEmpty()) return;
+            double tick = Vars.state.tick;
+            if (tick - lastAutoScanTick < 10) return;
+            lastAutoScanTick = tick;
+            float range = 0f;
+            for (var weapon : unit.type.weapons) range = Math.max(range, weapon.range());
+            if (range <= 0f) return;
+            Unit best = null;
+            float bestDistance = range;
+            for (Unit other : Groups.unit) {
+                if (other == null || other == unit || other.dead || other.team == unit.team) continue;
+                float distance = (float) Math.hypot(other.x - unit.x, other.y - unit.y);
+                if (distance < bestDistance) {
+                    best = other;
+                    bestDistance = distance;
+                }
+            }
+            if (best == null) {
+                unit.isShooting = false;
+                return;
+            }
+            unit.aimX = best.x;
+            unit.aimY = best.y;
+            unit.isShooting = true;
         }
 
         private void clearPath() {

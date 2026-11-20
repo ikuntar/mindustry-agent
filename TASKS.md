@@ -59,6 +59,7 @@
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
 - [x] `move_to` 基础 BFS 寻路：地面单位绕过 solid tile；Fortress 场景用 5 个 container 做墙，助手到达墙后目标（`1089,588` vs `1084,588`）；follow/attack 的接近移动共用该路径，attack 绕障接近已在固定场景验证
+- [x] 基础自动索敌/开火：空闲时扫描武器射程内最近敌军，设置 aim/isShooting；固定场景 spawn dagger 后 900ms 内 health 150→123
 - [ ] 本地反射控制器：自动索敌/开火、建造推进、撤退/卡住重试（BFS 只是移动基础）
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
