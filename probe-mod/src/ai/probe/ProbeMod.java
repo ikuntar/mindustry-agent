@@ -31,21 +31,31 @@ import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.CoreBlock.CoreBuild;
 import mindustry.world.modules.ItemModule;
 
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
 
 /**
  * Minimal probe mod: local socket + a handful of real game actions.
@@ -58,11 +68,17 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class ProbeMod extends Mod {
     private static final int PORT = 46500;
+    private static final int DATA_PORT = 46501;
     private static final int PROTOCOL_VERSION = 1;
     private static final String VERSION = "0.1.0";
 
     private final String token = UUID.randomUUID().toString();
+    private final String dataToken = UUID.randomUUID().toString();
     private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
+    private final Map<Long, MapSnapshot> mapSnapshots = new LinkedHashMap<>();
+    private long mapRevision = 0;
+    private long lastMapCaptureTick = -1;
+    private String dataBaseUrl = "http://127.0.0.1:" + DATA_PORT + "/data";
 
     private final ConcurrentLinkedQueue<Command> queue = new ConcurrentLinkedQueue<>();
     private final Map<String, Op> ops = new HashMap<>();
@@ -138,7 +154,9 @@ public class ProbeMod extends Mod {
             }
         });
         startSocket();
+        startDataServer();
         Log.info("[ai-probe] listening on 127.0.0.1:" + PORT);
+        Log.info("[ai-probe] data plane on 127.0.0.1:" + DATA_PORT + "/data");
     }
 
     private void addEvent(String type, Jval data) {
@@ -149,9 +167,11 @@ public class ProbeMod extends Mod {
                 .put("tick", Vars.state.tick)
                 .put("timeMs", System.currentTimeMillis())
                 .put("data", data);
-        eventLog.add(event);
-        while (eventLog.size > 512) {
-            eventLog.remove(0);
+        synchronized (eventLog) {
+            eventLog.add(event);
+            while (eventLog.size > 512) {
+                eventLog.remove(0);
+            }
         }
     }
 
@@ -163,8 +183,15 @@ public class ProbeMod extends Mod {
         autoRespawn = true;
         controller = null;
         ops.clear();
-        eventLog.clear();
+        synchronized (eventLog) {
+            eventLog.clear();
+        }
         eventSeq = 0;
+        synchronized (mapSnapshots) {
+            mapSnapshots.clear();
+        }
+        mapRevision = 0;
+        lastMapCaptureTick = -1;
         Log.info("[ai-probe] world loaded, waiting for requests");
     }
 
@@ -175,6 +202,11 @@ public class ProbeMod extends Mod {
         }
 
         ensureAssistant();
+
+        long tick = (long) Vars.state.tick;
+        if (mapSnapshotNeeded(tick)) {
+            captureMapSnapshot(tick);
+        }
 
         for (int i = 0; i < 50; i++) {
             Command command = queue.poll();
@@ -330,7 +362,20 @@ public class ProbeMod extends Mod {
                     .put("protocol", PROTOCOL_VERSION)
                     .put("version", VERSION)
                     .put("port", PORT)
+                    .put("dataPort", DATA_PORT)
+                    .put("dataBaseUrl", dataBaseUrl)
                     .put("requireAuth", requireAuth));
+            return;
+        }
+
+        if ("get_map_manifest".equals(op)) {
+            if (mapRevision == 0) captureMapSnapshot((long) Vars.state.tick);
+            MapSnapshot snapshot = findMapSnapshot(mapRevision);
+            if (snapshot == null) {
+                replyError(command, "map_not_ready", "Map snapshot is not ready");
+                return;
+            }
+            reply(command, snapshot.manifest(dataBaseUrl));
             return;
         }
 
@@ -1431,6 +1476,159 @@ public class ProbeMod extends Mod {
                 .put("error", Jval.newObject().put("code", code).put("message", message)));
     }
 
+    private boolean mapSnapshotNeeded(long tick) {
+        return mapRevision == 0 || tick - lastMapCaptureTick >= 600;
+    }
+
+    private void captureMapSnapshot(long tick) {
+        int width = Vars.world.width();
+        int height = Vars.world.height();
+        if (width <= 0 || height <= 0) return;
+        int cells = width * height;
+        short[] blocks = new short[cells];
+        short[] teams = new short[cells];
+        short[] drops = new short[cells];
+        short[] solids = new short[cells];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Tile tile = Vars.world.tile(x, y);
+                int index = y * width + x;
+                if (tile == null) continue;
+                blocks[index] = (short) tile.block().id;
+                teams[index] = (short) tile.team().id;
+                Item drop = tile.drop();
+                drops[index] = (short) (drop == null ? 0 : drop.id);
+                solids[index] = (short) (tile.block().solid ? 1 : 0);
+            }
+        }
+        long revision = ++mapRevision;
+        MapSnapshot snapshot = new MapSnapshot(revision, width, height, blocks, teams, drops, solids);
+        synchronized (mapSnapshots) {
+            mapSnapshots.put(revision, snapshot);
+            while (mapSnapshots.size() > 8) {
+                mapSnapshots.remove(mapSnapshots.keySet().iterator().next());
+            }
+        }
+        lastMapCaptureTick = tick;
+    }
+
+    private MapSnapshot findMapSnapshot(long revision) {
+        synchronized (mapSnapshots) {
+            return mapSnapshots.get(revision);
+        }
+    }
+
+    private void startDataServer() {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", DATA_PORT), 0);
+            server.createContext("/data", this::handleData);
+            server.setExecutor(Executors.newCachedThreadPool());
+            server.start();
+            Log.info("[ai-probe] data plane started: " + dataBaseUrl);
+        } catch (IOException error) {
+            Log.err("[ai-probe] data plane failed", error);
+        }
+    }
+
+    private void handleData(HttpExchange exchange) {
+        try {
+            String method = exchange.getRequestMethod();
+            if (!"GET".equals(method) && !"HEAD".equals(method)) {
+                sendText(exchange, 405, "method not allowed", "text/plain", true);
+                return;
+            }
+            String auth = exchange.getRequestHeaders().getFirst("Authorization");
+            if (!("Bearer " + dataToken).equals(auth)) {
+                sendText(exchange, 401, "unauthorized", "text/plain", false);
+                return;
+            }
+            String path = exchange.getRequestURI().getPath();
+            if (!path.startsWith("/data/")) {
+                sendText(exchange, 404, "not found", "text/plain", false);
+                return;
+            }
+            String[] parts = path.substring("/data/".length()).split("/");
+            if (parts.length < 2) {
+                sendText(exchange, 404, "not found", "text/plain", false);
+                return;
+            }
+            long revision;
+            try {
+                if ("current".equals(parts[1])) {
+                    revision = "events".equals(parts[0]) ? eventSeq : mapRevision;
+                } else {
+                    revision = Long.parseLong(parts[1]);
+                }
+            } catch (NumberFormatException error) {
+                sendText(exchange, 400, "bad revision", "text/plain", false);
+                return;
+            }
+            if ("manifest".equals(parts[0])) {
+                MapSnapshot snapshot = findMapSnapshot(revision);
+                if (snapshot == null) {
+                    sendText(exchange, 410, "ref_expired", "text/plain", false);
+                    return;
+                }
+                sendBytes(exchange, 200, snapshot.manifest(dataBaseUrl).toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8), "application/json", "\"map-" + revision + "\"", method.equals("HEAD"));
+                return;
+            }
+            if ("map".equals(parts[0])) {
+                if (parts.length > 2) {
+                    sendText(exchange, 404, "chunk endpoint is not implemented yet", "text/plain", false);
+                    return;
+                }
+                MapSnapshot snapshot = findMapSnapshot(revision);
+                if (snapshot == null) {
+                    sendText(exchange, 410, "ref_expired", "text/plain", false);
+                    return;
+                }
+                sendBytes(exchange, 200, snapshot.toBytes(), "application/octet-stream", "\"map-" + revision + "\"", method.equals("HEAD"));
+                return;
+            }
+            if ("events".equals(parts[0])) {
+                synchronized (eventLog) {
+                    StringBuilder output = new StringBuilder();
+                    for (Jval event : eventLog) {
+                        if (event.getInt("id", 0) <= revision) {
+                            output.append(event.toString(Jval.Jformat.plain)).append('\n');
+                        }
+                    }
+                    sendBytes(exchange, 200, output.toString().getBytes(StandardCharsets.UTF_8), "application/x-ndjson", "\"events-" + revision + "\"", method.equals("HEAD"));
+                }
+                return;
+            }
+            sendText(exchange, 404, "not found", "text/plain", false);
+        } catch (Throwable error) {
+            try {
+                sendText(exchange, 500, "internal error", "text/plain", false);
+            } catch (Throwable ignored) {
+            }
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void sendText(HttpExchange exchange, int status, String text, String contentType, boolean head) {
+        sendBytes(exchange, status, text.getBytes(StandardCharsets.UTF_8), contentType, null, head);
+    }
+
+    private void sendBytes(HttpExchange exchange, int status, byte[] bytes, String contentType, String etag, boolean head) {
+        try {
+            exchange.getResponseHeaders().set("Content-Type", contentType);
+            exchange.getResponseHeaders().set("Cache-Control", "no-store");
+            if (etag != null) exchange.getResponseHeaders().set("ETag", etag);
+            if (head) {
+                exchange.sendResponseHeaders(status, -1);
+                return;
+            }
+            exchange.sendResponseHeaders(status, bytes.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(bytes);
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
     private void startSocket() {
         Thread thread = new Thread(() -> {
             try (ServerSocket server = new ServerSocket(PORT, 50, InetAddress.getByName("127.0.0.1"))) {
@@ -1460,9 +1658,17 @@ public class ProbeMod extends Mod {
                     .put("protocol", PROTOCOL_VERSION)
                     .put("version", VERSION)
                     .put("requireAuth", requireAuth)
+                    .put("dataPort", DATA_PORT)
+                    .put("dataToken", dataToken)
+                    .put("dataBaseUrl", dataBaseUrl)
                     .put("pid", ProcessHandle.current().pid())
                     .toString(Jval.Jformat.plain);
             Files.writeString(file, json, StandardCharsets.UTF_8);
+            try {
+                Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
+            } catch (UnsupportedOperationException ignored) {
+                // Windows/non-POSIX fallback: the file is still local-only.
+            }
             Log.info("[ai-probe] discovery written: " + file);
         } catch (IOException error) {
             Log.err("[ai-probe] failed to write discovery file", error);
@@ -1513,6 +1719,59 @@ public class ProbeMod extends Mod {
             } catch (IOException error) {
                 Log.err("[ai-probe] write failed", error);
             }
+        }
+    }
+
+    private static final class MapSnapshot {
+        final long revision;
+        final int width;
+        final int height;
+        final short[] blocks;
+        final short[] teams;
+        final short[] drops;
+        final short[] solids;
+
+        MapSnapshot(long revision, int width, int height, short[] blocks, short[] teams, short[] drops, short[] solids) {
+            this.revision = revision;
+            this.width = width;
+            this.height = height;
+            this.blocks = blocks;
+            this.teams = teams;
+            this.drops = drops;
+            this.solids = solids;
+        }
+
+        byte[] toBytes() {
+            ByteBuffer buffer = ByteBuffer.allocate(16 + width * height * 8).order(ByteOrder.LITTLE_ENDIAN);
+            buffer.put((byte) 'M').put((byte) 'N').put((byte) 'D').put((byte) '1');
+            buffer.putInt(width);
+            buffer.putInt(height);
+            buffer.putInt(4);
+            for (short value : blocks) buffer.putShort(value);
+            for (short value : teams) buffer.putShort(value);
+            for (short value : drops) buffer.putShort(value);
+            for (short value : solids) buffer.putShort(value);
+            return buffer.array();
+        }
+
+        Jval manifest(String baseUrl) {
+            return Jval.newObject()
+                    .put("ref", "obs://map/rev/" + revision)
+                    .put("revision", revision)
+                    .put("kind", "map")
+                    .put("format", "raw-v1")
+                    .put("schema", Jval.newObject()
+                            .put("width", width)
+                            .put("height", height)
+                            .put("layers", Jval.newArray().add("block_id").add("team").add("drop_id").add("solid"))
+                            .put("dtype", "int16-le")
+                            .put("coord", "tile"))
+                    .put("bytes", 16 + width * height * 8)
+                    .put("access", Jval.newObject()
+                            .put("mode", "http-readonly")
+                            .put("baseUrl", baseUrl)
+                            .put("readOnly", true)
+                            .put("expires", System.currentTimeMillis() + 3600000L));
         }
     }
 

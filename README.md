@@ -16,6 +16,7 @@ mindustry-ai/
 │   ├── OPEN-QUESTIONS.md             ← 待拍板项与默认建议
 │   └── REALITY-CHECK.md              ← v160.8 真实 jar 的 API/启动核对
 ├── mcp-server/                       ← MCP 工具接口（当前 MockGameAdapter）
+├── mindustry_data/                   ← 只读数据面客户端 SDK + smoke tests
 ├── probe-mod/                        ← 最小真实游戏探针（Java mod + socket + client）
 └── refs/
     └── MindustryX-Ai/                ← 参考实现，浅克隆 main @89e3d71 (2026-05-23)
@@ -36,12 +37,14 @@ mindustry-ai/
 - [x] 路线定为：局内 co-op 助手（mod + 本地执行层），不是独立 AI 客户端
 - [x] 设计落档：`docs/ASSISTANT-DESIGN.md`、`docs/MCP-PROTOCOL.md`、`docs/REMOTE-DATA-PLANE.md`、`TASKS.md`
 - [x] MCP 接口脚手架 + MockGameAdapter（`mcp-server/`）
-- [x] MCP server 24 个工具、stdio 入口、Mock/MCP 测试、stdio harness（`npm test` 15/15）
+- [x] MCP server 25 个工具、stdio 入口、Mock/MCP 测试、stdio harness（`npm test` 15/15）
 - [x] Probe mod：真实 v160.8 服务端加载、get_context/move_to/build/get_tile 跑通
-- [x] ProbeGameAdapter：MCP 24 工具中的 context/capabilities/query_area/move/build/attack/mine/follow/withdraw/deposit/configure/command_units/set_stance/stop/possess/release/respawn/deconstruct/repair/cancel 接真实游戏
+- [x] ProbeGameAdapter：MCP 25 工具中的 context/capabilities/content/map_summary/query_area/move/build/attack/mine/follow/withdraw/deposit/configure/command_units/set_stance/stop/possess/release/respawn/deconstruct/repair/cancel 接真实游戏
 - [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance、附身/释放、sand 挖矿、死亡重生、攻击容器、deconstruct、repair
 - [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
 - [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权
+- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、`mindustry_data` SDK、`get_map_summary`
+- [ ] 地图 chunk、Parquet 事件、Range、远端 baseUrl/TTL/压测
 - [ ] 真实 Mindustry mod adapter 生产化（重连、心跳、多客户端、token 轮换）
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）

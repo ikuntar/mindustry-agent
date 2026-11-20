@@ -22,6 +22,7 @@ import {
   GameContext,
   GameError,
   GameEvent,
+  MapSummary,
   OpStatus,
   UnitCommandName,
   UnitSnapshot,
@@ -398,6 +399,31 @@ export class MockGameAdapter implements GameAdapter {
     if (type === "items") return { items };
     if (type === "liquids") return { liquids };
     return { blocks, units, items, liquids };
+  }
+
+  async getMapSummary(): Promise<MapSummary> {
+    const width = MAP_SIZE;
+    const height = MAP_SIZE;
+    return {
+      ref: "obs://map/rev/1",
+      revision: 1,
+      kind: "map",
+      format: "raw-v1",
+      schema: {
+        width,
+        height,
+        layers: ["block_id", "team", "drop_id", "solid"],
+        dtype: "int16-le",
+        coord: "tile",
+      },
+      bytes: 16 + width * height * 8,
+      access: {
+        mode: "mock",
+        baseUrl: "mock://data",
+        readOnly: true,
+        expires: Date.now() + 3_600_000,
+      },
+    };
   }
 
   async getEvents(since: number, limit = 50): Promise<EventPage> {

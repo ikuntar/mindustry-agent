@@ -48,9 +48,10 @@
 - [x] `cancel`：全量取消已实测；按 opId 定向取消已实现但未单独回放
 - [x] `get_events`：probe 事件环（unit_destroy / unit_create / block_destroy / block_build_end / build_damage / unit_damage），`since/limit/next/dropped` 已接；MCP 实测返回真实事件
 - [ ] 事件类型过滤、事件合并、核心事件细分和 dropped 压测
-- [ ] 远程数据面：`DatasetRef`/manifest、只读 HTTP GET/HEAD + Range、revision 保留
-- [ ] 客户端 SDK：`open_dataset(ref)`、本地 token 解析、npz/Parquet 读取、输出预算
-- [ ] `get_map_summary` / `get_events` 摘要 + ref；客户端代码读取完整数据
+- [x] 远程数据面：probe 内存 map revision、`/data/manifest/current`、GET/HEAD + token、raw-v1 地图二进制；事件为 NDJSON
+- [x] 客户端 SDK：`mindustry_data.open_dataset(ref)`、本地 token 解析、raw-v1 解码、事件读取；`mindustry_data/demo.py` 可运行
+- [x] `get_map_summary`：MCP 返回 `DatasetRef`/schema，不返回 tile；MCP harness 实测
+- [ ] 地图 chunk、Parquet 事件、Range、revision/TTL 压测、远端 baseUrl 配置
 - [ ] 无代码 host 的 `get_area` / `get_events` 有界查询 fallback
 - [ ] 数据面鉴权/TTL/路径白名单/速率限制与验收
 - [x] `get_context.eventsSince` 返回真实事件序号

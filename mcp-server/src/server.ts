@@ -132,6 +132,17 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   );
 
   server.registerTool(
+    "get_map_summary",
+    {
+      description:
+        "Read a map DatasetRef and schema without tile data. Use the read-only data plane (or a client SDK) for the snapshot.",
+      inputSchema: {},
+      annotations: readOnly,
+    },
+    async () => run(() => adapter.getMapSummary()),
+  );
+
+  server.registerTool(
     "get_events",
     {
       description: "Read game events after a sequence number. Events are buffered and may report drops.",

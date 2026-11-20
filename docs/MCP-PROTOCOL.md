@@ -137,6 +137,35 @@ MCP server（Node/TypeScript）
 参数：`{ "type": "all" | "blocks" | "units" | "items" | "liquids" }`。
 返回注册表条目；模型用来查方块/物品/单位名字。
 
+### `get_map_summary`
+
+无参数。返回地图 `DatasetRef`、revision、schema、字节数和只读访问信息；**不返回 tile 矩阵**。
+
+```json
+{
+  "ref": "obs://map/rev/3",
+  "revision": 3,
+  "kind": "map",
+  "format": "raw-v1",
+  "schema": {
+    "width": 256,
+    "height": 256,
+    "layers": ["block_id", "team", "drop_id", "solid"],
+    "dtype": "int16-le",
+    "coord": "tile"
+  },
+  "bytes": 524304,
+  "access": {
+    "mode": "http-readonly",
+    "baseUrl": "http://127.0.0.1:46501/data",
+    "readOnly": true,
+    "expires": 1234567890
+  }
+}
+```
+
+客户端代码通过 `DatasetRef` 读只读数据面；完整地图不进入工具结果。详见 `docs/REMOTE-DATA-PLANE.md`。
+
 ### `get_events`
 
 参数：`{ "since": 0, "limit": 50 }`。

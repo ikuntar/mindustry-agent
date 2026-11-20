@@ -256,24 +256,27 @@ print({
 - MCP 读工具返回字段冻结。
 - TASKS 增加数据面条目。
 
-### Phase 2：probe 只读数据面
+### Phase 2：probe 只读数据面（已实现）
 
-- 游戏侧生成地图/事件快照 revision。
-- HTTP GET/HEAD + range；无写方法。
-- discovery/manifest 返回 baseUrl/ref。
+- 游戏侧生成地图快照 revision（内存，最多保留 8 个）。
+- HTTP GET/HEAD + token；`/data/manifest/current`、`/data/map/{rev}`、`/data/events/{rev}`。
+- 当前 probe 格式为 **raw-v1**（`MND1` 头 + int16 层），不是最终 npz/zarr；事件为 NDJSON，不是最终 Parquet。
+- discovery/manifest 返回 `dataBaseUrl`/`dataToken`/ref。
 - 本地 dev 仍可用 `file://`，但标记为 dev-only。
 
-### Phase 3：客户端 SDK
+### Phase 3：客户端 SDK（已实现最小版）
 
 - `mindustry_data.open_dataset(ref)`。
-- 本地 token 解析、HTTP range、npz/parquet 读取、缓存。
+- 本地 token 解析、raw-v1 地图解码、NDJSON 事件读取；无 numpy 时回退纯 Python。
 - Hermes `execute_code` 示例和输出预算。
+- `mindustry_data/demo.py` 和 `test_data_plane.py` 已跑通。
 
-### Phase 4：MCP 接入
+### Phase 4：MCP 接入（部分完成）
 
-- `get_map_summary`、`get_events` 摘要、可选 `resolve_dataset`。
+- `get_map_summary` 已接 MCP，返回 `DatasetRef`/schema，不含 tile。
+- `get_events` 仍返回原始事件页；摘要模式/ref 聚合待补。
 - 移除任何“全图 JSON”假设。
-- 事件聚合在游戏侧完成。
+- 事件聚合在游戏侧待补。
 
 ### Phase 5：验收与压测
 

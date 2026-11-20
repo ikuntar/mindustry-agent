@@ -241,10 +241,41 @@ export interface ContextOptions {
   since?: number;
 }
 
+export interface DatasetSchema {
+  width: number;
+  height: number;
+  layers: string[];
+  dtype: string;
+  coord: string;
+}
+
+export interface DatasetAccess {
+  mode: string;
+  baseUrl: string;
+  readOnly: boolean;
+  expires: number;
+}
+
+export interface DatasetRef {
+  ref: string;
+  revision: number;
+  kind: string;
+  format: string;
+  schema: DatasetSchema;
+  bytes?: number;
+  counts?: Record<string, number>;
+  access?: DatasetAccess;
+}
+
+export interface MapSummary extends DatasetRef {
+  kind: "map";
+}
+
 export interface GameAdapter {
   getContext(options?: ContextOptions): Promise<GameContext>;
   getCapabilities(): Promise<Capabilities>;
   getContent(type?: ContentType): Promise<ContentSnapshot>;
+  getMapSummary(): Promise<MapSummary>;
   getEvents(since: number, limit: number): Promise<EventPage>;
   queryArea(query: AreaQuery): Promise<AreaSnapshot>;
   getConfigSchema(block: string): Promise<ConfigSchema>;

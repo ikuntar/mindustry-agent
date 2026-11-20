@@ -25,6 +25,7 @@ import {
   GameAdapter,
   GameContext,
   GameError,
+  MapSummary,
   OpStatus,
   UnitSnapshot,
   UnitStanceName,
@@ -287,6 +288,32 @@ export class ProbeGameAdapter implements GameAdapter {
     if (type === "items") return { items };
     if (type === "liquids") return { liquids };
     return { blocks, units, items, liquids };
+  }
+
+  async getMapSummary(): Promise<MapSummary> {
+    const raw = await this.call("get_map_manifest");
+    return {
+      ref: String(raw.ref ?? ""),
+      revision: Number(raw.revision ?? 0),
+      kind: "map",
+      format: String(raw.format ?? "raw-v1"),
+      schema: {
+        width: Number(raw.schema?.width ?? 0),
+        height: Number(raw.schema?.height ?? 0),
+        layers: (raw.schema?.layers ?? []) as string[],
+        dtype: String(raw.schema?.dtype ?? "int16-le"),
+        coord: String(raw.schema?.coord ?? "tile"),
+      },
+      bytes: raw.bytes == null ? undefined : Number(raw.bytes),
+      access: raw.access
+        ? {
+            mode: String(raw.access.mode ?? "http-readonly"),
+            baseUrl: String(raw.access.baseUrl ?? ""),
+            readOnly: raw.access.readOnly !== false,
+            expires: Number(raw.access.expires ?? 0),
+          }
+        : undefined,
+    };
   }
 
   async getEvents(since: number, limit = 50): Promise<EventPage> {

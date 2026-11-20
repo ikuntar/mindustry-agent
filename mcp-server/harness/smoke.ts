@@ -42,6 +42,9 @@ async function main(): Promise<void> {
   );
   console.log("context:", JSON.stringify(context.data, null, 2));
 
+  const mapSummary = parse(await client.callTool({ name: "get_map_summary", arguments: {} }));
+  console.log("map summary:", mapSummary);
+
   const core = context.data.cores?.[0];
   const moveTarget = probeMode && core
     ? { x: core.x + 24, y: core.y }
