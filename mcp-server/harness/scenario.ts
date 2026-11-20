@@ -602,10 +602,11 @@ async function main(): Promise<void> {
   check("attack approach crosses wall region", approached);
   await tool("cancel");
 
+  const autoStart = await tool("get_context", { detail: "summary" });
   const autoEnemy = await rawProbe("spawn_enemy", {
     type: "dagger",
-    x: afterPath.assistant.x + 30,
-    y: afterPath.assistant.y,
+    x: autoStart.assistant.x + 30,
+    y: autoStart.assistant.y,
   });
   const autoBefore = await rawProbe("get_unit", { unitId: autoEnemy.id });
   await new Promise((resolve) => setTimeout(resolve, 900));
@@ -656,6 +657,12 @@ async function main(): Promise<void> {
     "targeted cancel marks op cancelled",
     cancelResult.data?.cancelled >= 1 && cancelledOp.status === "cancelled",
     JSON.stringify({ cancelResult, cancelledOp }),
+  );
+  const actionLog = await rawProbe("get_action_log", { limit: 128 });
+  check(
+    "action log contains cancelled action",
+    actionLog?.actions?.some((action: { opId: string; status: string }) => action.opId === cancelMove.opId && action.status === "cancelled"),
+    JSON.stringify({ count: actionLog?.count }),
   );
 
   const waveHistory: { waveBefore: number; waveAfter: number; enemies: number }[] = [];

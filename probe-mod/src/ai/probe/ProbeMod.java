@@ -445,6 +445,18 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("get_action_log".equals(op)) {
+            int limit = Math.max(1, Math.min(128, request.getInt("limit", 50)));
+            Jval actions = Jval.newArray();
+            int count = 0;
+            for (Op entry : ops.values()) {
+                if (count++ >= limit) break;
+                actions.add(entry.toJson().put("createdTick", entry.createdTick));
+            }
+            reply(command, Jval.newObject().put("actions", actions).put("count", ops.size()));
+            return;
+        }
+
         if ("get_events".equals(op)) {
             int since = request.getInt("since", 0);
             int limit = Math.max(1, Math.min(200, request.getInt("limit", 50)));
@@ -1653,6 +1665,7 @@ public class ProbeMod extends Mod {
             case "list_unit_types":
             case "query_area":
             case "get_action_result":
+            case "get_action_log":
                 return true;
             default:
                 return false;
