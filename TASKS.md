@@ -95,7 +95,7 @@
 - [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（上下文/事件增量/移动/多块建造/事件摘要/附身/释放/指定核心重生/无核心恢复）
 - [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
 - [x] harness：固定场景建 `duo` 炮塔 + feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 ammoTotal `6`；连续 4 个敌人均被命中（150→141），炮塔弹药实际消耗到 0
-- [x] harness：真实 survival wave fixture：`start_wave` 连续触发 wave 1→2→3，分别生成 3/5 个敌人、27 个 spawn group；`query_area includeEnemies=true` 读到 wave dagger（health 114，已被炮塔打伤）
+- [x] harness：真实 survival wave fixture：`start_wave` 连续触发 4 波（wave 1→2→3→4→5），每波生成敌人和 spawn group；`query_area includeEnemies=true` 读到 wave dagger（health 114，已被炮塔打伤）
 - [x] harness：核心受击：助手撤离后生成 3 个启用真实 AI 的敌方 dagger，核心 health `1100→1082`
 - [ ] harness：完整 survival 多波防守、长线铺带
 - [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency

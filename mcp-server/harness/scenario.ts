@@ -716,7 +716,7 @@ async function main(): Promise<void> {
   await tool("cancel", { opId: idemMove.opId });
 
   const waveHistory: { waveBefore: number; waveAfter: number; enemies: number }[] = [];
-  for (let cycle = 0; cycle < 2; cycle++) {
+  for (let cycle = 0; cycle < 4; cycle++) {
     const waveBefore = (await tool("get_context", { detail: "summary" })).wave;
     const waveStart = await rawProbe("start_wave");
     check("survival wave fixture has spawn groups", waveStart?.spawnGroups > 0, JSON.stringify(waveStart));
@@ -738,7 +738,8 @@ async function main(): Promise<void> {
   }
   check(
     "survival waves advance consecutively",
-    waveHistory[1].waveAfter > waveHistory[0].waveAfter,
+    waveHistory.length === 4 &&
+      waveHistory.every((wave, index) => index === 0 || wave.waveAfter > waveHistory[index - 1].waveAfter),
     JSON.stringify(waveHistory),
   );
   const enemyArea = await tool("query_area", {
