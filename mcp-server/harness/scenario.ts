@@ -621,6 +621,7 @@ async function main(): Promise<void> {
     type: "dagger",
     x: autoStart.assistant.x + 30,
     y: autoStart.assistant.y,
+    ai: true,
   });
   const autoBefore = await rawProbe("get_unit", { unitId: autoEnemy.id });
   let autoAfter = autoBefore;
