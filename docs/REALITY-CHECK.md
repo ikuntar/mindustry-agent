@@ -89,6 +89,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景 spawn dagger 后 health `150→123`。
 - 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。
 - 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，核心取 15 copper 分批存入传送带，连续 spawn 2 个敌人，炮塔分别造成伤害（150→132、150→141）。
+- 失败注入：固定场景验证 `withdraw` 未知物品返回 `not_found/Unknown item`、`possess` 自己返回 `bad_target/Cannot possess the assistant's own body`、`deposit` 不存在建筑返回 `building_not_found/No target building`；越界、错队、LLM 超时仍待补。
 - LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 26 tools、1 次 `get_context`、token/latency 记录。`harness/mock-openai-server.mjs` 已真实验证 HTTP 路径（`mock=false`、24/12 tokens）；真实本地 Ollama `lfm3:latest` 在 mock 和 Fortress probe 上都调用了 `get_context`，真实 probe 6237/426 tokens、2.4s。固定动作任务 `get_context → move_to(952,584) → get_action_result` 返回 done，最终 `x=944.95`；自算 `core.x+24` 任务最终 `x=944.92`，`LLM_EXPECT_NEAR` 验收通过。外部供应商 endpoint 未验收。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
 - `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。

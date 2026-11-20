@@ -46,6 +46,17 @@ async function tool(name: string, args: Record<string, unknown> = {}): Promise<a
   return result.data;
 }
 
+async function expectToolError(
+  name: string,
+  args: Record<string, unknown>,
+  contains: string,
+  label = `${name} rejects ${contains}`,
+): Promise<void> {
+  const result = parse(await client.callTool({ name, arguments: args }));
+  const text = JSON.stringify(result);
+  check(label, !result.ok && text.includes(contains), text.slice(0, 300));
+}
+
 async function rawProbe(name: string, args: Record<string, unknown> = {}): Promise<any> {
   const discoveryPath =
     process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
@@ -109,6 +120,21 @@ async function main(): Promise<void> {
   const caughtUp = await tool("get_context", { detail: "summary", since: context.eventsSince });
   check("event delta does not grow", caughtUp.eventsPending <= context.eventsPending, String(caughtUp.eventsPending));
   if (expectedMap) check(`fixed map ${expectedMap}`, context.map === expectedMap, String(context.map));
+
+  const coreId = context.cores?.[0]?.id;
+  if (coreId != null) {
+    await expectToolError(
+      "withdraw",
+      { target: { buildingId: coreId }, item: "unobtainium-test", amount: 1 },
+      "Unknown item",
+    );
+  }
+  await expectToolError("possess", { unitId: context.assistant.id }, "own body");
+  await expectToolError(
+    "deposit",
+    { target: { buildingId: 999999 }, item: "copper", amount: 1 },
+    "No target building",
+  );
 
   const local = await tool("get_context", { detail: "full", radius: 4 });
   const localUnits = local.nearby?.units ?? [];
