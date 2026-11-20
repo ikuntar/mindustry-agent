@@ -95,7 +95,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `possessionAllowed`：规则关闭时 `possess` 返回 `possession_disabled/Possession is disabled in the current rules`。
 - 附身校验：敌方 dagger `possess` 返回 `wrong_team/Target unit is not on the assistant's team`；助手自己身体返回 `bad_target`；临时把 dagger 类型的 `playerControllable` 设为 false 后返回 `not_possessable/Target unit type is not player-controllable`。
 - 停机开关：probe `set_writes_enabled(enabled=false)` 后 `move_to` 返回 `writes_disabled/Probe writes are disabled`。
-- 动作日志：probe `get_action_log` 返回 op 状态列表；固定场景取消 `move_to` 后能在日志中找到该 `opId` 且 status 为 `cancelled`。
+- 动作日志：probe `get_action_log` 返回 op 状态列表；固定场景取消 `move_to` 后能在日志中找到该 `opId` 且 status 为 `cancelled`；ops 上限 256，优先淘汰已结束动作。
 - `get_events` 类型过滤：固定场景 `summary=true, types=['unit_destroy','build_damage']` 实测 `byType={unit_destroy:4,build_damage:25}`；`summary=true` 时 events 为空、`hasMore=false`。
 - 真实 `get_content`：probe 读取 `Vars.content.units()` 70 个类型、blocks/items/liquids；固定场景 `get_content(type=units)` 包含 dagger。
 - 真实 survival wave：末尾连续两次 `start_wave`，wave `1→2→3`，分别生成 3/5 个敌人、每次 27 个 spawn group；`query_area includeEnemies=true` 找到 wave dagger，最近坐标 `1104.9,580.1`、health 114（炮塔已造成伤害）；`get_context includeEnemies=true` 的 `threats` 返回同一敌军；未验证完整多波防守/核心受击。

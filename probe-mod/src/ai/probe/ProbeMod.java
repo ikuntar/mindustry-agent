@@ -79,6 +79,7 @@ public class ProbeMod extends Mod {
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
     private static final String VERSION = "0.1.0";
+    private static final int MAX_OPS = 256;
 
     private final String token = UUID.randomUUID().toString();
     private final String dataToken = UUID.randomUUID().toString();
@@ -1747,6 +1748,7 @@ public class ProbeMod extends Mod {
     }
 
     private Op newOp(String kind) {
+        pruneOps();
         Op op = new Op();
         op.id = "op-" + (++opSeq);
         op.kind = kind;
@@ -1754,6 +1756,23 @@ public class ProbeMod extends Mod {
         op.createdTick = Vars.state.tick;
         ops.put(op.id, op);
         return op;
+    }
+
+    private void pruneOps() {
+        while (ops.size() >= MAX_OPS) {
+            Op terminal = null;
+            Op oldest = null;
+            for (Op candidate : ops.values()) {
+                if (oldest == null || candidate.createdTick < oldest.createdTick) oldest = candidate;
+                boolean finished = !"queued".equals(candidate.status) && !"running".equals(candidate.status);
+                if (finished && (terminal == null || candidate.createdTick < terminal.createdTick)) {
+                    terminal = candidate;
+                }
+            }
+            Op remove = terminal != null ? terminal : oldest;
+            if (remove == null) return;
+            ops.remove(remove.id);
+        }
     }
 
     private Jval context(int radius, int since, boolean includeEnemies) {

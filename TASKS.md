@@ -77,7 +77,7 @@
 - [x] `possessionAllowed` 规则：规则关闭时 `possess` 返回 `possession_disabled`
 - [x] 助手身体不可附身：非 `AIController` 控制器 + 显式拒绝
 - [x] 停机开关：probe `set_writes_enabled(enabled=false)` 时 `move_to` 返回 `writes_disabled/Probe writes are disabled`，读操作仍可用
-- [x] 动作日志：probe `get_action_log` 返回活跃/历史 op 的 `opId`、kind、status、progress、data、createdTick；固定场景找到已取消的 op
+- [x] 动作日志：probe `get_action_log` 返回活跃/历史 op 的 `opId`、kind、status、progress、data、createdTick；ops 上限 256，优先淘汰已结束动作
 - [ ] 结构化失败原因
 
 ## M2：观测与上下文
