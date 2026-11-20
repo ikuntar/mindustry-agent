@@ -220,6 +220,30 @@ async function main(): Promise<void> {
   check("event summary has ref", typeof events.ref === "string" && events.ref.startsWith("obs://events/"));
 
   if (seed?.ally?.id) {
+    const ally = { ...seed.ally, x: core.x + 80, y: core.y };
+    await tool("command_units", {
+      unitIds: [ally.id],
+      command: "move",
+      target: { x: ally.x + 160, y: ally.y },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await tool("follow", { unitId: ally.id, distance: 48 });
+    let followed = false;
+    let lastDistance = Infinity;
+    for (let i = 0; i < 30 && !followed; i++) {
+      const snapshot = await tool("get_context", { detail: "full", radius: 300 });
+      const allyNow = snapshot.nearby?.units?.find((unit: { id: number }) => unit.id === ally.id);
+      if (allyNow) {
+        lastDistance = Math.hypot(snapshot.assistant.x - allyNow.x, snapshot.assistant.y - allyNow.y);
+        followed = lastDistance <= 80;
+      }
+      if (!followed) await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    check("follow keeps within range", followed, String(lastDistance));
+    await tool("cancel");
+  }
+
+  if (seed?.ally?.id) {
     const possessed = await tool("possess", { unitId: seed.ally.id });
     check("possess completed", possessed.status === "done" && possessed.data?.unitId, JSON.stringify(possessed));
     const release = await tool("release");

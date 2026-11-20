@@ -49,7 +49,7 @@ mindustry-ai/
 - [ ] 真实 Mindustry mod adapter 生产化（重连、心跳、多客户端、token 轮换）
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
-- [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近
+- [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近
 
 ## MCP 快速开始
 

@@ -44,7 +44,8 @@
 - [x] `configure`：sorter 配置已验证
 - [x] `command_units` / `set_stance`：dagger move 与 holdPosition 已验证
 - [x] `possess` / `release` / `respawn`：基本状态机已验证
-- [x] `follow`：入口与移动跟随已验证；目标死亡时 op 会结束，持续跟随/复杂避障仍未定义
+- [x] `follow`：MCP follow 后助手位置变化；固定场景实测 ally 移动后助手追到 30.38px 内并 `cancel`；目标死亡语义仍简化
+- [ ] `follow` 的目标消失/复杂避障语义、持续追远距离上限
 - [x] `cancel`：全量取消已实测；按 opId 定向取消已实现但未单独回放
 - [x] `get_events`：probe 事件环（unit_destroy / unit_create / block_destroy / block_build_end / build_damage / unit_damage），`since/limit/next/dropped`、`summary` 和 `types` 已接；MCP 实测 `byType` 摘要
 - [ ] 事件类型过滤压测、核心事件细分、更多语义事件
