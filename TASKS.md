@@ -1,6 +1,6 @@
 # TASKS
 
-状态：M0 完成 / M1 设计阶段
+状态：MCP 工具面 / 真实 probe adapter / 固定场景已可用；剩余项见未完成条目
 更新：2026-11-18
 
 ## M0：MCP 工具接口 + Mock Adapter
