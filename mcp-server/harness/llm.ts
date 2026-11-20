@@ -93,6 +93,45 @@ async function callModel(messages: ChatMessage[], tools: Tool[]): Promise<{
         },
       };
     }
+    if (task.toLowerCase().includes("withdraw") && task.toLowerCase().includes("deposit")) {
+      const toolResults = messages.filter((message) => message.role === "tool").length;
+      if (toolResults === 1) {
+        return {
+          message: {
+            role: "assistant",
+            content: null,
+            tool_calls: [
+              {
+                id: "mock-withdraw",
+                type: "function",
+                function: {
+                  name: "withdraw",
+                  arguments: JSON.stringify({ target: { buildingId: 1000 }, item: "copper", amount: 5 }),
+                },
+              },
+            ],
+          },
+        };
+      }
+      if (toolResults === 2) {
+        return {
+          message: {
+            role: "assistant",
+            content: null,
+            tool_calls: [
+              {
+                id: "mock-deposit",
+                type: "function",
+                function: {
+                  name: "deposit",
+                  arguments: JSON.stringify({ target: { buildingId: 1000 }, item: "copper", amount: 5 }),
+                },
+              },
+            ],
+          },
+        };
+      }
+    }
     return {
       message: { role: "assistant", content: "Context read. No world mutation requested." },
       usage: { prompt_tokens: 10, completion_tokens: 8, total_tokens: 18 },
@@ -114,7 +153,7 @@ async function callModel(messages: ChatMessage[], tools: Tool[]): Promise<{
           model,
           messages,
           tools: toOpenAITools(tools),
-          tool_choice: "auto",
+          tool_choice: process.env.LLM_TOOL_CHOICE ?? "auto",
         }),
       });
     } catch (error) {
@@ -228,6 +267,17 @@ async function main(): Promise<void> {
       Math.hypot(actualX - expectedX, actualY - expectedY) <= tolerance;
     verification = { expectedX, expectedY, tolerance, actualX, actualY, ok };
     if (!ok) process.exitCode = 1;
+  }
+
+  if (process.env.LLM_REQUIRE_TOOLS) {
+    const required = process.env.LLM_REQUIRE_TOOLS.split(",").map((name) => name.trim()).filter(Boolean);
+    const missing = required.filter(
+      (name) => !toolLog.some((entry) => entry.name === name && entry.ok && entry.result.includes('"ok": true')),
+    );
+    if (missing.length) {
+      console.error(`LLM did not successfully call required tools: ${missing.join(", ")}`);
+      process.exitCode = 1;
+    }
   }
 
   console.log(
