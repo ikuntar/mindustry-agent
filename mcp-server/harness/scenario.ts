@@ -214,6 +214,13 @@ async function main(): Promise<void> {
       wide.nearby?.units?.some((unit: { id: number }) => unit.id === seed.ally.id),
       JSON.stringify(wide.nearby?.units?.map((unit: { id: number }) => unit.id)),
     );
+    const limited = await tool("get_context", { detail: "full", radius: 15, maxUnits: 1 });
+    check(
+      "context maxUnits bounds unit list",
+      (limited.nearby?.units?.length ?? 0) <= 1 &&
+        (limited.nearby?.units?.length ?? 0) < (wide.nearby?.units?.length ?? 0),
+      JSON.stringify({ limited: limited.nearby?.units?.length, wide: wide.nearby?.units?.length }),
+    );
   }
 
   const summary = await tool("get_map_summary");

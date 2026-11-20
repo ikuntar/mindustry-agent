@@ -503,7 +503,8 @@ public class ProbeMod extends Mod {
             int radius = Math.max(0, request.getInt("radius", 0));
             int since = Math.max(0, request.getInt("since", 0));
             boolean includeEnemies = request.getBool("includeEnemies", false);
-            reply(command, context(radius, since, includeEnemies));
+            int maxUnits = Math.max(1, Math.min(64, request.getInt("maxUnits", 20)));
+            reply(command, context(radius, since, includeEnemies, maxUnits));
             return;
         }
 
@@ -1904,7 +1905,7 @@ public class ProbeMod extends Mod {
         }
     }
 
-    private Jval context(int radius, int since, boolean includeEnemies) {
+    private Jval context(int radius, int since, boolean includeEnemies, int maxUnits) {
         Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         Jval data = Jval.newObject()
                 .put("tick", Vars.state.tick)
@@ -1980,11 +1981,16 @@ public class ProbeMod extends Mod {
         data.put("cores", cores);
 
         Jval units = Jval.newArray();
+        boolean unitsTruncated = false;
         Seq<Unit> teamUnits = team.data().units;
-        for (int i = 0; i < teamUnits.size && i < 20; i++) {
+        for (int i = 0; i < teamUnits.size; i++) {
             Unit unit = teamUnits.get(i);
             if (radius > 0 && assistant != null
                     && Math.hypot(unit.x - assistant.x, unit.y - assistant.y) > radius * 8f) continue;
+            if (units.asArray().size >= maxUnits) {
+                unitsTruncated = true;
+                break;
+            }
             units.add(Jval.newObject()
                     .put("id", unit.id)
                     .put("type", unit.type.name)
@@ -1999,6 +2005,7 @@ public class ProbeMod extends Mod {
                     .put("isAI", unit.isAI()));
         }
         data.put("units", units);
+        data.put("unitsTruncated", unitsTruncated);
         data.put("unitCount", team.data().unitCount);
         Jval threats = Jval.newArray();
         if (includeEnemies && assistant != null) {
