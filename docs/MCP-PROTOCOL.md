@@ -249,7 +249,7 @@ MCP server（Node/TypeScript）
 - `build_plan { placements: [{block,x,y,rotation?,config?}], deconstruct?: [{x,y}], allowPartial? }`
   - 逐块校验、扣费、建造；`allowPartial=false` 时任一失败整单拒绝。
   - 最大 256 个 placement。
-- `deconstruct { targets: [{x,y}] }`
+- `deconstruct { targets[], timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `repair { x, y }`
 
 ### 物流

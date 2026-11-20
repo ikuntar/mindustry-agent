@@ -256,6 +256,8 @@ public class ProbeMod extends Mod {
                     assistant.isShooting = false;
                 } else if ("follow".equals(op.kind)) {
                     controller.followTarget = null;
+                } else if ("deconstruct".equals(op.kind) || "repair".equals(op.kind)) {
+                    controller.target = null;
                 }
                 continue;
             }
@@ -1502,6 +1504,8 @@ public class ProbeMod extends Mod {
             }
             Op result = newOp("deconstruct");
             result.status = "running";
+            int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
+            if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.targetTiles = targets;
             result.data = Jval.newObject().put("targets", planned);
             reply(command, result.toJson());

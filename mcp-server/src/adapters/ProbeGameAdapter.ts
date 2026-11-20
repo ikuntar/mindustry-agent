@@ -564,10 +564,11 @@ export class ProbeGameAdapter implements GameAdapter {
     };
   }
 
-  async deconstruct(targets: Vec2[]): Promise<ActionResult> {
+  async deconstruct(targets: Vec2[], timeoutTicks?: number): Promise<ActionResult> {
     return this.immediate(
       await this.call("deconstruct", {
         targets: targets.map((target) => ({ x: target.x, y: target.y })),
+        timeoutTicks,
       }),
     );
   }

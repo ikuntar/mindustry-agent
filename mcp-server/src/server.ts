@@ -378,9 +378,10 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
       description: "Deconstruct buildings at tile coordinates.",
       inputSchema: {
         targets: z.array(z.object({ x: z.number().int(), y: z.number().int() })).min(1).max(256),
+        timeoutTicks: z.number().int().min(0).max(1200).optional(),
       },
     },
-    async (args) => run(() => adapter.deconstruct(args.targets)),
+    async (args) => run(() => adapter.deconstruct(args.targets, args.timeoutTicks)),
   );
 
   server.registerTool(

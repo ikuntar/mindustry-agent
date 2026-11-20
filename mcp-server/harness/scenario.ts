@@ -461,6 +461,17 @@ async function main(): Promise<void> {
       switchOffTile.config === "false",
       JSON.stringify({ config: switchOffTile.config }),
     );
+    const timeoutDeconstruct = await tool("deconstruct", {
+      targets: [{ x: switchBuilding.tileX, y: switchBuilding.tileY }],
+      timeoutTicks: 1,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const timeoutDeconstructResult = await tool("get_action_result", { opId: timeoutDeconstruct.opId });
+    check(
+      "deconstruct timeout fails action",
+      timeoutDeconstructResult.status === "failed" && timeoutDeconstructResult.data?.code === "timeout",
+      JSON.stringify(timeoutDeconstructResult),
+    );
   }
 
   let feeder: any;

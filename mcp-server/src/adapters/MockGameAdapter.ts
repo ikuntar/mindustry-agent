@@ -651,7 +651,7 @@ export class MockGameAdapter implements GameAdapter {
     return this.opResult(op);
   }
 
-  async deconstruct(targets: Vec2[]): Promise<ActionResult> {
+  async deconstruct(targets: Vec2[], _timeoutTicks?: number): Promise<ActionResult> {
     this.requireAlive();
     if (!targets.length) throw new GameError("bad_request", "No deconstruct targets");
     for (const t of targets) {
