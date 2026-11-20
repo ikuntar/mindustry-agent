@@ -119,6 +119,7 @@
 
 - [ ] 本地 socket 鉴权、localhost only、token
 - [x] 动作 allowlist：`MCP_ALLOWED_TOOLS`/`MCP_DENIED_TOOLS` 在注册阶段过滤工具；`MCP_ALLOWED_TOOLS=get_context` 实测只暴露 1 个工具，`move_to` 调用被拒绝
+- [x] 写动作速率限制：`MCP_WRITE_RATE_LIMIT`（每秒）；limit=1 时首个写成功，第二个返回 `rate_limited`（retryable=true）
 - [ ] API key 只在伴生进程；日志脱敏
 - [ ] 存档/读档记忆处理
 - [ ] 跨区块/跨地图重生

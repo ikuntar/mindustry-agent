@@ -13,7 +13,8 @@
     "scenario": "tsx harness/scenario.ts",
     "llm-harness": "tsx harness/llm.ts",
     "writer-harness": "tsx harness/writer.ts",
-    "allowlist-harness": "tsx harness/allowlist.ts"
+    "allowlist-harness": "tsx harness/allowlist.ts",
+    "rate-limit-harness": "tsx harness/rate-limit.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

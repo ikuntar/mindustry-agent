@@ -100,6 +100,8 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   // All tools accept an optional idempotencyKey. Successful results are cached
   // in-process so a client retry cannot execute the same action twice.
   const idempotencyCache = new Map<string, CallToolResult>();
+  const writeLimit = Number(process.env.MCP_WRITE_RATE_LIMIT ?? 0);
+  const writeTimes: number[] = [];
   const allowedTools = (process.env.MCP_ALLOWED_TOOLS ?? "")
     .split(",")
     .map((name) => name.trim())
@@ -120,6 +122,25 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
       name,
       { ...config, inputSchema },
       async (args: any, extra: any) => {
+        if (writeLimit > 0 && !config.annotations?.readOnlyHint) {
+          const now = Date.now();
+          while (writeTimes.length && now - writeTimes[0] >= 1000) writeTimes.shift();
+          if (writeTimes.length >= writeLimit) {
+            return textResult(
+              {
+                ok: false,
+                error: {
+                  code: "rate_limited",
+                  message: "Too many write actions",
+                  category: "transport",
+                  retryable: true,
+                },
+              },
+              true,
+            );
+          }
+          writeTimes.push(now);
+        }
         const key = typeof args?.idempotencyKey === "string" ? args.idempotencyKey : "";
         if (!key) return handler(args, extra);
         const cacheKey = `${name}:${key}`;

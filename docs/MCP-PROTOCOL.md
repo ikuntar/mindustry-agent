@@ -233,6 +233,7 @@ MCP server（Node/TypeScript）
 所有写工具都返回 `ActionResult`（accepted/opId），并遵守权限矩阵。
 所有工具还接受可选的 `idempotencyKey`；同一 key 的成功结果在 MCP 进程内复用，不会重复执行动作。
 工具注册可用 `MCP_ALLOWED_TOOLS` / `MCP_DENIED_TOOLS` 过滤；未注册的工具不会被 `listTools` 暴露。
+写工具可用 `MCP_WRITE_RATE_LIMIT`（每秒）限制，超限返回结构化 `rate_limited`。
 
 ### 单位
 
