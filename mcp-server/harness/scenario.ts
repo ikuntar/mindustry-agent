@@ -841,6 +841,21 @@ async function main(): Promise<void> {
       coreAfter.health < homeCore.health,
       JSON.stringify({ before: homeCore.health, after: coreAfter.health }),
     );
+    for (let i = 0; i < 2; i++) {
+      await rawProbe("spawn_enemy", { type: "dagger", x: homeCore.x + 40, y: homeCore.y + 16 + i * 8, ai: true });
+    }
+    let coreAfterSecond = coreAfter;
+    for (let i = 0; i < 30; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const snapshot = await tool("get_context", { detail: "full" });
+      coreAfterSecond = snapshot.cores?.[0] ?? coreAfterSecond;
+      if (coreAfterSecond.health <= 0) break;
+    }
+    check(
+      "core survives second AI raider wave",
+      coreAfterSecond.health > 0,
+      JSON.stringify({ health: coreAfterSecond.health }),
+    );
   }
 
   const discoveryPath =
