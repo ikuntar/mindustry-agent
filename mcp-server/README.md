@@ -22,6 +22,8 @@ mod, then:
 MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 # fixed-map scenario (starts Fortress, seeds, asserts movement/build/events/possess)
 ../scripts/run-fixed-scenario.sh
+# OpenAI-compatible tool loop; LLM_MOCK=1 needs no credentials
+LLM_MOCK=1 MINDUSTRY_AI_ADAPTER=mock npm run llm-harness
 ```
 
 Implemented: `get_context`, `get_capabilities`, `get_content` (static registry),

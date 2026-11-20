@@ -86,8 +86,9 @@
 - [x] 固定地图场景：`Fortress` 启动、seed 场景、场景断言通过（上下文/事件增量/移动/多块建造/事件摘要/附身/释放/指定核心重生/无核心恢复）
 - [x] harness：MCP stdio 客户端，跑固定动作序列并断言（`scripts/run-fixed-scenario.sh`）
 - [ ] harness：完整铺带、供弹、防守 N 波、换核心重生
-- [ ] LLM harness：接真实模型，记录工具调用、token、延迟
-- [ ] 指标：任务成功率、动作失败率、响应延迟、token/分钟、误伤玩家资产、助手死亡
+- [x] LLM harness：OpenAI-compatible `/chat/completions` 工具循环 + `LLM_MOCK=1` 本地 planner；mock 运行 `get_context` 成功，记录 toolCalls/token/latency
+- [ ] LLM harness：接真实模型并跑固定任务；当前真实 HTTP 路径未实测
+- [ ] 指标：任务成功率、动作失败率、响应延迟、token/分钟、误伤玩家资产、助手死亡（harness 已记录基础计数）
 - [ ] 失败注入：越界、资源不足、错队、不可附身、无核心、LLM 超时
 
 ## M4：运行时/安全/多人
