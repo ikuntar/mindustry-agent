@@ -334,6 +334,32 @@ async function main(): Promise<void> {
     JSON.stringify(removedFollowResult),
   );
 
+  const oreScan = await tool("get_area", {
+    x: context.assistant.x,
+    y: context.assistant.y,
+    radius: 5,
+    maxTiles: 512,
+  });
+  const oreCandidate = oreScan.tiles?.find(
+    (tile: { block: string; solid: boolean }) => tile.block === "air" && !tile.solid,
+  );
+  if (oreCandidate) {
+    const oreX = oreCandidate.x;
+    const oreY = oreCandidate.y;
+    await rawProbe("set_floor", { x: oreX, y: oreY, floor: "ore-copper" });
+    const oreTile = await rawProbe("get_tile", { x: oreX, y: oreY });
+    if (oreTile.drop === "copper") {
+      const timeoutMine = await tool("mine", { x: oreX, y: oreY, timeoutTicks: 1 });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const timeoutMineResult = await tool("get_action_result", { opId: timeoutMine.opId });
+      check(
+        "mine timeout fails action",
+        timeoutMineResult.status === "failed" && timeoutMineResult.data?.code === "timeout",
+        JSON.stringify(timeoutMineResult),
+      );
+    }
+  }
+
   const core = context.cores[0];
   const baseX = Math.floor(core.x / 8);
   const baseY = Math.floor(core.y / 8);

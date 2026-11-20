@@ -33,6 +33,7 @@ import mindustry.world.Tile;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.CoreBlock.CoreBuild;
 import mindustry.world.blocks.defense.turrets.Turret;
+import mindustry.world.blocks.environment.Floor;
 import mindustry.world.modules.ItemModule;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -258,6 +259,8 @@ public class ProbeMod extends Mod {
                     controller.followTarget = null;
                 } else if ("deconstruct".equals(op.kind) || "repair".equals(op.kind)) {
                     controller.target = null;
+                } else if ("mine".equals(op.kind)) {
+                    assistant.mineTile = null;
                 }
                 continue;
             }
@@ -1585,8 +1588,25 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("set_floor".equals(op)) {
+            // Probe/debug helper for mining timeout tests; not part of the MCP surface.
+            int x = request.getInt("x", Integer.MIN_VALUE);
+            int y = request.getInt("y", Integer.MIN_VALUE);
+            if (!Vars.world.tiles.in(x, y)) {
+                replyError(command, "out_of_bounds", "Tile is outside the map");
+                return;
+            }
+            Block block = Vars.content.block(request.getString("floor", ""));
+            if (!(block instanceof Floor floor)) {
+                replyError(command, "not_found", "Unknown floor block");
+                return;
+            }
+            Vars.world.tile(x, y).setFloor(floor);
+            reply(command, Jval.newObject().put("x", x).put("y", y).put("floor", floor.name));
+            return;
+        }
+
         if ("damage_building".equals(op)) {
-            // Probe/debug helper for repair tests; not part of the MCP surface.
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
                 return;
@@ -1735,6 +1755,8 @@ public class ProbeMod extends Mod {
             assistant.mineTimer = 0f;
             Op result = newOp("mine");
             result.status = "running";
+            int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
+            if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.data = Jval.newObject()
                     .put("x", x)
                     .put("y", y)

@@ -586,7 +586,7 @@ export class MockGameAdapter implements GameAdapter {
     return this.opResult(op);
   }
 
-  async mine(x: number, y: number): Promise<ActionResult> {
+  async mine(x: number, y: number, _timeoutTicks?: number): Promise<ActionResult> {
     const a = this.requireAlive();
     if (this.distance(a, { x, y }) > 5) {
       throw new GameError("out_of_range", "Mining target is out of range");

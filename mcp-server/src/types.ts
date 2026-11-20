@@ -351,7 +351,7 @@ export interface GameAdapter {
   moveTo(x: number, y: number, arriveRadius?: number, timeoutTicks?: number): Promise<ActionResult>;
   attack(target: CommandTarget, timeoutTicks?: number): Promise<ActionResult>;
   follow(unitId: EntityId, distance?: number, timeoutTicks?: number): Promise<ActionResult>;
-  mine(x: number, y: number): Promise<ActionResult>;
+  mine(x: number, y: number, timeoutTicks?: number): Promise<ActionResult>;
   stop(): Promise<ActionResult>;
   buildPlan(request: BuildPlanRequest): Promise<ActionResult>;
   deconstruct(targets: Vec2[], timeoutTicks?: number): Promise<ActionResult>;

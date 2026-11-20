@@ -525,8 +525,8 @@ export class ProbeGameAdapter implements GameAdapter {
     return this.immediate(await this.call("follow", { unitId, distance, timeoutTicks }));
   }
 
-  async mine(x: number, y: number): Promise<ActionResult> {
-    return this.immediate(await this.call("mine", { x, y }));
+  async mine(x: number, y: number, timeoutTicks?: number): Promise<ActionResult> {
+    return this.immediate(await this.call("mine", { x, y, timeoutTicks }));
   }
 
   async stop(): Promise<ActionResult> {

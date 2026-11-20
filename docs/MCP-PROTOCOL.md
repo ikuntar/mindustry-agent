@@ -240,7 +240,7 @@ MCP server（Node/TypeScript）
 - `move_to { x, y, arriveRadius?, timeoutTicks? }`；`timeoutTicks` 超时后 op `failed`，`data.code=timeout`。
 - `attack { target: { unitId? | buildingId? | x?, y? }, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `follow { unitId, distance?, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
-- `mine { x, y }`
+- `mine { x, y, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `stop {}`
 - `cancel { opId? }`
 

@@ -336,9 +336,9 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
     "mine",
     {
       description: "Mine at a tile coordinate; the assistant must be within its mine range.",
-      inputSchema: { x: z.number(), y: z.number() },
+      inputSchema: { x: z.number(), y: z.number(), timeoutTicks: z.number().int().min(0).max(1200).optional() },
     },
-    async (args) => run(() => adapter.mine(args.x, args.y)),
+    async (args) => run(() => adapter.mine(args.x, args.y, args.timeoutTicks)),
   );
 
   server.registerTool(
