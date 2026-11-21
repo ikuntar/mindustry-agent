@@ -16,7 +16,9 @@ import mindustry.ai.types.CommandAI;
 import mindustry.entities.units.BuildPlan;
 import mindustry.entities.units.UnitController;
 import mindustry.game.EventType;
+import mindustry.game.Gamemode;
 import mindustry.game.Team;
+import mindustry.game.Rules;
 import mindustry.gen.Building;
 import mindustry.gen.Call;
 import mindustry.gen.Groups;
@@ -135,6 +137,18 @@ public class ProbeMod extends Mod {
         Events.on(EventType.WorldLoadEvent.class, event -> reset());
         if (!Vars.headless) {
             Events.on(EventType.WorldLoadEvent.class, event -> showSessionDialog());
+        }
+        if (!Vars.headless && "1".equals(System.getenv("PROBE_TEST_AUTOLOAD"))) {
+            Events.on(EventType.ClientLoadEvent.class, event -> Time.run(90f, () -> {
+                String mapName = System.getenv().getOrDefault("PROBE_TEST_MAP", "Fortress");
+                mindustry.maps.Map map = Vars.maps.byName(mapName);
+                if (map == null) {
+                    Log.warn("[ai-probe] autoload map not found: " + mapName);
+                    return;
+                }
+                Log.info("[ai-probe] autoloading map: " + mapName);
+                Vars.control.playMap(map, map.applyRules(Gamemode.survival), false);
+            }));
         }
         Events.on(EventType.UnitDestroyEvent.class, event -> {
             if (event.unit != null) {

@@ -290,7 +290,7 @@ POST /mcp   MCP Streamable HTTP
 
 ## 9. 弹窗设计
 
-当前 MVP（已编译，未做客户端 UI 实测）：
+当前 MVP（已做视觉验收）：
 
 - `WorldLoadEvent` 后、`reset()` 轮到新 bootstrap token 后显示 `BaseDialog`。
 - 显示 endpoint、bootstrap token 和完整 session prompt。
@@ -306,8 +306,21 @@ POST /mcp   MCP Streamable HTTP
 - 专用服：`<server>/config/mods/ai-probe.jar`
 - 同一端口同一时间只能有一个实例监听 `47600`；不要同时开客户端和专用服。
 
-已做：桌面客户端 v160.8 能加载 mod，并成功启动 `/session`、`/tools`、`/data`、`/mcp`。
-未做：WSLg 下截图链路无法捕获 GL 窗口；Xvfb 下能截到主菜单，但 SDL 没有接收 XTest 合成点击，无法自动进入地图。popup 仍需人工点击或桌面环境验收。
+验收方式：
+
+```bash
+# 无窗口环境用 Xvfb + 软件 OpenGL；PROBE_TEST_AUTOLOAD 仅用于 UI 测试
+Xvfb :99 -screen 0 1280x720x24 -ac &
+DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
+  PROBE_TEST_AUTOLOAD=1 PROBE_TEST_MAP=Fortress \
+  java -jar Mindustry.jar
+```
+
+实测：Mindustry v160.8 主菜单加载 mod 后自动进入 Fortress，出现 `Mindustry AI`
+弹窗，显示 LAN endpoint、bootstrap token、6 步 API 说明和
+`Copy session prompt` / `Close` 按钮。截图在 `artifacts/xvfb-popup.png`。
+
+未做：`Copy session prompt` 的剪贴板内容断言；需要真实桌面会话或可注入输入的环境。
 
 后续：
 
