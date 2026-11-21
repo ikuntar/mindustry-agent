@@ -1,6 +1,9 @@
 # 单 Mod + 会话 API 设计
 
-状态：设计稿，未实现。当前仓库仍是 probe socket + Node MCP server + 数据面。
+状态：Phase 2 MVP + Phase 3 弹窗代码（2026-11-21）。`probe-mod` 内已加入 `/session`、
+`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定和客户端 session prompt
+弹窗；弹窗尚未做 UI 实测，数据面迁移、可选 MCP、Android 尚未实现。当前开发路径仍是
+probe socket + Node MCP server。
 
 目标：普通用户只安装一个 Mindustry mod，按需启动一局 AI 会话；不安装 Node、
 不常驻 MCP、不安装 skill，也不需要把 MCP 永久配置进 coding harness。
@@ -264,33 +267,31 @@ POST /mcp   MCP Streamable HTTP
 
 ## 9. 弹窗设计
 
-客户端：
+当前 MVP（已编译，未做客户端 UI 实测）：
 
-- `ClientLoadEvent` 后等待 endpoint ready，显示 `Dialog`。
-- 显示 loopback/LAN URL、token、session prompt。
-- 按钮：
-  - Copy session prompt
-  - Copy curl smoke command
-  - Copy optional MCP config
-  - Regenerate session prompt
-  - Don't show again
+- `WorldLoadEvent` 后、`reset()` 轮到新 bootstrap token 后显示 `BaseDialog`。
+- 显示 endpoint、bootstrap token 和完整 session prompt。
+- 按钮：`Copy session prompt`、`Close`。
+- 复制使用 `Core.app.setClipboardText`，不写 settings、不持久化 token。
+- 专用服务端没有 UI；本局 token 可通过 `PROBE_EXPOSE_SESSION=1` 写 discovery（0600），
+  默认不写。
+
+后续：
+
+- 显示 loopback/LAN URL 列表，用户选一个复制。
+- `Copy curl smoke command`、`Copy optional MCP config`。
+- `Regenerate session prompt`：旧 bootstrap 失效，已建立的 session token 是否保留需明确。
+- `Don't show again`，用 `Core.settings` 记录已读；不记录 token。
 - 设置菜单保留 “AI MCP / Session API” 入口。
-- `Core.settings` 记录弹窗已读；不记录 token。
 - 移动端使用可滚动/可复制的文本区域，避免长 prompt 被截断。
-
-专用服务端：
-
-- 没有 UI；写 `bridge-info.json`/日志（token 可仅写 discovery 权限 0600）。
-- 打印 endpoint 和 session prompt 路径。
 
 ## 10. 生命周期
 
-- `init()`：读配置，启动 HTTP server；端口冲突时递增重试。
-- world load：生成 bootstrap/session token，写 EndpointInfo。
-- `ClientLoadEvent`：显示弹窗。
-- world unload / game exit：清空 session、关闭 server、删除 discovery。
-- 进程崩溃：端口关闭，token 自然失效；不保证清理文件，但文件不保存 token。
-- 重启：新 token、新 session，不存在旧 token 复用。
+- `init()`：启动 socket、数据面、HTTP session server；端口冲突时目前只记录错误，不递增重试。
+- world load：轮换 bootstrap token、清空 session token；客户端显示弹窗。
+- world unload / game exit：当前进程退出后端口关闭、token 失效；显式关闭和删除 discovery 仍待补。
+- 进程崩溃：端口关闭，token 自然失效；不保证清理文件，但默认文件不保存 session token。
+- 重启：新 bootstrap token，不存在旧 token 复用。
 
 ## 11. 安全边界
 
@@ -314,17 +315,31 @@ POST /mcp   MCP Streamable HTTP
 
 ### Phase 2：mod 内 HTTP API
 
-- `/session`、`/context`、`/actions`、`/actions/{opId}`
-- `/guide` 基础版
-- LAN 绑定 + token
-- 10 个核心工具，复用现有 `GameCore`
+已完成（MVP）：
+
+- `/session`：一次性 bootstrap token → session token
+- `/context`：有界摘要，`detail=summary/full`
+- `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
+- `/actions/{opId}`：动作状态轮询
+- `/guide`：短游戏说明
+- LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
+- 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
+
+待完成：
+
+- 10 个核心工具的显式 schema/错误码表
+- `/data/map` + Range、`/data/events` NDJSON 迁移进 mod
+- session token 失效/刷新按钮
+- 弹窗/UX
 
 ### Phase 3：弹窗/UX
 
-- 客户端弹窗
-- 复制 session prompt
-- 不显示选项/设置入口
-- 专用服 discovery
+部分完成：
+
+- 客户端 `WorldLoadEvent` 后显示 `BaseDialog`
+- `Copy session prompt` 按钮
+- 专用服 discovery（仅 `PROBE_EXPOSE_SESSION=1`）
+- 尚未做 UI 实测；LAN URL 选择、regenerate、don't show again、设置入口未做
 
 ### Phase 4：数据面
 
@@ -365,3 +380,52 @@ POST /mcp   MCP Streamable HTTP
 - 不把游戏控制暴露到公网
 - 不把地图/事件全量塞进上下文
 - 不把长期目标/自动玩游戏做进 mod；目标由 harness 管理
+
+## 15. 当前实现与实测（Phase 2 MVP）
+
+代码位置：`probe-mod/src/ai/probe/ProbeMod.java`
+
+已实现：
+
+- `startSessionServer()`：`HttpServer` 绑定 `PROBE_SESSION_BIND`（默认 `0.0.0.0`）
+  和 `PROBE_SESSION_PORT`（默认 `47600`）
+- `POST /session`：校验一次性 `bootstrapToken`，返回 `sessionToken`；
+  `bootstrapToken` 只能成功使用一次
+- `GET /context?detail=summary|full&radius=...`：通过游戏线程队列执行
+  `get_context`，HTTP 线程只等待结果
+- `POST /actions`：接受 `{kind,...}` 或 `{op,...}`，入队到现有 `handle`，
+  返回 `opId`；支持已有动作，不复制游戏逻辑
+- `GET /actions/{opId}`：入队 `get_action_result`
+- `GET /guide`：短游戏说明
+- 关闭游戏/进程退出后端口关闭，session token 与 bootstrap token 一起失效
+- 进程内 discovery 增加 `sessionPort`/`sessionBind`；仅当
+  `PROBE_EXPOSE_SESSION=1` 时写入 `sessionBootstrapToken`（开发/测试用）
+
+实测：
+
+```bash
+# 启动 Fortress（脚本设置 PROBE_EXPOSE_SESSION=1）
+scripts/start-game-server.sh
+
+# 读取 discovery，走 /session -> /context -> /actions -> /actions/{opId}
+node scripts/session-api-smoke.mjs
+```
+
+结果：
+
+```text
+session 200 true
+reused bootstrap 401
+context 200 Fortress 928 584
+action 200 op-1
+result 200 done
+guide 200 # Mindustry AI session
+```
+
+说明：
+
+- Node 冒烟脚本用 `fetch`，与 curl 的 HTTP 语义一致；curl 可用
+  `curl -H "Authorization: Bearer ***" ...` 复现。
+- `/session` 的一次性 token 已验证第二次返回 401。
+- 当前没有把 session token 写进 discovery；只有开发开关会写 bootstrap token。
+- 下一阶段：弹窗、显式工具 schema、mod 内数据面、可选 `/mcp`、Android。

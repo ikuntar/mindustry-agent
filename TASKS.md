@@ -15,7 +15,7 @@
 - [x] `harness/smoke.ts`：stdio 连接、列工具、读上下文、最小动作序列
 - [x] `docs/ASSISTANT-DESIGN.md`
 - [x] `docs/MCP-PROTOCOL.md`
-- [x] `docs/SESSION-API.md`：单 mod + 每局 session prompt + 一次性 bootstrap token + LAN HTTP API + 可选 MCP；设计稿未实现
+- [x] 设计 `docs/SESSION-API.md`：单 mod + 每局 session prompt + 一次性 bootstrap token + LAN HTTP API + 可选 MCP（Phase 2 MVP 已实现）
 - [x] `docs/REMOTE-DATA-PLANE.md`（方案 A：远程只读数据面 + 客户端代码）
 - [x] `README.md` 更新目录与运行方式
 - [x] `mcp-server/README.md`
@@ -133,7 +133,11 @@
 - [x] 动作 allowlist：`MCP_ALLOWED_TOOLS`/`MCP_DENIED_TOOLS` 在注册阶段过滤工具；`MCP_ALLOWED_TOOLS=get_context` 实测只暴露 1 个工具，`move_to` 调用被拒绝
 - [x] 写动作速率限制：`MCP_WRITE_RATE_LIMIT`（每秒）；limit=1 时首个写成功，第二个返回 `rate_limited`（retryable=true）
 - [ ] API key 只在伴生进程；日志脱敏
-- [ ] 实现 mod 内 HTTP session API：`/session` 一次性 bootstrap、`/context`、`/actions`、`/guide`、LAN 绑定、弹窗 session prompt
+- [x] mod 内 HTTP session API MVP：`/session` 一次性 bootstrap、`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定、Bearer session token
+- [x] session API 冒烟脚本 `scripts/session-api-smoke.mjs`
+- [x] 弹窗 session prompt 代码（`WorldLoadEvent` + `BaseDialog` + 剪贴板；编译通过，客户端 UI 未实测）
+- [ ] 弹窗 UI 实测：真机/桌面客户端加载地图后复制 prompt
+- [ ] 10 个核心工具的显式 schema/错误码表
 - [ ] Android 兼容构建：`android: true` + d8 + 去 `com.sun` + 外部 discovery
 - [ ] 数据面迁移到 mod 内 `/data`，curl 直接落文件
 - [ ] 可选 MCP Streamable HTTP `/mcp`，与 REST 共享 tool registry

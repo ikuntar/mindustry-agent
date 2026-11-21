@@ -32,9 +32,10 @@ cd "$SERVER_DIR"
 (
   printf 'host fortress\n'
   sleep 86400
-) | PROBE_REQUIRE_AUTH=1 PROBE_DATA_RATE_LIMIT_PER_SEC=120 \
-  nohup java -jar server-release.jar > "$LOG" 2>&1 &
+) | PROBE_REQUIRE_AUTH=1 PROBE_EXPOSE_SESSION=1 PROBE_DATA_RATE_LIMIT_PER_SEC=120 \
+  setsid java -jar server-release.jar > "$LOG" 2>&1 &
 SERVER_PID=$!
+disown "$SERVER_PID" 2>/dev/null || true
 printf '%s\n' "$SERVER_PID" > "$ROOT/artifacts/host-server.pid"
 
 for _ in $(seq 1 40); do

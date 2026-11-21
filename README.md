@@ -53,7 +53,7 @@ mindustry-ai/
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
 - [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔+传送带供弹防守；真实本地 LLM 固定移动任务已跑通
 - [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、omp、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
-- [x] 单 mod + session API 设计：`docs/SESSION-API.md`（一次性 bootstrap token、LAN、session prompt、REST/数据面、可选 MCP；未实现）
+- [x] 单 mod + session API：`docs/SESSION-API.md`；mod 内 `/session` 一次性 bootstrap、`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定已实现并通过 `scripts/session-api-smoke.mjs`；弹窗代码已编译，客户端 UI 未实测；数据面迁移/可选 MCP/Android 未实现
 - [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
 - [x] Ground Zero campaign-like：omp 连续观察 35 次到 `wave=10`，`winWave=10`、`won=false`；证明可玩到终点波次，正式战役结算仍需客户端 campaign 或 mod 支持
 - [x] omp 上手速度：冷启动+首次真实 context 约 13.0s；热启动约 8.7s；连续 35 次 context 约 254s（约 7.3s/次）
@@ -76,6 +76,7 @@ MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-har
 ../scripts/start-game-server.sh
 ../scripts/mindustry-mcp --check
 MINDUSTRY_AI_ADAPTER=probe npm run host-smoke  # 通过 wrapper 走真实 probe
+node ../scripts/session-api-smoke.mjs  # mod 内 session API：一次性 bootstrap、context、move、poll、guide
 # omp 对话（独立游戏目录，不污染代码会话）
 scripts/omp-mindustry -p --no-session --max-time 120 'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
 ../scripts/stop-game-server.sh
