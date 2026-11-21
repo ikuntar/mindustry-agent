@@ -145,7 +145,8 @@
 - [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
 - [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
-- [ ] `/data` data token TTL 刷新、Parquet
+- [x] `/data` data token 轮换：`POST /session/data-token`，旧 token 立即 401
+- [ ] `/data` Parquet 事件
 - [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；10 个核心工具
 - [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources/prompts 通过
 - [x] MCP `resources/list` / `resources/read`：`mindustry://guide`

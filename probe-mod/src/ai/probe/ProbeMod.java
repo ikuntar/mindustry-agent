@@ -101,8 +101,9 @@ public class ProbeMod extends Mod {
 
     private final String token = UUID.randomUUID().toString();
     private String dataToken = UUID.randomUUID().toString();
-    private long dataTokenExpires = System.currentTimeMillis()
-            + Long.parseLong(System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
+    private final long dataTokenTtlMs = Long.parseLong(
+            System.getenv().getOrDefault("PROBE_DATA_TOKEN_TTL_MS", "3600000"));
+    private long dataTokenExpires = System.currentTimeMillis() + dataTokenTtlMs;
     private volatile String sessionBootstrapToken = UUID.randomUUID().toString();
     private volatile String sessionToken = "";
     private volatile boolean sessionBootstrapUsed = false;
@@ -2403,6 +2404,7 @@ public class ProbeMod extends Mod {
                             .put("sessionToken", sessionToken)
                             .put("dataToken", dataToken)
                             .put("dataBaseUrl", requestDataBaseUrl(exchange))
+                            .put("dataTokenExpires", dataTokenExpires)
                             .put("apiVersion", 1)
                             .put("promptVersion", 1)
                             .put("endpoint", requestDataBaseUrl(exchange).replace("/data", ""))
@@ -2414,6 +2416,23 @@ public class ProbeMod extends Mod {
 
             if (!sessionAuthorized(exchange)) {
                 sendText(exchange, 401, "unauthorized", "text/plain", false);
+                return;
+            }
+
+            if ("/session/data-token".equals(path)) {
+                if (!"POST".equals(method)) {
+                    sendText(exchange, 405, "method not allowed", "text/plain", false);
+                    return;
+                }
+                synchronized (this) {
+                    dataToken = UUID.randomUUID().toString();
+                    dataTokenExpires = System.currentTimeMillis() + dataTokenTtlMs;
+                    Jval payload = Jval.newObject()
+                            .put("dataToken", dataToken)
+                            .put("dataTokenExpires", dataTokenExpires)
+                            .put("dataBaseUrl", requestDataBaseUrl(exchange));
+                    sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
+                }
                 return;
             }
 

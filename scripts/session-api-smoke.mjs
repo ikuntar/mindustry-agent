@@ -78,6 +78,17 @@ console.log(
 const guide = await call("/guide", { headers: auth });
 console.log("guide", guide.status, String(guide.body).split("\n")[0]);
 
+const refreshed = await call("/session/data-token", {
+  method: "POST",
+  headers: auth,
+  body: "{}",
+});
+console.log("data token refresh", refreshed.status, Boolean(refreshed.body.dataToken));
+const oldData = await fetch(`${base}/data/map/latest`, { headers: dataAuth });
+const freshDataAuth = { ...headers, authorization: `Bearer ${refreshed.body.dataToken}` };
+const freshData = await fetch(`${base}/data/map/latest`, { headers: freshDataAuth });
+console.log("data token rotation", oldData.status, freshData.status);
+
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
@@ -86,3 +97,4 @@ if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) proc
 if (sessionMap.status !== 401) process.exit(1);
 if (manifest.status !== 200 || events.status !== 200) process.exit(1);
 if (second.status !== 401) process.exit(1);
+if (refreshed.status !== 200 || oldData.status !== 401 || freshData.status !== 200) process.exit(1);

@@ -209,6 +209,7 @@ GET /data/events/{revision}/page/{cursor}
 - 支持 `Content-Length`、`Content-Range`、`ETag`/revision。
 - token 用 header，不放 URL。
 - `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`）；`/data` 只接受 data token，控制面只接受 session token。
+- `POST /session/data-token` 用 session token 轮换 data token；旧 data token 立即 401。
 - 旧的 `dataToken` 仍可访问本地 `46501`；session server `/data` 使用同一个 data token，不做控制面越权。
 - manifest 的 `access.baseUrl` 按请求 Host 返回，LAN 客户端拿到的是 `http://<host>:47600/data`。
 - harness 可直接重定向到文件：
@@ -398,9 +399,10 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/data/events/latest` 和 `/data/events/{revision}/page/{cursor}` NDJSON
 - data token 可读；旧 `46501` 数据面继续服务 MCP 路径
 - session token 只用于控制，不用于 `/data`
+- `POST /session/data-token` 轮换 data token；旧 token 立即 401
 - `scripts/session-api-smoke.mjs` 已用 HTTP 把地图写入 `/tmp/mindustry-session-map.bin`，
   并验证 Range 206
-- 尚未做：data token TTL 刷新、Parquet
+- 尚未做：Parquet 事件
 
 ### Phase 5：可选 MCP
 
@@ -504,6 +506,8 @@ action 200 op-1
 result 200 done
 data map 200 524304 MND1 sessionData 401 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
 guide 200 # Mindustry AI session
+data token refresh 200 true
+data token rotation 401 200
 ```
 
 MCP 冒烟：
