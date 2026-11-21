@@ -101,6 +101,7 @@ public class ProbeMod extends Mod {
     private volatile String sessionBootstrapToken = UUID.randomUUID().toString();
     private volatile String sessionToken = "";
     private volatile boolean sessionBootstrapUsed = false;
+    private volatile String mcpSessionId = "";
     private final boolean requireAuth = "1".equals(System.getenv("PROBE_REQUIRE_AUTH"));
     private boolean requireWriter = "1".equals(System.getenv("PROBE_REQUIRE_WRITER"));
     private final int dataRateLimit = Math.max(1, Integer.parseInt(
@@ -2287,6 +2288,7 @@ public class ProbeMod extends Mod {
             HttpServer server = HttpServer.create(new InetSocketAddress(SESSION_BIND, SESSION_PORT), 0);
             server.createContext("/", this::handleSession);
             server.createContext("/data", this::handleData);
+            server.createContext("/mcp", this::handleMcp);
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
             Log.info("[ai-probe] session API listening on " + SESSION_BIND + ":" + SESSION_PORT);
@@ -2486,6 +2488,105 @@ public class ProbeMod extends Mod {
         } finally {
             exchange.close();
         }
+    }
+
+    private void handleMcp(HttpExchange exchange) {
+        try {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                sendText(exchange, 405, "method not allowed", "text/plain", false);
+                return;
+            }
+            if (!sessionAuthorized(exchange)) {
+                sendText(exchange, 401, "unauthorized", "text/plain", false);
+                return;
+            }
+            String body = readSmallBody(exchange);
+            if (body == null) {
+                sendText(exchange, 413, "request too large", "text/plain", false);
+                return;
+            }
+            Jval request;
+            try {
+                request = Jval.read(body);
+            } catch (Throwable error) {
+                sendText(exchange, 400, "invalid json", "text/plain", false);
+                return;
+            }
+            if (request == null || !request.isObject()) {
+                sendText(exchange, 400, "body must be an object", "text/plain", false);
+                return;
+            }
+            Jval id = request.get("id");
+            String method = request.getString("method", "");
+            if (id == null) {
+                // MCP notifications have no response body.
+                exchange.sendResponseHeaders(202, -1);
+                return;
+            }
+            Jval response = Jval.newObject().put("jsonrpc", "2.0").put("id", id);
+            if ("initialize".equals(method)) {
+                if (mcpSessionId.isEmpty()) mcpSessionId = UUID.randomUUID().toString();
+                exchange.getResponseHeaders().set("Mcp-Session-Id", mcpSessionId);
+                Jval result = Jval.newObject()
+                        .put("protocolVersion", "2024-11-05")
+                        .put("capabilities", Jval.newObject().put("tools", Jval.newObject()))
+                        .put("serverInfo", Jval.newObject()
+                                .put("name", "mindustry-ai")
+                                .put("version", VERSION))
+                        .put("instructions", gameGuide());
+                response.put("result", result);
+            } else if ("tools/list".equals(method)) {
+                response.put("result", Jval.newObject().put("tools", toolsJson().get("tools")));
+            } else if ("tools/call".equals(method)) {
+                Jval params = request.get("params");
+                String name = params == null ? "" : params.getString("name", "");
+                Jval arguments = params == null ? null : params.get("arguments");
+                if (name.isEmpty()) {
+                    response.put("error", Jval.newObject().put("code", -32602).put("message", "missing tool name"));
+                } else {
+                    Jval actionRequest = arguments == null || !arguments.isObject()
+                            ? Jval.newObject()
+                            : Jval.read(arguments.toString(Jval.Jformat.plain));
+                    actionRequest.put("op", name).put("token", token);
+                    Jval command;
+                    try {
+                        command = runGameCommand(actionRequest);
+                    } catch (Throwable error) {
+                        response.put("error", Jval.newObject().put("code", -32603).put("message", "game command timed out"));
+                        sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
+                        return;
+                    }
+                    boolean ok = command.getBool("ok", false);
+                    String text = (ok ? command.get("data") : command.get("error")) != null
+                            ? (ok ? command.get("data") : command.get("error")).toString(Jval.Jformat.plain)
+                            : command.toString(Jval.Jformat.plain);
+                    Jval result = Jval.newObject()
+                            .put("content", Jval.newArray().add(Jval.newObject()
+                                    .put("type", "text")
+                                    .put("text", text)))
+                            .put("isError", !ok);
+                    response.put("result", result);
+                }
+            } else if ("ping".equals(method)) {
+                response.put("result", Jval.newObject());
+            } else {
+                response.put("error", Jval.newObject().put("code", -32601).put("message", "method not found: " + method));
+            }
+            sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
+        } catch (Throwable error) {
+            try {
+                sendText(exchange, 500, "internal error", "text/plain", false);
+            } catch (Throwable ignored) {
+            }
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private Jval runGameCommand(Jval request) throws Exception {
+        CompletableFuture<Jval> future = new CompletableFuture<>();
+        queue.add(new Command(request, future::complete));
+        return future.get(5, TimeUnit.SECONDS);
     }
 
     private String readSmallBody(HttpExchange exchange) throws IOException {

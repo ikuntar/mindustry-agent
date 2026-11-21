@@ -1,10 +1,10 @@
 # 单 Mod + 会话 API 设计
 
-状态：Phase 2 MVP + Phase 3 弹窗代码 + Phase 4 数据面（2026-11-21）。`probe-mod` 内
-已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定、
-客户端 session prompt 弹窗，以及 session server 上的 `/data` 地图/事件读取；弹窗尚未
-做 UI 实测，完整数据面迁移、可选 MCP、Android 尚未实现。当前开发路径仍是 probe
-socket + Node MCP server。
+状态：Phase 2 MVP + Phase 3 弹窗代码 + Phase 4 数据面 + Phase 5 可选 MCP（2026-11-21）。
+`probe-mod` 内已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、
+`/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
+`POST /mcp` 的最小 MCP Streamable HTTP 子集；弹窗尚未做 UI 实测，SSE/resources、
+Android 尚未实现。当前开发路径仍是 probe socket + Node MCP server。
 
 目标：普通用户只安装一个 Mindustry mod，按需启动一局 AI 会话；不安装 Node、
 不常驻 MCP、不安装 skill，也不需要把 MCP 永久配置进 coding harness。
@@ -262,13 +262,25 @@ guide 是 mod 内置 Markdown，版本随 mod 走；不安装 skill。
 POST /mcp   MCP Streamable HTTP
 ```
 
-用途：支持 MCP 且愿意配置一次的 harness。
+已实现最小子集：
 
-但 MCP 不是主路径：
+- `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-ai`、
+  `Mcp-Session-Id`
+- `notifications/initialized`：202，无 body
+- `tools/list`：10 个核心工具
+- `tools/call`：复用现有游戏动作队列，返回 MCP text content
+- `ping`
+- 错误使用 JSON-RPC 错误码；未知方法 `-32601`
+- 鉴权：`Authorization: Bearer <sessionToken>`；session token 由 `POST /session` 获取
+- 尚未实现：GET SSE、resources/prompts、标准 MCP client 兼容性矩阵
+
+用途：支持 MCP 且愿意配置一次的 harness。它不是主路径；session prompt + REST 仍是主路径。
+
+注意：
 
 - 许多 host 不支持热重载，首次配置后要重启。
 - 本项目的推荐流程是 session prompt，不依赖 MCP 配置。
-- MCP 和 REST 共享同一个 `GameCore`/tool registry，避免行为漂移。
+- MCP 和 REST 共享同一份工具 schema 与游戏动作队列，避免行为漂移。
 - 第一版只暴露 10 个核心工具，不搬 27 个。
 
 ## 9. 弹窗设计
@@ -362,9 +374,12 @@ POST /mcp   MCP Streamable HTTP
 
 ### Phase 5：可选 MCP
 
-- `/mcp` Streamable HTTP
-- 与 REST 共享 tool registry
-- MCP instructions/resources
+部分完成：
+
+- `POST /mcp` 的 `initialize`、`notifications/initialized`、`tools/list`、`tools/call`、`ping`
+- 10 个核心工具与 REST 共用 `toolsJson()` schema
+- `Mcp-Session-Id`
+- 尚未做：GET SSE、resources/prompts、标准 MCP client 兼容性矩阵、bootstrap token 直接用来初始化
 
 ### Phase 6：Android
 
@@ -410,6 +425,8 @@ POST /mcp   MCP Streamable HTTP
   返回 `opId`；支持已有动作，不复制游戏逻辑
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /guide`：短游戏说明
+- `GET /tools`：10 个核心工具 JSON Schema
+- `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）
 - session server 的 `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON
 - 关闭游戏/进程退出后端口关闭，session token 与 bootstrap token 一起失效
 - 进程内 discovery 增加 `sessionPort`/`sessionBind`；仅当
@@ -423,6 +440,9 @@ scripts/start-game-server.sh
 
 # 读取 discovery，走 /session -> /context -> /actions -> /actions/{opId} -> /data
 node scripts/session-api-smoke.mjs
+
+# 可选 MCP HTTP
+node scripts/mcp-http-smoke.mjs
 ```
 
 结果：
@@ -436,6 +456,19 @@ action 200 op-1
 result 200 done
 data map 200 524304 MND1 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
 guide 200 # Mindustry AI session
+```
+
+MCP 冒烟：
+
+```text
+session 200
+initialize 200 mindustry-ai 2024-11-05
+initialized notification 202
+tools/list 200 10
+tools/call get_context 200 Fortress 928 584
+tools/call move_to 200 op-1 running
+tools/call get_action_result done
+unknown method 200 -32601
 ```
 
 说明：

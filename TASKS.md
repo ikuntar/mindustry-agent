@@ -141,7 +141,8 @@
 - [ ] Android 兼容构建：`android: true` + d8 + 去 `com.sun` + 外部 discovery
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；session token 可读；旧 `46501` 数据面保留
 - [ ] `/data` 独立 data token 分权、TTL 刷新、Parquet、curl 进程级验收
-- [ ] 可选 MCP Streamable HTTP `/mcp`，与 REST 共享 tool registry
+- [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；10 个核心工具
+- [ ] MCP GET SSE、resources/prompts、标准 MCP client 兼容性矩阵
 - [ ] 存档/读档记忆处理
 - [ ] 跨区块/跨地图重生
 - [ ] 本地主机/专用服/其他玩家可见性
