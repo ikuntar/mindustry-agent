@@ -40,8 +40,8 @@ import mindustry.world.blocks.defense.turrets.Turret;
 import mindustry.world.blocks.environment.Floor;
 import mindustry.world.modules.ItemModule;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
+import ai.probe.http.HttpExchange;
+import ai.probe.http.HttpServer;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -64,10 +64,13 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -468,7 +471,7 @@ public class ProbeMod extends Mod {
 
         if ("claim_writer".equals(op)) {
             String clientId = request.getString("clientId", "");
-            if (clientId.isBlank()) {
+            if (clientId.trim().isEmpty()) {
                 replyError(command, "bad_request", "Missing clientId");
                 return;
             }
@@ -2343,7 +2346,7 @@ public class ProbeMod extends Mod {
 
     private String requestDataBaseUrl(HttpExchange exchange) {
         String host = exchange.getRequestHeaders().getFirst("Host");
-        if (host == null || host.isBlank()) return preferredSessionUrl() + "/data";
+        if (host == null || host.trim().isEmpty()) return preferredSessionUrl() + "/data";
         return "http://" + host + "/data";
     }
 
@@ -2497,6 +2500,7 @@ public class ProbeMod extends Mod {
 
             sendText(exchange, 404, "not found", "text/plain", false);
         } catch (Throwable error) {
+            Log.err("[ai-probe] session handler failed", error);
             try {
                 sendText(exchange, 500, "internal error", "text/plain", false);
             } catch (Throwable ignored) {
@@ -2645,9 +2649,23 @@ public class ProbeMod extends Mod {
     }
 
     private String readSmallBody(HttpExchange exchange) throws IOException {
-        byte[] bytes = exchange.getRequestBody().readAllBytes();
-        if (bytes.length > 1024 * 1024) return null;
-        return new String(bytes, StandardCharsets.UTF_8);
+        String rawLength = exchange.getRequestHeaders().getFirst("Content-Length");
+        if (rawLength == null || rawLength.isEmpty()) return "";
+        int length;
+        try {
+            length = Integer.parseInt(rawLength);
+        } catch (NumberFormatException error) {
+            return null;
+        }
+        if (length < 0 || length > 1024 * 1024) return null;
+        byte[] bytes = new byte[length];
+        int read = 0;
+        while (read < length) {
+            int count = exchange.getRequestBody().read(bytes, read, length - read);
+            if (count < 0) break;
+            read += count;
+        }
+        return new String(bytes, 0, read, StandardCharsets.UTF_8);
     }
 
     private void sendCommandResult(HttpExchange exchange, Jval request) throws Exception {
@@ -3120,9 +3138,19 @@ public class ProbeMod extends Mod {
         thread.start();
     }
 
+    private static long currentPid() {
+        try {
+            String name = ManagementFactory.getRuntimeMXBean().getName();
+            int at = name.indexOf('@');
+            return Long.parseLong(at > 0 ? name.substring(0, at) : name);
+        } catch (Throwable ignored) {
+            return 0;
+        }
+    }
+
     private void writeDiscovery() {
         try {
-            Path directory = Path.of(System.getProperty("java.io.tmpdir"), "mindustry-ai-probe");
+            Path directory = Paths.get(System.getProperty("java.io.tmpdir"), "mindustry-ai-probe");
             Files.createDirectories(directory);
             Path file = directory.resolve("bridge-info.json");
             String json = Jval.newObject()
@@ -3139,9 +3167,9 @@ public class ProbeMod extends Mod {
                     .put("sessionPort", SESSION_PORT)
                     .put("sessionBind", SESSION_BIND)
                     .put("sessionBootstrapToken", EXPOSE_SESSION ? sessionBootstrapToken : "")
-                    .put("pid", ProcessHandle.current().pid())
+                    .put("pid", currentPid())
                     .toString(Jval.Jformat.plain);
-            Files.writeString(file, json, StandardCharsets.UTF_8);
+            Files.write(file, json.getBytes(StandardCharsets.UTF_8));
             try {
                 Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
             } catch (UnsupportedOperationException ignored) {
@@ -3159,7 +3187,7 @@ public class ProbeMod extends Mod {
              BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = in.readLine()) != null) {
-                if (line.isBlank()) continue;
+                if (line.trim().isEmpty()) continue;
                 try {
                     queue.add(new Command(Jval.read(line), out));
                 } catch (Throwable error) {
@@ -3360,7 +3388,7 @@ public class ProbeMod extends Mod {
         volatile Teamc attackEntity;
         volatile Vec2 attackPosition;
         private Vec2 pathTarget;
-        private List<Vec2> path = List.of();
+        private List<Vec2> path = Collections.emptyList();
         private int pathIndex;
         private double lastAutoScanTick = -1;
 
@@ -3484,7 +3512,7 @@ public class ProbeMod extends Mod {
 
         private void clearPath() {
             pathTarget = null;
-            path = List.of();
+            path = Collections.emptyList();
             pathIndex = 0;
         }
 
@@ -3509,7 +3537,7 @@ public class ProbeMod extends Mod {
         }
 
         private List<Vec2> findPath(Vec2 destination) {
-            if (unit == null || unit.type.flying || unit.dead) return List.of();
+            if (unit == null || unit.type.flying || unit.dead) return Collections.emptyList();
             int width = Vars.world.width();
             int height = Vars.world.height();
             int startX = Math.max(0, Math.min(width - 1, (int) (unit.x / 8f)));
@@ -3518,7 +3546,7 @@ public class ProbeMod extends Mod {
             int goalY = Math.max(0, Math.min(height - 1, (int) (destination.y / 8f)));
             int start = startY * width + startX;
             int goal = goalY * width + goalX;
-            if (start == goal) return List.of();
+            if (start == goal) return Collections.emptyList();
 
             boolean[] visited = new boolean[width * height];
             int[] previous = new int[width * height];
@@ -3557,7 +3585,7 @@ public class ProbeMod extends Mod {
                     queue.add(next);
                 }
             }
-            if (!found) return List.of();
+            if (!found) return Collections.emptyList();
             ArrayList<Vec2> result = new ArrayList<>();
             int current = goal;
             while (current != start && current >= 0) {

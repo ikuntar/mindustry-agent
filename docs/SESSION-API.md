@@ -1,10 +1,11 @@
 # 单 Mod + 会话 API 设计
 
-状态：Phase 2 MVP + Phase 3 弹窗代码 + Phase 4 数据面 + Phase 5 可选 MCP（2026-11-21）。
+状态：Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-21）。
 `probe-mod` 内已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、
 `/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
-`POST /mcp` 的最小 MCP Streamable HTTP 子集；弹窗尚未做 UI 实测，SSE/resources、
-Android 尚未实现。当前开发路径仍是 probe socket + Node MCP server。
+`POST /mcp` 的最小 MCP Streamable HTTP 子集；HTTP server 已改成 `ai.probe.http`
+的 ServerSocket 实现，移除 `com.sun.net.httpserver`。Android 元数据、d8 构建和
+其余 Android API 兼容仍未完成。
 
 目标：普通用户只安装一个 Mindustry mod，按需启动一局 AI 会话；不安装 Node、
 不常驻 MCP、不安装 skill，也不需要把 MCP 永久配置进 coding harness。
@@ -415,10 +416,25 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 
 ### Phase 6：Android
 
-- `android: true` + d8
-- 去掉 `com.sun.net.httpserver`
-- 外部配置/discovery 路径
-- 手机 LAN endpoint + PC harness
+当前决定：**PC 作为游戏/服务端 host，手机只作为客户端**。这是默认路径；手机
+hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Android mod 兼容不作为当前
+阻塞项。
+
+已完成的可复用前置：
+
+- 已移除 `com.sun.net.httpserver`，改为 `probe-mod/src/ai/probe/http/` 的
+  `ServerSocket` 实现（GET/POST/HEAD、Content-Length、Range 由现有 handler 处理）
+- 桌面端 `/session`、`/data`、`/mcp` 在自定义 HTTP server 下全部回归通过
+- Java 11+ API 已做部分替代（`List.of`、`isBlank`、`Files.writeString`、`ProcessHandle`）
+
+若以后做 phone-hosted：
+
+- `mod.json` 的 `android: true`
+- d8/dex 构建脚本
+- Android 外部 discovery 路径（不能依赖 `/tmp`）
+- 固定 token 或可从 UI 读取的 token
+- `adb reverse`/SSH tunnel + 鉴权
+- 真机包名验收（不能拿桌面 jar 当证据）
 
 ## 13. 验收标准
 

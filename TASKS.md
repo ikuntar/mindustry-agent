@@ -141,7 +141,9 @@
 - [ ] `Copy session prompt` 剪贴板内容断言
 - [ ] 桌面客户端/真机人工点击验收
 - [x] 10 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema
-- [ ] Android 兼容构建：`android: true` + d8 + 去 `com.sun` + 外部 discovery
+- [x] 自定义 `ai.probe.http` ServerSocket HTTP server：移除 `com.sun.net.httpserver`；桌面 `/session`、`/data`、`/mcp` 回归通过
+- [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
+- [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
 - [ ] `/data` data token TTL 刷新、Parquet
 - [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；10 个核心工具
