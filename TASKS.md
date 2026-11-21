@@ -136,7 +136,8 @@
 - [x] mod 内 HTTP session API MVP：`/session` 一次性 bootstrap、`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定、Bearer session token
 - [x] session API 冒烟脚本 `scripts/session-api-smoke.mjs`
 - [x] 弹窗 session prompt 代码（`WorldLoadEvent` + `BaseDialog` + 剪贴板；编译通过，客户端 UI 未实测）
-- [ ] 弹窗 UI 实测：真机/桌面客户端加载地图后复制 prompt
+- [x] 桌面客户端 v160.8 加载 mod 并启动 `/session`、`/data`、`/mcp`（WSLg 下 GL 窗口截图不可用，popup 未目视验收）
+- [ ] 弹窗 UI 实测：桌面客户端/真机加载地图后复制 prompt
 - [x] 10 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema
 - [ ] Android 兼容构建：`android: true` + d8 + 去 `com.sun` + 外部 discovery
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留

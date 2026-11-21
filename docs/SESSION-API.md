@@ -299,6 +299,16 @@ POST /mcp   MCP Streamable HTTP
 - 专用服务端没有 UI；本局 token 可通过 `PROBE_EXPOSE_SESSION=1` 写 discovery（0600），
   默认不写。
 
+安装位置：
+
+- Linux 客户端：`~/.local/share/Mindustry/mods/ai-probe.jar`
+- Windows 客户端：`%APPDATA%\Mindustry\mods\ai-probe.jar`
+- 专用服：`<server>/config/mods/ai-probe.jar`
+- 同一端口同一时间只能有一个实例监听 `47600`；不要同时开客户端和专用服。
+
+已做：桌面客户端 v160.8 能加载 mod，并成功启动 `/session`、`/tools`、`/data`、`/mcp`。
+未做：WSLg 下截图链路无法捕获 GL 窗口，popup 还没有目视验收。
+
 后续：
 
 - 显示 loopback/LAN URL 列表，用户选一个复制。
