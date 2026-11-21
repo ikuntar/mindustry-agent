@@ -15,6 +15,7 @@
 - [x] `harness/smoke.ts`：stdio 连接、列工具、读上下文、最小动作序列
 - [x] `docs/ASSISTANT-DESIGN.md`
 - [x] `docs/MCP-PROTOCOL.md`
+- [x] `docs/SESSION-API.md`：单 mod + 每局 session prompt + 一次性 bootstrap token + LAN HTTP API + 可选 MCP；设计稿未实现
 - [x] `docs/REMOTE-DATA-PLANE.md`（方案 A：远程只读数据面 + 客户端代码）
 - [x] `README.md` 更新目录与运行方式
 - [x] `mcp-server/README.md`
@@ -132,6 +133,10 @@
 - [x] 动作 allowlist：`MCP_ALLOWED_TOOLS`/`MCP_DENIED_TOOLS` 在注册阶段过滤工具；`MCP_ALLOWED_TOOLS=get_context` 实测只暴露 1 个工具，`move_to` 调用被拒绝
 - [x] 写动作速率限制：`MCP_WRITE_RATE_LIMIT`（每秒）；limit=1 时首个写成功，第二个返回 `rate_limited`（retryable=true）
 - [ ] API key 只在伴生进程；日志脱敏
+- [ ] 实现 mod 内 HTTP session API：`/session` 一次性 bootstrap、`/context`、`/actions`、`/guide`、LAN 绑定、弹窗 session prompt
+- [ ] Android 兼容构建：`android: true` + d8 + 去 `com.sun` + 外部 discovery
+- [ ] 数据面迁移到 mod 内 `/data`，curl 直接落文件
+- [ ] 可选 MCP Streamable HTTP `/mcp`，与 REST 共享 tool registry
 - [ ] 存档/读档记忆处理
 - [ ] 跨区块/跨地图重生
 - [ ] 本地主机/专用服/其他玩家可见性

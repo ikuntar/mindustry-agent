@@ -3,6 +3,9 @@
 目标：让 Claude Code / Claude Desktop / Codex / OpenCode / Hermes 这类已经有
 agent loop 的 host 直接调用本项目的 MCP server，而不是在本项目里再实现长期目标。
 
+产品化方向（单 mod、每局 session prompt、一次性 token、LAN HTTP API、可选 MCP）
+见 `docs/SESSION-API.md`。当前文档描述的是已经可用的开发/测试接入方式。
+
 ## 职责边界
 
 - **Host/harness 负责**：目标、长期计划、重试策略、上下文管理、模型选择。
