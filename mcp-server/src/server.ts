@@ -88,11 +88,12 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
     {
       maxToolInputElements: 4096,
       instructions: [
-        "Mindustry AI assistant tool interface.",
-        "Read get_context/get_capabilities before acting.",
-        "Write tools return {accepted, opId}; use get_action_result to poll.",
-        "All actions are performed by the assistant unit/team, not by the human player.",
-        "No chat UI is exposed; this is a tool-only interface for a harness or MCP host.",
+        "Mindustry co-op assistant tool interface. The MCP host owns the goal and the loop; this server has no planner and no long-term memory.",
+        "Start with get_context({detail:\"summary\"}) and get_capabilities; use get_area or the obs:// data plane for bounded map/event detail.",
+        "Read tools are cheap; write tools are asynchronous and return {opId}. Poll get_action_result before issuing the next action.",
+        "All actions are performed by the assistant unit/team, not by the human player. Use possess/release for units and respawn for a new body.",
+        "No chat UI is exposed. Do not invent tools or game state; report tool errors instead of retrying blindly.",
+        "On transport errors start the probe game server first (scripts/mindustry-mcp --check).",
       ].join(" "),
     },
   );

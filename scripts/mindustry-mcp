@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Launch the Mindustry MCP server for an MCP host.
+#
+#   scripts/mindustry-mcp            # real game via probe (default)
+#   MINDUSTRY_AI_ADAPTER=mock scripts/mindustry-mcp
+#   scripts/mindustry-mcp --check    # print probe/discovery status, no stdio
+#
+# The game server must already be running with the probe mod. The MCP server
+# never starts Mindustry itself; the host owns the process.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MCP_DIR="$ROOT/mcp-server"
+ENTRY="$MCP_DIR/dist/src/index.js"
+DISCOVERY="${PROBE_DISCOVERY:-/tmp/mindustry-ai-probe/bridge-info.json}"
+
+if [[ "${1:-}" == "--check" ]]; then
+  if [[ ! -f "$DISCOVERY" ]]; then
+    printf 'discovery missing: %s\n' "$DISCOVERY" >&2
+    printf 'start the Mindustry server with probe-mod, then retry\n' >&2
+    exit 1
+  fi
+  node -e '
+    const fs = require("fs");
+    const net = require("net");
+    const d = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const socket = net.createConnection({ host: "127.0.0.1", port: d.port });
+    const timer = setTimeout(() => {
+      console.error("probe port timed out: " + d.port);
+      socket.destroy();
+      process.exit(1);
+    }, 1500);
+    socket.on("connect", () => {
+      clearTimeout(timer);
+      console.log("discovery: " + process.argv[1]);
+      console.log(JSON.stringify({
+        port: d.port, protocol: d.protocol, version: d.version,
+        dataPort: d.dataPort, requireAuth: d.requireAuth, requireWriter: d.requireWriter
+      }));
+      socket.end();
+    });
+    socket.on("error", (error) => {
+      clearTimeout(timer);
+      console.error("probe port unavailable: " + error.message);
+      process.exit(1);
+    });
+  ' "$DISCOVERY"
+  exit $?
+fi
+
+if [[ ! -f "$ENTRY" ]]; then
+  printf 'missing %s\n' "$ENTRY" >&2
+  printf 'run: (cd mcp-server && npm install && npm run build)\n' >&2
+  exit 1
+fi
+
+export MINDUSTRY_AI_ADAPTER="${MINDUSTRY_AI_ADAPTER:-probe}"
+exec node "$ENTRY"

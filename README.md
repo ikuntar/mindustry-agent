@@ -1,6 +1,6 @@
 # mindustry-ai
 
-目标：做一个 Mindustry × AI 的版本。当前阶段：调研/参考实现拆解。
+目标：做一个 Mindustry × AI 的版本。当前阶段：MCP 工具面可用，正在补主流 harness 接入。
 
 ## 目录
 
@@ -12,6 +12,7 @@ mindustry-ai/
 │   ├── bek-mindustryx-ai-bridge.md   ← BEK-Group/MindustryX 的 AI 通道拆解（参考实现）
 │   ├── ASSISTANT-DESIGN.md           ← 助手总体设计：身体/附身/权限/团队/验收
 │   ├── MCP-PROTOCOL.md               ← MCP 工具、动作生命周期、事件、权限矩阵
+│   ├── HARNESS-INTEGRATION.md        ← Claude Code/Desktop、Codex、OpenCode、Hermes 接入
 │   ├── REMOTE-DATA-PLANE.md          ← 远程只读数据面：DatasetRef、HTTP range、客户端代码分析
 │   ├── OPEN-QUESTIONS.md             ← 待拍板项与默认建议
 │   └── REALITY-CHECK.md              ← v160.8 真实 jar 的 API/启动核对
@@ -50,6 +51,8 @@ mindustry-ai/
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
 - [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔+传送带供弹防守；真实本地 LLM 固定移动任务已跑通
+- [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
+- [ ] 在真实 Claude Code/Codex/OpenCode host UI 中做人工双 client 验收
 
 ## MCP 快速开始
 
@@ -58,21 +61,19 @@ cd mcp-server
 npm install
 npm run build
 npm test        # MockGameAdapter + MCP 工具测试
+npm run host-smoke # 通过 scripts/mindustry-mcp 启动的通用 MCP host 冒烟（mock）
 npm run harness # stdio harness（构建后运行）
 ../scripts/run-fixed-scenario.sh # 启动 Fortress 固定地图 + 场景断言
 LLM_MOCK=1 MINDUSTRY_AI_ADAPTER=mock npm run llm-harness # 无凭证工具循环 dry run
 node harness/mock-openai-server.mjs # 另一个终端：本地 mock OpenAI endpoint
 MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-harness
-# local Ollama OpenAI-compatible endpoint
-MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest npm run llm-harness
-# 真实本地模型 + 最终位置验收（需要已启动 Fortress 服务端和 probe）
-MINDUSTRY_AI_ADAPTER=probe LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=lfm3:latest LLM_FINAL_CONTEXT=1 LLM_EXPECT_NEAR_X=952 LLM_EXPECT_NEAR_Y=584 LLM_TASK='Call get_context, move to core.x+24 and report.' npm run llm-harness
-# 超时验证：本地延迟 mock endpoint + 150ms 超时
-MOCK_LLM_PORT=18081 MOCK_LLM_DELAY_MS=1000 node harness/mock-openai-server.mjs &
-MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18081/v1 LLM_REQUEST_TIMEOUT_MS=150 npm run llm-harness
-# 重试验证：首次 503，第二次成功
-MOCK_LLM_PORT=18082 MOCK_LLM_FAIL_TIMES=1 node harness/mock-openai-server.mjs &
-MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18082/v1 LLM_MAX_RETRIES=1 LLM_RETRY_BACKOFF_MS=10 npm run llm-harness
+# 真实游戏 MCP host 启动（服务端和 probe 已运行）
+../scripts/start-game-server.sh
+../scripts/mindustry-mcp --check
+MINDUSTRY_AI_ADAPTER=probe npm run host-smoke  # 通过 wrapper 走真实 probe
+../scripts/stop-game-server.sh
+# 主流 host 配置（Claude Code/Desktop、Codex、OpenCode、Hermes）
+cat docs/HARNESS-INTEGRATION.md
 ```
 
 ## 备注

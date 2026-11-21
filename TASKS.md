@@ -71,6 +71,8 @@
 - [x] `attack.unitId` 独立伤害：固定场景在核心附近生成 idle dagger 后按 `unitId` 攻击，health `150→141`（4 波后的低血助手路径不作为验收）
 - [x] 动作超时：`move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；固定场景分别实测
 - [x] `mine` 超时与正常完成：固定场景在助手附近放 `ore-copper`，`timeoutTicks=1` 返回 `failed/timeout`；无超时挖矿 `done` 并获得 1 copper
+- [x] 主流 harness 接入：`scripts/mindustry-mcp` 包装器（默认 probe）+ `harness/host-smoke.ts` + `scripts/start-game-server.sh`；真实 probe 下 host-smoke `{"ok":true,"tools":27,"adapter":"probe","moveStatus":"done"}`，`docs/HARNESS-INTEGRATION.md` 覆盖 Claude Code/Desktop、Codex、OpenCode、Hermes
+- [ ] 在真实 Claude Code/Codex/OpenCode host UI 中连真实游戏做人工双 client 验收（启动/配置格式已有，真实 wrapper 冒烟已过）
 - [ ] 本地反射控制器：建造推进、卡住重试、撤退完成后的回归
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
