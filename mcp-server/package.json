@@ -15,6 +15,7 @@
     "writer-harness": "tsx harness/writer.ts",
     "allowlist-harness": "tsx harness/allowlist.ts",
     "rate-limit-harness": "tsx harness/rate-limit.ts",
+    "mcp-http-smoke": "tsx harness/mcp-http-smoke.ts",
     "host-smoke": "tsx harness/host-smoke.ts"
   },
   "dependencies": {
