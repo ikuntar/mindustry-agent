@@ -2050,6 +2050,10 @@ public class ProbeMod extends Mod {
                 .put("teamName", team.name)
                 .put("paused", Vars.state.isPaused())
                 .put("gameOver", Vars.state.gameOver)
+                .put("won", Vars.state.won)
+                .put("campaign", Vars.state.isCampaign())
+                .put("sector", Vars.state.hasSector() ? Vars.state.getSector().name() : "")
+                .put("winWave", Vars.state.rules.winWave)
                 .put("eventsSince", eventSeq);
 
         Jval eventByType = Jval.newObject();

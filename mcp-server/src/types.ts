@@ -59,6 +59,10 @@ export interface GameContext {
   timeMs: number;
   paused: boolean;
   gameOver: boolean;
+  won?: boolean;
+  campaign?: boolean;
+  sector?: string;
+  winWave?: number;
   map: string;
   mode: string;
   wave: number;

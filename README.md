@@ -53,6 +53,8 @@ mindustry-ai/
 - [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔+传送带供弹防守；真实本地 LLM 固定移动任务已跑通
 - [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、omp、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
 - [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
+- [x] Ground Zero campaign-like：omp 连续观察 35 次到 `wave=10`，`winWave=10`、`won=false`；证明可玩到终点波次，正式战役结算仍需客户端 campaign 或 mod 支持
+- [x] omp 上手速度：冷启动+首次真实 context 约 13.0s；热启动约 8.7s；连续 35 次 context 约 254s（约 7.3s/次）
 - [ ] 在真实 Claude Code/Codex/OpenCode host UI 中做人工双 client 验收
 
 ## MCP 快速开始

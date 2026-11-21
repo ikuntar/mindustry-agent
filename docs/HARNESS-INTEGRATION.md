@@ -192,6 +192,53 @@ respawn only through their tools. This server does not plan long-term goals.
 - 已有 `LLM_TOOL_FILTER`/`LLM_TOOL_CHOICE` 只用于本项目 LLM harness 冒烟，
   主流 host 应使用自己的工具选择和审批机制。
 
+## 战役模式（Ground Zero）实测
+
+专用服务端没有原生 `campaign` 命令，只有 `host <map> [mode]`。仓库通过
+`scripts/start-ground-zero-server.sh` 做了 campaign-like fixture：
+
+- 从 jar 载入内嵌 `maps/serpulo/groundZero.msav`
+- `host groundZero survival`
+- 设置 `rules.sector = SectorPresets.groundZero.sector`
+- `rules.winWave = captureWave`（本版本为 10）
+- 给队伍 150 copper / 50 lead，`waveSpacing=30`
+
+启动：
+
+```bash
+scripts/start-ground-zero-server.sh
+scripts/mindustry-mcp --check
+```
+
+`get_context` 会返回 `campaign/sector/won/gameOver/winWave`，host 可据此判断
+是否停止。omp 实测到达 `wave=10`、核心存活、`winWave=10`，但 `won=false`；
+专用服随后自动切到下一张地图，且没有客户端战役的 objectives/存档归属。
+因此：
+
+- 能验证“omp 通过 MCP 在 Ground Zero 地图上持续观察/行动到终点波次”
+- **不能**声称完成了原版战役第一关的正式结算
+- 真正战役胜利需要客户端 host campaign，或在 probe mod 里补战役目标/结算支持
+
+## omp 上手速度（2026-11-21，本机）
+
+命令形态：
+
+```bash
+omp -p --no-session --max-time 90 --cwd /home/kuutar/project/mindustry-ai \
+  'Use mindustry MCP get_context detail="full" ...'
+```
+
+实测：
+
+- 冷启动 + 首次真实 `get_context`：约 **13.0s**
+- 已热启动 + 首次真实 `get_context`：约 **8.7s**
+- Ground Zero 连续观察：35 次 `get_context`，约 254s，约 **7.3s/次**（包含
+  模型推理、MCP 调用和工具结果回传，不只是游戏 RPC）
+- 完整 Ground Zero 到 `wave=10` 的服务器时间约 4.5 分钟；omp 的 420s
+  播放会话仍可能先到 max-time，host 必须用 `won/gameOver` 做明确停止条件。
+
+这些数字用于判断“host 上手是否可用”，不是游戏服务器性能基准。
+
 ## 验收
 
 ```bash

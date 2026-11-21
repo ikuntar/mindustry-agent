@@ -72,8 +72,10 @@
 - [x] 动作超时：`move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；固定场景分别实测
 - [x] `mine` 超时与正常完成：固定场景在助手附近放 `ore-copper`，`timeoutTicks=1` 返回 `failed/timeout`；无超时挖矿 `done` 并获得 1 copper
 - [x] 主流 harness 接入：`scripts/mindustry-mcp` 包装器（默认 probe）+ `harness/host-smoke.ts` + `scripts/start-game-server.sh`；真实 probe 下 host-smoke `{"ok":true,"tools":27,"adapter":"probe","moveStatus":"done"}`，`docs/HARNESS-INTEGRATION.md` 覆盖 Claude Code/Desktop、Codex、OpenCode、omp、Hermes
-- [x] omp 对话验收：真实 Fortress 中 omp 识别 27 个工具，`get_context` 读到 alpha/核心，`move_to` 轮询 `done`，助手 `(928,584)→(942.2,584)`
-- [ ] 在真实 Claude Code/Codex/OpenCode host UI 中连真实游戏做人工双 client 验收（启动/配置格式已有，真实 wrapper 冒烟已过）
+- [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
+- [x] Ground Zero campaign-like 实测：专用服载入内嵌 sector 地图、设置 sector/winWave/资源；omp 连续观察 35 次到 `wave=10`，核心存活，但 `won=false`，专用服自动切图
+- [ ] 真正的战役第一关正式结算（需要客户端 host campaign 或 probe mod 补 objectives/sector 结算）
+- [ ] 在真实 Claude Code/Codex/OpenCode host UI 中连真实游戏做人工双 client 验收（omp 已实测）
 - [ ] 本地反射控制器：建造推进、卡住重试、撤退完成后的回归
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
@@ -91,7 +93,7 @@
 
 ## M2：观测与上下文
 
-- [x] `get_context` 摘要 + 局部窗口（radius，tile）+ 团队取 assistant.team + `since` 事件增量摘要 + `includeEnemies` 的 `threats`（最多 16 个）+ `maxUnits`（1–64，默认 20，返回 `unitsTruncated`）+ `maxBytes`（有界裁剪，返回 `bytesTruncated`）+ 粗略 `bytes`
+- [x] `get_context` 摘要 + 局部窗口（radius，tile）+ 团队取 assistant.team + `since` 事件增量摘要 + `includeEnemies` 的 `threats`（最多 16 个）+ `maxUnits`（1–64，默认 20，返回 `unitsTruncated`）+ `maxBytes`（有界裁剪，返回 `bytesTruncated`）+ 粗略 `bytes` + `won/campaign/sector/winWave`
 - [ ] token 预算、detail/radius/since 的完整分页/resource
 - [x] `configure` 端到端：固定场景建 sorter 并配置 `copper`，`get_tile.config="copper"`；建 switch 并配置 `true/false`，回读 `"true"/"false"`；同时覆盖 sorter/unloader/switch/message/processor schema
 - [ ] 可指挥单位 + stance + 命令队列
