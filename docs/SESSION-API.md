@@ -376,7 +376,7 @@ POST /mcp   MCP Streamable HTTP
 - session token 只用于控制，不用于 `/data`
 - `scripts/session-api-smoke.mjs` 已用 HTTP 把地图写入 `/tmp/mindustry-session-map.bin`，
   并验证 Range 206
-- 尚未做：data token TTL 刷新、Parquet、`curl` 进程级验收
+- 尚未做：data token TTL 刷新、Parquet
 
 ### Phase 5：可选 MCP
 
@@ -498,5 +498,6 @@ sdk move op-1 running
   `curl -H "Authorization: Bearer ***" ...` 复现。
 - `/session` 的一次性 token 已验证第二次返回 401。
 - 完整地图已由脚本写入 `/tmp/mindustry-session-map.bin`，验证了“大结果落文件”路径。
+- 实际 `curl -o` 验证：地图 `200 524304`，Range `206 16`，首 4 字节 `MND1`。
 - 当前没有把 session token 写进 discovery；只有开发开关会写 bootstrap token。
-- 下一阶段：客户端 UI 实测、显式工具 schema、可选 `/mcp`、独立数据 token、Android。
+- 下一阶段：客户端 UI 实测、MCP GET SSE、data token TTL、Android。
