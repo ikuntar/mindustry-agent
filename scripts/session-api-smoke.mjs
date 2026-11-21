@@ -31,6 +31,7 @@ const second = await call("/session", {
 console.log("reused bootstrap", second.status);
 
 const auth = { ...headers, authorization: `Bearer ${first.body.sessionToken}` };
+const dataAuth = { ...headers, authorization: `Bearer ${first.body.dataToken}` };
 const tools = await call("/tools", { headers: auth });
 console.log("tools", tools.status, tools.body.tools?.length);
 const context = await call("/context?detail=summary", { headers: auth });
@@ -54,19 +55,21 @@ for (let i = 0; i < 30; i++) {
 }
 console.log("result", result.status, result.body.status, result.body.data?.code ?? result.body.data?.distance ?? "");
 
-const map = await fetch(`${base}/data/map/latest`, { headers: auth });
+const map = await fetch(`${base}/data/map/latest`, { headers: dataAuth });
+const sessionMap = await fetch(`${base}/data/map/latest`, { headers: auth });
 const mapBytes = Buffer.from(await map.arrayBuffer());
 fs.writeFileSync("/tmp/mindustry-session-map.bin", mapBytes);
 const range = await fetch(`${base}/data/map/latest`, {
-  headers: { ...auth, range: "bytes=0-15" },
+  headers: { ...dataAuth, range: "bytes=0-15" },
 });
 const rangeBytes = Buffer.from(await range.arrayBuffer());
-const manifest = await call("/data/manifest/latest", { headers: auth });
-const events = await fetch(`${base}/data/events/latest`, { headers: auth });
+const manifest = await call("/data/manifest/latest", { headers: dataAuth });
+const events = await fetch(`${base}/data/events/latest`, { headers: dataAuth });
 const eventsBody = await events.text();
 console.log(
   "data",
   "map", map.status, mapBytes.length, mapBytes.subarray(0, 4).toString("ascii"),
+  "sessionData", sessionMap.status,
   "range", range.status, rangeBytes.length, range.headers.get("content-range"),
   "manifest", manifest.status, manifest.body.access?.baseUrl,
   "events", events.status, eventsBody.split("\n").filter(Boolean).length,
@@ -80,5 +83,6 @@ if (context.status !== 200 || action.status !== 200 || result.status !== 200 || 
 }
 if (tools.status !== 200 || tools.body.tools?.length !== 10) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
+if (sessionMap.status !== 401) process.exit(1);
 if (manifest.status !== 200 || events.status !== 200) process.exit(1);
 if (second.status !== 401) process.exit(1);

@@ -139,8 +139,8 @@
 - [ ] 弹窗 UI 实测：真机/桌面客户端加载地图后复制 prompt
 - [x] 10 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema
 - [ ] Android 兼容构建：`android: true` + d8 + 去 `com.sun` + 外部 discovery
-- [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；session token 可读；旧 `46501` 数据面保留
-- [ ] `/data` 独立 data token 分权、TTL 刷新、Parquet、curl 进程级验收
+- [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
+- [ ] `/data` data token TTL 刷新、Parquet、curl 进程级验收
 - [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；10 个核心工具
 - [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call 通过
 - [ ] MCP GET SSE、resources/prompts、完整兼容性矩阵

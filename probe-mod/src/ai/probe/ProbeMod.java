@@ -2384,9 +2384,11 @@ public class ProbeMod extends Mod {
                     sessionToken = UUID.randomUUID().toString();
                     Jval payload = Jval.newObject()
                             .put("sessionToken", sessionToken)
+                            .put("dataToken", dataToken)
+                            .put("dataBaseUrl", requestDataBaseUrl(exchange))
                             .put("apiVersion", 1)
                             .put("promptVersion", 1)
-                            .put("endpoint", "http://" + SESSION_BIND + ":" + SESSION_PORT)
+                            .put("endpoint", requestDataBaseUrl(exchange).replace("/data", ""))
                             .put("expires", "game-process");
                     sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
                 }
@@ -2765,6 +2767,7 @@ public class ProbeMod extends Mod {
                 + "3. GET /context?detail=summary for the current state.\n"
                 + "4. POST /actions with {\"kind\":\"move_to\",\"x\":...,\"y\":...} and poll GET /actions/{opId}.\n"
                 + "5. GET /guide for game rules.\n"
+                + "6. Use the returned dataToken (not sessionToken) with GET /data/map/latest; write large files to disk.\n"
                 + "The bootstrap token is single-use. Everything expires when the game closes.\n";
     }
 
@@ -2803,16 +2806,15 @@ public class ProbeMod extends Mod {
             }
             String auth = exchange.getRequestHeaders().getFirst("Authorization");
             boolean dataAuth = ("Bearer " + dataToken).equals(auth);
-            boolean sessionAuth = sessionAuthorized(exchange);
-            if (!dataAuth && !sessionAuth) {
+            if (!dataAuth) {
                 sendText(exchange, 401, "unauthorized", "text/plain", false);
                 return;
             }
-            if (dataAuth && System.currentTimeMillis() > dataTokenExpires) {
+            if (System.currentTimeMillis() > dataTokenExpires) {
                 sendText(exchange, 410, "ref_expired", "text/plain", false);
                 return;
             }
-            String dataBase = sessionAuth ? requestDataBaseUrl(exchange) : dataBaseUrl;
+            String dataBase = requestDataBaseUrl(exchange);
             if (!allowDataRequest()) {
                 exchange.getResponseHeaders().set("Retry-After", "1");
                 sendText(exchange, 429, "rate_limited", "text/plain", false);

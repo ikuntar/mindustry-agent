@@ -207,7 +207,8 @@ GET /data/events/{revision}/page/{cursor}
 - 二进制/NDJSON，不包成 MCP JSON。
 - 支持 `Content-Length`、`Content-Range`、`ETag`/revision。
 - token 用 header，不放 URL。
-- session token 可直接读取 `/data`；旧的 `dataToken` 仍可访问本地 `46501`。
+- `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`）；`/data` 只接受 data token，控制面只接受 session token。
+- 旧的 `dataToken` 仍可访问本地 `46501`；session server `/data` 使用同一个 data token，不做控制面越权。
 - manifest 的 `access.baseUrl` 按请求 Host 返回，LAN 客户端拿到的是 `http://<host>:47600/data`。
 - harness 可直接重定向到文件：
 
@@ -369,10 +370,11 @@ POST /mcp   MCP Streamable HTTP
 - session server 挂载 `/data/map/latest`、`/data/map/{revision}`、chunk、Range
 - `/data/manifest/latest`，`access.baseUrl` 按请求 Host 生成
 - `/data/events/latest` 和 `/data/events/{revision}/page/{cursor}` NDJSON
-- session token 可读；旧的 `46501` 数据面继续服务 MCP 路径
+- data token 可读；旧 `46501` 数据面继续服务 MCP 路径
+- session token 只用于控制，不用于 `/data`
 - `scripts/session-api-smoke.mjs` 已用 HTTP 把地图写入 `/tmp/mindustry-session-map.bin`，
   并验证 Range 206
-- 尚未做：独立 data token 分权、TTL 刷新、Parquet、`curl` 进程级验收
+- 尚未做：data token TTL 刷新、Parquet、`curl` 进程级验收
 
 ### Phase 5：可选 MCP
 
@@ -457,7 +459,7 @@ tools 200 10
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
-data map 200 524304 MND1 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
+data map 200 524304 MND1 sessionData 401 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
 guide 200 # Mindustry AI session
 ```
 
