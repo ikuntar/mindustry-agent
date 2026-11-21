@@ -307,7 +307,7 @@ POST /mcp   MCP Streamable HTTP
 - 同一端口同一时间只能有一个实例监听 `47600`；不要同时开客户端和专用服。
 
 已做：桌面客户端 v160.8 能加载 mod，并成功启动 `/session`、`/tools`、`/data`、`/mcp`。
-未做：WSLg 下截图链路无法捕获 GL 窗口，popup 还没有目视验收。
+未做：WSLg 下截图链路无法捕获 GL 窗口；Xvfb 下能截到主菜单，但 SDL 没有接收 XTest 合成点击，无法自动进入地图。popup 仍需人工点击或桌面环境验收。
 
 后续：
 
