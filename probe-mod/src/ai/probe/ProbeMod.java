@@ -2531,7 +2531,9 @@ public class ProbeMod extends Mod {
                 exchange.getResponseHeaders().set("Mcp-Session-Id", mcpSessionId);
                 Jval result = Jval.newObject()
                         .put("protocolVersion", "2024-11-05")
-                        .put("capabilities", Jval.newObject().put("tools", Jval.newObject()))
+                        .put("capabilities", Jval.newObject()
+                                .put("tools", Jval.newObject())
+                                .put("resources", Jval.newObject()))
                         .put("serverInfo", Jval.newObject()
                                 .put("name", "mindustry-ai")
                                 .put("version", VERSION))
@@ -2539,6 +2541,25 @@ public class ProbeMod extends Mod {
                 response.put("result", result);
             } else if ("tools/list".equals(method)) {
                 response.put("result", Jval.newObject().put("tools", toolsJson().get("tools")));
+            } else if ("resources/list".equals(method)) {
+                response.put("result", Jval.newObject().put("resources", Jval.newArray().add(
+                        Jval.newObject()
+                                .put("uri", "mindustry://guide")
+                                .put("name", "Mindustry AI guide")
+                                .put("description", "Game rules and session usage")
+                                .put("mimeType", "text/markdown"))));
+            } else if ("resources/read".equals(method)) {
+                Jval params = request.get("params");
+                String uri = params == null ? "" : params.getString("uri", "");
+                if (!"mindustry://guide".equals(uri)) {
+                    response.put("error", Jval.newObject().put("code", -32602).put("message", "unknown resource: " + uri));
+                } else {
+                    response.put("result", Jval.newObject().put("contents", Jval.newArray().add(
+                            Jval.newObject()
+                                    .put("uri", uri)
+                                    .put("mimeType", "text/markdown")
+                                    .put("text", gameGuide()))));
+                }
             } else if ("tools/call".equals(method)) {
                 Jval params = request.get("params");
                 String name = params == null ? "" : params.getString("name", "");

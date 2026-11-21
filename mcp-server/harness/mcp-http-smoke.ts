@@ -28,6 +28,16 @@ try {
   const tools = await client.listTools();
   console.log("sdk tools", tools.tools.length);
 
+  const resources = await client.listResources();
+  console.log("sdk resources", resources.resources.length);
+  if (resources.resources.length !== 1) process.exitCode = 1;
+
+  const guide = await client.readResource({ uri: "mindustry://guide" });
+  const firstContent = guide.contents?.[0];
+  const guideText = firstContent && "text" in firstContent ? firstContent.text : undefined;
+  console.log("sdk guide", typeof guideText === "string" && guideText.startsWith("# Mindustry AI session"));
+  if (typeof guideText !== "string" || !guideText.startsWith("# Mindustry AI session")) process.exitCode = 1;
+
   const context = (await client.callTool({
     name: "get_context",
     arguments: { detail: "summary" },
