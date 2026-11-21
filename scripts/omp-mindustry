@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Run omp in an isolated game workspace with the Mindustry MCP server.
+#
+# The MCP config lives outside the code repo, so normal omp coding sessions in
+# this repository do not auto-load 27 game tools or a game server.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WORKDIR="${MINDUSTRY_OMP_WORKDIR:-$HOME/.mindustry-omp}"
+
+mkdir -p "$WORKDIR/.omp"
+cat > "$WORKDIR/.omp/mcp.json" <<JSON
+{
+  "\$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+  "mcpServers": {
+    "mindustry": {
+      "type": "stdio",
+      "command": "$ROOT/scripts/mindustry-mcp",
+      "args": [],
+      "env": {
+        "MINDUSTRY_AI_ADAPTER": "probe"
+      },
+      "timeout": 120000
+    }
+  }
+}
+JSON
+
+exec omp --cwd "$WORKDIR" "$@"

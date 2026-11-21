@@ -2,6 +2,9 @@
 mcp-server/dist/
 probe-mod/build/
 
+# local agent/MCP config; do not load game tools in coding sessions
+.omp/
+
 # dependencies
 mcp-server/node_modules/
 

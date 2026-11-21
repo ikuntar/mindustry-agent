@@ -105,21 +105,32 @@ opencode mcp add mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
 
 ### omp (oh-my-pi)
 
-仓库自带项目级 `.omp/mcp.json`，从仓库根目录启动即可（`${PWD}` 会展开到根目录）：
+不要把 Mindustry MCP 配置放进代码仓库的 `.omp/mcp.json`：omp 会在该仓库的
+每次会话都加载 27 个游戏工具，写代码时也会被污染。使用独立游戏目录的
+launcher：
 
 ```bash
 cd /ABS/PATH/mindustry-ai
-omp
+scripts/omp-mindustry
 ```
 
-它等价于：
+launcher 会把配置写到 `~/.mindustry-omp/.omp/mcp.json`（可用
+`MINDUSTRY_OMP_WORKDIR` 改路径），然后在该目录启动 omp；MCP command 使用
+仓库的绝对路径。这样：
+
+- 在仓库里直接运行 `omp` 不会加载游戏 MCP
+- 游戏会话的配置独立于代码会话
+- omp 退出后 stdio MCP 子进程一起退出；没有常驻 MCP daemon
+- 不会安装或加载 mindustry skill（本项目没有给 omp 装 skill）
+
+等价的配置：
 
 ```json
 {
   "mcpServers": {
     "mindustry": {
       "type": "stdio",
-      "command": "${PWD}/scripts/mindustry-mcp",
+      "command": "/ABS/PATH/mindustry-ai/scripts/mindustry-mcp",
       "env": { "MINDUSTRY_AI_ADAPTER": "probe" }
     }
   }
@@ -129,7 +140,7 @@ omp
 已验证（真实 `Fortress` + probe）：
 
 ```bash
-omp -p --no-session --max-time 120 \
+scripts/omp-mindustry -p --no-session --max-time 120 \
   'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
 ```
 

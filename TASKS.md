@@ -72,6 +72,7 @@
 - [x] 动作超时：`move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；固定场景分别实测
 - [x] `mine` 超时与正常完成：固定场景在助手附近放 `ore-copper`，`timeoutTicks=1` 返回 `failed/timeout`；无超时挖矿 `done` 并获得 1 copper
 - [x] 主流 harness 接入：`scripts/mindustry-mcp` 包装器（默认 probe）+ `harness/host-smoke.ts` + `scripts/start-game-server.sh`；真实 probe 下 host-smoke `{"ok":true,"tools":27,"adapter":"probe","moveStatus":"done"}`，`docs/HARNESS-INTEGRATION.md` 覆盖 Claude Code/Desktop、Codex、OpenCode、omp、Hermes
+- [x] omp 游戏会话与代码会话隔离：launcher `scripts/omp-mindustry` 把 `.omp/mcp.json` 放在 `~/.mindustry-omp`，仓库 `.omp/` 不提交；真实 probe 冒烟通过
 - [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
 - [x] Ground Zero campaign-like 实测：专用服载入内嵌 sector 地图、设置 sector/winWave/资源；omp 连续观察 35 次到 `wave=10`，核心存活，但 `won=false`，专用服自动切图
 - [ ] 真正的战役第一关正式结算（需要客户端 host campaign 或 probe mod 补 objectives/sector 结算）

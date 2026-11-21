@@ -74,8 +74,8 @@ MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-har
 ../scripts/start-game-server.sh
 ../scripts/mindustry-mcp --check
 MINDUSTRY_AI_ADAPTER=probe npm run host-smoke  # 通过 wrapper 走真实 probe
-# omp 对话（仓库自带 .omp/mcp.json）
-omp -p --no-session --max-time 120 'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
+# omp 对话（独立游戏目录，不污染代码会话）
+scripts/omp-mindustry -p --no-session --max-time 120 'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
 ../scripts/stop-game-server.sh
 # 主流 host 配置（Claude Code/Desktop、Codex、OpenCode、Hermes）
 cat docs/HARNESS-INTEGRATION.md
