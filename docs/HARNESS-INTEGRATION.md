@@ -103,6 +103,38 @@ opencode mcp add mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
 }
 ```
 
+### omp (oh-my-pi)
+
+仓库自带项目级 `.omp/mcp.json`，从仓库根目录启动即可（`${PWD}` 会展开到根目录）：
+
+```bash
+cd /ABS/PATH/mindustry-ai
+omp
+```
+
+它等价于：
+
+```json
+{
+  "mcpServers": {
+    "mindustry": {
+      "type": "stdio",
+      "command": "${PWD}/scripts/mindustry-mcp",
+      "env": { "MINDUSTRY_AI_ADAPTER": "probe" }
+    }
+  }
+}
+```
+
+已验证（真实 `Fortress` + probe）：
+
+```bash
+omp -p --no-session --max-time 120 \
+  'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
+```
+
+实际结果：`op-1 done`，助手从 `(928,584)` 移动到 `(942.2,584)`，在 arriveRadius 内。
+
 ### Hermes
 
 `~/.hermes/config.yaml`：

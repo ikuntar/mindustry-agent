@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+  "mcpServers": {
+    "mindustry": {
+      "type": "stdio",
+      "command": "${PWD}/scripts/mindustry-mcp",
+      "args": [],
+      "env": {
+        "MINDUSTRY_AI_ADAPTER": "probe"
+      },
+      "timeout": 120000
+    }
+  }
+}

@@ -51,7 +51,8 @@ mindustry-ai/
 - [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
 - [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
 - [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔+传送带供弹防守；真实本地 LLM 固定移动任务已跑通
-- [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
+- [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、omp、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
+- [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
 - [ ] 在真实 Claude Code/Codex/OpenCode host UI 中做人工双 client 验收
 
 ## MCP 快速开始
@@ -71,6 +72,8 @@ MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-har
 ../scripts/start-game-server.sh
 ../scripts/mindustry-mcp --check
 MINDUSTRY_AI_ADAPTER=probe npm run host-smoke  # 通过 wrapper 走真实 probe
+# omp 对话（仓库自带 .omp/mcp.json）
+omp -p --no-session --max-time 120 'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
 ../scripts/stop-game-server.sh
 # 主流 host 配置（Claude Code/Desktop、Codex、OpenCode、Hermes）
 cat docs/HARNESS-INTEGRATION.md
