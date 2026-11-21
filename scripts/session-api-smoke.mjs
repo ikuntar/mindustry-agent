@@ -31,6 +31,8 @@ const second = await call("/session", {
 console.log("reused bootstrap", second.status);
 
 const auth = { ...headers, authorization: `Bearer ${first.body.sessionToken}` };
+const tools = await call("/tools", { headers: auth });
+console.log("tools", tools.status, tools.body.tools?.length);
 const context = await call("/context?detail=summary", { headers: auth });
 console.log("context", context.status, context.body.map, context.body.assistant?.x, context.body.assistant?.y);
 
@@ -76,6 +78,7 @@ console.log("guide", guide.status, String(guide.body).split("\n")[0]);
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
+if (tools.status !== 200 || tools.body.tools?.length !== 10) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
 if (manifest.status !== 200 || events.status !== 200) process.exit(1);
 if (second.status !== 401) process.exit(1);

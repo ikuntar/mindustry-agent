@@ -328,6 +328,7 @@ POST /mcp   MCP Streamable HTTP
 - `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
 - `/actions/{opId}`：动作状态轮询
 - `/guide`：短游戏说明
+- `/tools`：10 个核心工具的 JSON Schema（get_context/get_area/move_to/attack/mine/build_plan/withdraw/deposit/configure/get_action_result）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
 
@@ -429,6 +430,7 @@ node scripts/session-api-smoke.mjs
 ```text
 session 200 true
 reused bootstrap 401
+tools 200 10
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
