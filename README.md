@@ -55,7 +55,7 @@ mindustry-ai/
 - [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、omp、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
 - [x] 单 mod + session API：mod 内 `/session` 一次性 bootstrap、`/context`、`/actions`、`/actions/{opId}`、`/guide`、`/tools`（10 个核心 schema）、LAN 绑定已实现并通过 `scripts/session-api-smoke.mjs`；弹窗代码已编译，客户端 UI 未实测
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON 已挂载；`session-api-smoke` 把地图写入 `/tmp/mindustry-session-map.bin` 并验证 Range 206
-- [x] 可选 MCP `/mcp`：initialize/tools/list/tools/call/ping + `mindustry://guide` resources，`mcp-http-smoke` 通过；官方 MCP SDK connect/list/call/resources 通过；REST 仍是主路径
+- [x] 可选 MCP `/mcp`：initialize/tools/list/tools/call/ping + guide resources + 3 个 prompts，`mcp-http-smoke` 通过；官方 MCP SDK connect/list/call/resources/prompts 通过；REST 仍是主路径
 - [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
 - [x] Ground Zero campaign-like：omp 连续观察 35 次到 `wave=10`，`winWave=10`、`won=false`；证明可玩到终点波次，正式战役结算仍需客户端 campaign 或 mod 支持
 - [x] omp 上手速度：冷启动+首次真实 context 约 13.0s；热启动约 8.7s；连续 35 次 context 约 254s（约 7.3s/次）

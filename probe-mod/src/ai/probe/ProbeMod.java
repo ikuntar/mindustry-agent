@@ -2533,7 +2533,8 @@ public class ProbeMod extends Mod {
                         .put("protocolVersion", "2024-11-05")
                         .put("capabilities", Jval.newObject()
                                 .put("tools", Jval.newObject())
-                                .put("resources", Jval.newObject()))
+                                .put("resources", Jval.newObject())
+                                .put("prompts", Jval.newObject()))
                         .put("serverInfo", Jval.newObject()
                                 .put("name", "mindustry-ai")
                                 .put("version", VERSION))
@@ -2559,6 +2560,23 @@ public class ProbeMod extends Mod {
                                     .put("uri", uri)
                                     .put("mimeType", "text/markdown")
                                     .put("text", gameGuide()))));
+                }
+            } else if ("prompts/list".equals(method)) {
+                response.put("result", Jval.newObject().put("prompts", promptsJson()));
+            } else if ("prompts/get".equals(method)) {
+                Jval params = request.get("params");
+                String name = params == null ? "" : params.getString("name", "");
+                String prompt = promptText(name);
+                if (prompt == null) {
+                    response.put("error", Jval.newObject().put("code", -32602).put("message", "unknown prompt: " + name));
+                } else {
+                    response.put("result", Jval.newObject()
+                            .put("description", "Mindustry AI session prompt")
+                            .put("messages", Jval.newArray().add(Jval.newObject()
+                                    .put("role", "user")
+                                    .put("content", Jval.newObject()
+                                            .put("type", "text")
+                                            .put("text", prompt)))));
                 }
             } else if ("tools/call".equals(method)) {
                 Jval params = request.get("params");
@@ -2663,6 +2681,42 @@ public class ProbeMod extends Mod {
                 .put("name", name)
                 .put("description", description)
                 .put("inputSchema", schema);
+    }
+
+    private Jval promptsJson() {
+        return Jval.newArray()
+                .add(Jval.newObject()
+                        .put("name", "play-session")
+                        .put("description", "Start a Mindustry AI session and inspect the current game."))
+                .add(Jval.newObject()
+                        .put("name", "defend-core")
+                        .put("description", "Defend the team core from nearby threats."))
+                .add(Jval.newObject()
+                        .put("name", "mine-and-deposit")
+                        .put("description", "Mine a resource and deposit it into a core."));
+    }
+
+    private String promptText(String name) {
+        if ("play-session".equals(name)) {
+            return "You are playing Mindustry as the AI assistant in a live game.\n"
+                    + "Start with get_context({detail:\"summary\"}), then inspect only what you need.\n"
+                    + "Use actions and poll get_action_result until done/failed.\n"
+                    + "Do not attack your own team. Large map/event data goes to /data and files, not context.\n\n"
+                    + gameGuide();
+        }
+        if ("defend-core".equals(name)) {
+            return "Defend the team core. Read context, identify hostile units or buildings near the core, "
+                    + "move the assistant into range, attack the highest threat, and re-check context.\n"
+                    + "Do not attack your own team. Report what you defended and what remains.\n\n"
+                    + gameGuide();
+        }
+        if ("mine-and-deposit".equals(name)) {
+            return "Mine a resource and deposit it into a core. Read context, find a reachable resource tile, "
+                    + "call mine, wait for done, move to a same-team core, call deposit, and verify the result.\n"
+                    + "Do not attack your own team.\n\n"
+                    + gameGuide();
+        }
+        return null;
     }
 
     private Jval toolsJson() {

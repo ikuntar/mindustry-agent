@@ -142,9 +142,10 @@
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
 - [ ] `/data` data token TTL 刷新、Parquet、curl 进程级验收
 - [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；10 个核心工具
-- [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources 通过
+- [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources/prompts 通过
 - [x] MCP `resources/list` / `resources/read`：`mindustry://guide`
-- [ ] MCP GET SSE、prompts、完整兼容性矩阵
+- [x] MCP `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
+- [ ] MCP GET SSE、完整兼容性矩阵
 - [ ] 存档/读档记忆处理
 - [ ] 跨区块/跨地图重生
 - [ ] 本地主机/专用服/其他玩家可见性

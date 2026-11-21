@@ -271,12 +271,13 @@ POST /mcp   MCP Streamable HTTP
 - `tools/list`：10 个核心工具
 - `tools/call`：复用现有游戏动作队列，返回 MCP text content
 - `resources/list` / `resources/read`：`mindustry://guide`
+- `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
 - `ping`
 - 错误使用 JSON-RPC 错误码；未知方法 `-32601`
 - 鉴权：`Authorization: Bearer <sessionToken>`；session token 由 `POST /session` 获取
 - 已用官方 `@modelcontextprotocol/sdk` 的 `StreamableHTTPClientTransport` 验证：
-  connect、tools/list、tools/call、resources/list、resources/read 均通过
-- 尚未实现：GET SSE、prompts、完整兼容性矩阵
+  connect、tools/list、tools/call、resources/list、resources/read、prompts/list、prompts/get 均通过
+- 尚未实现：GET SSE、完整兼容性矩阵
 
 用途：支持 MCP 且愿意配置一次的 harness。它不是主路径；session prompt + REST 仍是主路径。
 
@@ -385,8 +386,9 @@ POST /mcp   MCP Streamable HTTP
 - 10 个核心工具与 REST 共用 `toolsJson()` schema
 - `Mcp-Session-Id`
 - `resources/list` / `resources/read`：`mindustry://guide`
-- 已用官方 `@modelcontextprotocol/sdk` 验证 connect/list/call/resources
-- 尚未做：GET SSE、prompts、完整兼容性矩阵、bootstrap token 直接用来初始化
+- `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
+- 已用官方 `@modelcontextprotocol/sdk` 验证 connect/list/call/resources/prompts
+- 尚未做：GET SSE、完整兼容性矩阵、bootstrap token 直接用来初始化
 
 ### Phase 6：Android
 
@@ -484,6 +486,8 @@ unknown method 200 -32601
 sdk tools 10
 sdk resources 1
 sdk guide true
+sdk prompts 3
+sdk prompt text true
 sdk context Fortress 928 584
 sdk move op-1 running
 ```

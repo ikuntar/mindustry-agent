@@ -38,6 +38,18 @@ try {
   console.log("sdk guide", typeof guideText === "string" && guideText.startsWith("# Mindustry AI session"));
   if (typeof guideText !== "string" || !guideText.startsWith("# Mindustry AI session")) process.exitCode = 1;
 
+  const prompts = await client.listPrompts();
+  console.log("sdk prompts", prompts.prompts.length);
+  if (prompts.prompts.length !== 3) process.exitCode = 1;
+
+  const prompt = await client.getPrompt({ name: "defend-core" });
+  const promptMessage = prompt.messages?.[0];
+  const promptText = promptMessage && "content" in promptMessage && promptMessage.content.type === "text"
+    ? promptMessage.content.text
+    : undefined;
+  console.log("sdk prompt text", typeof promptText === "string" && promptText.includes("Defend the team core"));
+  if (typeof promptText !== "string" || !promptText.includes("Defend the team core")) process.exitCode = 1;
+
   const context = (await client.callTool({
     name: "get_context",
     arguments: { detail: "summary" },
