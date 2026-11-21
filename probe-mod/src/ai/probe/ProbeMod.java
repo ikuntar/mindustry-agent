@@ -2286,6 +2286,7 @@ public class ProbeMod extends Mod {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(SESSION_BIND, SESSION_PORT), 0);
             server.createContext("/", this::handleSession);
+            server.createContext("/data", this::handleData);
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
             Log.info("[ai-probe] session API listening on " + SESSION_BIND + ":" + SESSION_PORT);
@@ -2322,6 +2323,12 @@ public class ProbeMod extends Mod {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
         if (auth == null || !auth.startsWith("Bearer ")) return "";
         return auth.substring("Bearer ".length()).trim();
+    }
+
+    private String requestDataBaseUrl(HttpExchange exchange) {
+        String host = exchange.getRequestHeaders().getFirst("Host");
+        if (host == null || host.isBlank()) return preferredSessionUrl() + "/data";
+        return "http://" + host + "/data";
     }
 
     private boolean sessionAuthorized(HttpExchange exchange) {
@@ -2558,14 +2565,17 @@ public class ProbeMod extends Mod {
                 return;
             }
             String auth = exchange.getRequestHeaders().getFirst("Authorization");
-            if (!("Bearer " + dataToken).equals(auth)) {
+            boolean dataAuth = ("Bearer " + dataToken).equals(auth);
+            boolean sessionAuth = sessionAuthorized(exchange);
+            if (!dataAuth && !sessionAuth) {
                 sendText(exchange, 401, "unauthorized", "text/plain", false);
                 return;
             }
-            if (System.currentTimeMillis() > dataTokenExpires) {
+            if (dataAuth && System.currentTimeMillis() > dataTokenExpires) {
                 sendText(exchange, 410, "ref_expired", "text/plain", false);
                 return;
             }
+            String dataBase = sessionAuth ? requestDataBaseUrl(exchange) : dataBaseUrl;
             if (!allowDataRequest()) {
                 exchange.getResponseHeaders().set("Retry-After", "1");
                 sendText(exchange, 429, "rate_limited", "text/plain", false);
@@ -2583,7 +2593,7 @@ public class ProbeMod extends Mod {
             }
             long revision;
             try {
-                if ("current".equals(parts[1])) {
+                if ("current".equals(parts[1]) || "latest".equals(parts[1])) {
                     revision = "events".equals(parts[0]) ? eventSeq : mapRevision;
                 } else {
                     revision = Long.parseLong(parts[1]);
@@ -2598,7 +2608,7 @@ public class ProbeMod extends Mod {
                     sendText(exchange, 410, "ref_expired", "text/plain", false);
                     return;
                 }
-                sendBytes(exchange, 200, snapshot.manifest(dataBaseUrl).toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8), "application/json", "\"map-" + revision + "\"", method.equals("HEAD"));
+                sendBytes(exchange, 200, snapshot.manifest(dataBase).toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8), "application/json", "\"map-" + revision + "\"", method.equals("HEAD"));
                 return;
             }
             if ("map".equals(parts[0])) {

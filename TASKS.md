@@ -139,7 +139,8 @@
 - [ ] 弹窗 UI 实测：真机/桌面客户端加载地图后复制 prompt
 - [ ] 10 个核心工具的显式 schema/错误码表
 - [ ] Android 兼容构建：`android: true` + d8 + 去 `com.sun` + 外部 discovery
-- [ ] 数据面迁移到 mod 内 `/data`，curl 直接落文件
+- [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；session token 可读；旧 `46501` 数据面保留
+- [ ] `/data` 独立 data token 分权、TTL 刷新、Parquet、curl 进程级验收
 - [ ] 可选 MCP Streamable HTTP `/mcp`，与 REST 共享 tool registry
 - [ ] 存档/读档记忆处理
 - [ ] 跨区块/跨地图重生

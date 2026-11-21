@@ -52,10 +52,30 @@ for (let i = 0; i < 30; i++) {
 }
 console.log("result", result.status, result.body.status, result.body.data?.code ?? result.body.data?.distance ?? "");
 
+const map = await fetch(`${base}/data/map/latest`, { headers: auth });
+const mapBytes = Buffer.from(await map.arrayBuffer());
+fs.writeFileSync("/tmp/mindustry-session-map.bin", mapBytes);
+const range = await fetch(`${base}/data/map/latest`, {
+  headers: { ...auth, range: "bytes=0-15" },
+});
+const rangeBytes = Buffer.from(await range.arrayBuffer());
+const manifest = await call("/data/manifest/latest", { headers: auth });
+const events = await fetch(`${base}/data/events/latest/page/0?limit=1`, { headers: auth });
+const eventsBody = await events.text();
+console.log(
+  "data",
+  "map", map.status, mapBytes.length, mapBytes.subarray(0, 4).toString("ascii"),
+  "range", range.status, rangeBytes.length, range.headers.get("content-range"),
+  "manifest", manifest.status, manifest.body.access?.baseUrl,
+  "events", events.status, eventsBody.split("\n").filter(Boolean).length,
+);
+
 const guide = await call("/guide", { headers: auth });
 console.log("guide", guide.status, String(guide.body).split("\n")[0]);
 
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
+if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
+if (manifest.status !== 200 || events.status !== 200) process.exit(1);
 if (second.status !== 401) process.exit(1);

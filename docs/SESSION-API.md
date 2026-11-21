@@ -1,9 +1,10 @@
 # 单 Mod + 会话 API 设计
 
-状态：Phase 2 MVP + Phase 3 弹窗代码（2026-11-21）。`probe-mod` 内已加入 `/session`、
-`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定和客户端 session prompt
-弹窗；弹窗尚未做 UI 实测，数据面迁移、可选 MCP、Android 尚未实现。当前开发路径仍是
-probe socket + Node MCP server。
+状态：Phase 2 MVP + Phase 3 弹窗代码 + Phase 4 数据面（2026-11-21）。`probe-mod` 内
+已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定、
+客户端 session prompt 弹窗，以及 session server 上的 `/data` 地图/事件读取；弹窗尚未
+做 UI 实测，完整数据面迁移、可选 MCP、Android 尚未实现。当前开发路径仍是 probe
+socket + Node MCP server。
 
 目标：普通用户只安装一个 Mindustry mod，按需启动一局 AI 会话；不安装 Node、
 不常驻 MCP、不安装 skill，也不需要把 MCP 永久配置进 coding harness。
@@ -190,10 +191,13 @@ POST /cancel
 
 ### 数据面（大结果）
 
+当前 session server 已挂载 `/data`；旧的 `127.0.0.1:46501/data` 仍保留给 MCP 开发路径。
+
 ```text
 GET /data/map/latest
 GET /data/map/{revision}
 GET /data/map/{revision}/chunk/{x}/{y}
+GET /data/manifest/latest
 GET /data/events/latest
 GET /data/events/{revision}/page/{cursor}
 ```
@@ -203,10 +207,12 @@ GET /data/events/{revision}/page/{cursor}
 - 二进制/NDJSON，不包成 MCP JSON。
 - 支持 `Content-Length`、`Content-Range`、`ETag`/revision。
 - token 用 header，不放 URL。
+- session token 可直接读取 `/data`；旧的 `dataToken` 仍可访问本地 `46501`。
+- manifest 的 `access.baseUrl` 按请求 Host 返回，LAN 客户端拿到的是 `http://<host>:47600/data`。
 - harness 可直接重定向到文件：
 
 ```bash
-curl -fsS -H "Authorization: Bearer $SESSION_TOKEN" \
+curl -fsS -H "Authorization: Bearer ***" \
   -o /tmp/map.mnd \
   "http://192.168.1.23:47600/data/map/latest"
 ```
@@ -343,9 +349,15 @@ POST /mcp   MCP Streamable HTTP
 
 ### Phase 4：数据面
 
-- `/data/map` + Range
-- `/data/events` NDJSON
-- ref/url/bytes 引用
+部分完成：
+
+- session server 挂载 `/data/map/latest`、`/data/map/{revision}`、chunk、Range
+- `/data/manifest/latest`，`access.baseUrl` 按请求 Host 生成
+- `/data/events/latest` 和 `/data/events/{revision}/page/{cursor}` NDJSON
+- session token 可读；旧的 `46501` 数据面继续服务 MCP 路径
+- `scripts/session-api-smoke.mjs` 已用 HTTP 把地图写入 `/tmp/mindustry-session-map.bin`，
+  并验证 Range 206
+- 尚未做：独立 data token 分权、TTL 刷新、Parquet、`curl` 进程级验收
 
 ### Phase 5：可选 MCP
 
@@ -381,7 +393,7 @@ POST /mcp   MCP Streamable HTTP
 - 不把地图/事件全量塞进上下文
 - 不把长期目标/自动玩游戏做进 mod；目标由 harness 管理
 
-## 15. 当前实现与实测（Phase 2 MVP）
+## 15. 当前实现与实测（Phase 2 MVP + Phase 4 数据面）
 
 代码位置：`probe-mod/src/ai/probe/ProbeMod.java`
 
@@ -397,6 +409,7 @@ POST /mcp   MCP Streamable HTTP
   返回 `opId`；支持已有动作，不复制游戏逻辑
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /guide`：短游戏说明
+- session server 的 `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON
 - 关闭游戏/进程退出后端口关闭，session token 与 bootstrap token 一起失效
 - 进程内 discovery 增加 `sessionPort`/`sessionBind`；仅当
   `PROBE_EXPOSE_SESSION=1` 时写入 `sessionBootstrapToken`（开发/测试用）
@@ -407,7 +420,7 @@ POST /mcp   MCP Streamable HTTP
 # 启动 Fortress（脚本设置 PROBE_EXPOSE_SESSION=1）
 scripts/start-game-server.sh
 
-# 读取 discovery，走 /session -> /context -> /actions -> /actions/{opId}
+# 读取 discovery，走 /session -> /context -> /actions -> /actions/{opId} -> /data
 node scripts/session-api-smoke.mjs
 ```
 
@@ -419,6 +432,7 @@ reused bootstrap 401
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
+data map 200 524304 MND1 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
 guide 200 # Mindustry AI session
 ```
 
@@ -427,5 +441,6 @@ guide 200 # Mindustry AI session
 - Node 冒烟脚本用 `fetch`，与 curl 的 HTTP 语义一致；curl 可用
   `curl -H "Authorization: Bearer ***" ...` 复现。
 - `/session` 的一次性 token 已验证第二次返回 401。
+- 完整地图已由脚本写入 `/tmp/mindustry-session-map.bin`，验证了“大结果落文件”路径。
 - 当前没有把 session token 写进 discovery；只有开发开关会写 bootstrap token。
-- 下一阶段：弹窗、显式工具 schema、mod 内数据面、可选 `/mcp`、Android。
+- 下一阶段：客户端 UI 实测、显式工具 schema、可选 `/mcp`、独立数据 token、Android。
