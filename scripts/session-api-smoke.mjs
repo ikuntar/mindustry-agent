@@ -62,7 +62,7 @@ const range = await fetch(`${base}/data/map/latest`, {
 });
 const rangeBytes = Buffer.from(await range.arrayBuffer());
 const manifest = await call("/data/manifest/latest", { headers: auth });
-const events = await fetch(`${base}/data/events/latest/page/0?limit=1`, { headers: auth });
+const events = await fetch(`${base}/data/events/latest`, { headers: auth });
 const eventsBody = await events.text();
 console.log(
   "data",
