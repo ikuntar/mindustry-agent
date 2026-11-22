@@ -313,9 +313,24 @@ public class ProbeMod extends Mod {
     }
 
     private void updateActionOps() {
-        if (assistant == null) return;
+        if (assistant == null) {
+            for (Op op : ops.values()) {
+                if ("running".equals(op.status)) {
+                    op.status = "failed";
+                    op.progress = 0f;
+                    op.data = Jval.newObject().put("code", "assistant_gone");
+                }
+            }
+            return;
+        }
         for (Op op : ops.values()) {
             if (!"running".equals(op.status)) continue;
+            if (op.startUnitId >= 0 && (assistant.dead || assistant.id != op.startUnitId)) {
+                op.status = "failed";
+                op.progress = 0f;
+                op.data = Jval.newObject().put("code", "assistant_gone");
+                continue;
+            }
             if (op.timeoutTick > 0 && Vars.state.tick >= op.timeoutTick) {
                 op.status = "failed";
                 op.data = Jval.newObject().put("code", "timeout");
@@ -327,6 +342,9 @@ public class ProbeMod extends Mod {
                     controller.followTarget = null;
                 } else if ("deconstruct".equals(op.kind) || "repair".equals(op.kind)) {
                     controller.target = null;
+                    if (assistant != null) assistant.clearBuilding();
+                } else if ("build".equals(op.kind)) {
+                    if (assistant != null) assistant.clearBuilding();
                 } else if ("mine".equals(op.kind)) {
                     assistant.mineTile = null;
                 }
@@ -359,13 +377,20 @@ public class ProbeMod extends Mod {
                     }
                 }
             } else if ("mine".equals(op.kind)) {
-                if (assistant.stack != null && assistant.stack.amount > 0) {
+                boolean gained = assistant.stack != null
+                        && assistant.stack.item == op.mineItem
+                        && assistant.stack.amount > op.mineStartAmount;
+                if (gained) {
                     op.status = "done";
                     op.progress = 1f;
                     op.data = Jval.newObject()
                             .put("item", assistant.stack.item.name)
-                            .put("amount", assistant.stack.amount);
+                            .put("amount", assistant.stack.amount - op.mineStartAmount);
                     assistant.mineTile = null;
+                } else if (op.mineTile != null && assistant.mineTile != op.mineTile) {
+                    op.status = "failed";
+                    op.progress = 0f;
+                    op.data = Jval.newObject().put("code", "target_gone");
                 }
             } else if ("build".equals(op.kind)) {
                 if (op.buildBlock == null) continue;
@@ -414,26 +439,50 @@ public class ProbeMod extends Mod {
                                 : "Build plan was dropped by the game");
             } else if ("deconstruct".equals(op.kind)) {
                 boolean remaining = false;
+                boolean dropped = false;
                 if (op.targetTiles != null) {
                     for (Jval target : op.targetTiles.asArray()) {
                         int x = target.get("x").asInt();
                         int y = target.get("y").asInt();
                         if (Vars.world.tiles.in(x, y) && Vars.world.tile(x, y).build != null) {
                             remaining = true;
-                            break;
+                            boolean planned = false;
+                            for (BuildPlan plan : assistant.plans()) {
+                                if (plan.x == x && plan.y == y) {
+                                    planned = true;
+                                    break;
+                                }
+                            }
+                            if (!planned) {
+                                dropped = true;
+                                break;
+                            }
                         }
                     }
                 }
-                if (!remaining) {
+                if (dropped) {
+                    op.status = "failed";
+                    op.progress = 0f;
+                    op.data = Jval.newObject().put("code", "deconstruct_dropped");
+                } else if (!remaining) {
                     op.status = "done";
                     op.progress = 1f;
                     op.data = Jval.newObject().put("deconstructed", true);
                 }
             } else if ("repair".equals(op.kind)) {
-                if (op.targetBuilding == null || op.targetBuilding.health >= op.targetBuilding.block.health) {
+                if (op.targetBuilding == null || op.targetBuilding.health <= 0f || !op.targetBuilding.isValid()) {
+                    op.status = "failed";
+                    op.progress = 0f;
+                    op.data = Jval.newObject().put("code", "target_gone");
+                } else if (Math.hypot(op.targetBuilding.x - assistant.x, op.targetBuilding.y - assistant.y) > assistant.type.buildRange) {
+                    op.status = "failed";
+                    op.progress = 0f;
+                    op.data = Jval.newObject().put("code", "out_of_range");
+                    controller.target = null;
+                } else if (op.targetBuilding.health >= op.targetBuilding.block.health) {
                     op.status = "done";
                     op.progress = 1f;
-                    op.data = Jval.newObject().put("health", op.targetBuilding == null ? 0 : op.targetBuilding.health);
+                    op.data = Jval.newObject().put("health", op.targetBuilding.health);
                 } else {
                     op.targetBuilding.heal(Time.delta * Math.max(1f, assistant.type.buildSpeed) * 10f);
                     op.data = Jval.newObject()
@@ -497,6 +546,16 @@ public class ProbeMod extends Mod {
         if (assistant == null || controller == null) return;
         long tick = (long) Vars.state.tick;
         for (Op op : ops.values()) {
+            if ("move".equals(op.kind) && "running".equals(op.status)
+                    && op.startUnitId >= 0 && (assistant.dead || assistant.id != op.startUnitId)) {
+                op.status = "failed";
+                op.progress = 0f;
+                op.data = Jval.newObject().put("code", "assistant_gone");
+                controller.target = null;
+                assistant.moveAt(new Vec2());
+                assistant.vel.setZero();
+                continue;
+            }
             if ("move".equals(op.kind) && "running".equals(op.status) && op.timeoutTick > 0 && tick >= op.timeoutTick) {
                 op.status = "failed";
                 op.data = Jval.newObject().put("code", "timeout").put("timeoutTicks", (long) (op.timeoutTick - op.createdTick));
@@ -1161,11 +1220,22 @@ public class ProbeMod extends Mod {
                 return;
             }
             Object value = configValue(request.get("value"));
-            building.configured(assistant, value);
+            try {
+                building.configured(assistant, value);
+            } catch (RuntimeException e) {
+                replyError(command, "configure_failed", e.getMessage() == null ? "configure threw" : e.getMessage());
+                return;
+            }
+            Object applied = building.config();
+            if (!configEquals(value, applied)) {
+                replyError(command, "configure_rejected", "Building did not apply the requested config");
+                return;
+            }
             reply(command, Jval.newObject()
                     .put("block", building.block.name)
                     .put("x", building.tileX())
-                    .put("y", building.tileY()));
+                    .put("y", building.tileY())
+                    .put("config", String.valueOf(applied)));
             return;
         }
 
@@ -1215,10 +1285,18 @@ public class ProbeMod extends Mod {
                     }
                 } else if (target != null && target.get("unitId") != null) {
                     Unit targetUnit = Groups.unit.getByID(target.get("unitId").asInt());
-                    if (targetUnit != null) commandAI.commandTarget(targetUnit);
+                    if (targetUnit == null || targetUnit.dead) {
+                        replyError(command, "target_not_found", "Target unit not found");
+                        return;
+                    }
+                    commandAI.commandTarget(targetUnit);
                 } else if (target != null && target.get("buildingId") != null) {
                     Building targetBuilding = findBuilding(target);
-                    if (targetBuilding != null) commandAI.commandTarget(targetBuilding);
+                    if (targetBuilding == null || !targetBuilding.isValid()) {
+                        replyError(command, "target_not_found", "Target building not found");
+                        return;
+                    }
+                    commandAI.commandTarget(targetBuilding);
                 }
                 commanded.add(unit.id);
             }
@@ -1264,11 +1342,27 @@ public class ProbeMod extends Mod {
         }
 
         if ("stop".equals(op)) {
-            if (controller != null) controller.target = null;
+            if (controller != null) {
+                controller.target = null;
+                controller.attackEntity = null;
+                controller.attackPosition = null;
+                controller.followTarget = null;
+            }
+            int cancelled = 0;
+            for (Op result : ops.values()) {
+                if ("running".equals(result.status) || "queued".equals(result.status)) {
+                    result.status = "cancelled";
+                    result.progress = 0f;
+                    result.data = Jval.newObject().put("code", "stopped");
+                    cancelled++;
+                }
+            }
             if (assistant != null) {
                 assistant.clearBuilding();
+                assistant.mineTile = null;
+                assistant.isShooting = false;
             }
-            reply(command, Jval.newObject().put("stopped", true));
+            reply(command, Jval.newObject().put("stopped", true).put("cancelled", cancelled));
             return;
         }
 
@@ -1511,6 +1605,8 @@ public class ProbeMod extends Mod {
             Unit target = assistant;
             if (savedController != null) {
                 target.controller(savedController);
+            } else {
+                target.controller(new IdleController());
             }
             possessing = false;
             assistant = null;
@@ -1557,7 +1653,7 @@ public class ProbeMod extends Mod {
             } else {
                 ensureAssistant();
             }
-            if (assistant == null || assistant.dead) {
+            if (assistant == null || assistant.dead || !assistant.isValid() || !assistant.isAdded()) {
                 replyError(command, "no_core", "No core is available for respawn");
                 return;
             }
@@ -1642,6 +1738,10 @@ public class ProbeMod extends Mod {
                 replyError(command, "no_assistant", "Assistant is not spawned");
                 return;
             }
+            if (!assistant.canBuild()) {
+                replyError(command, "cannot_build", "Assistant body has buildSpeed <= 0");
+                return;
+            }
             Jval targets = request.get("targets");
             if (targets == null && request.get("x") != null && request.get("y") != null) {
                 targets = Jval.newArray().add(Jval.newObject()
@@ -1680,6 +1780,10 @@ public class ProbeMod extends Mod {
         if ("repair".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            if (!assistant.canBuild()) {
+                replyError(command, "cannot_build", "Assistant body has buildSpeed <= 0");
                 return;
             }
             Building building = findBuilding(request);
@@ -1731,6 +1835,9 @@ public class ProbeMod extends Mod {
                             if (assistant != null) assistant.isShooting = false;
                         }
                         if ("follow".equals(result.kind)) controller.followTarget = null;
+                        if ("mine".equals(result.kind)) {
+                            if (assistant != null) assistant.mineTile = null;
+                        }
                         if ("build".equals(result.kind) || "deconstruct".equals(result.kind) || "repair".equals(result.kind)) {
                             if (assistant != null) assistant.clearBuilding();
                         }
@@ -1738,7 +1845,11 @@ public class ProbeMod extends Mod {
                 }
             }
             if (opId.isEmpty()) {
-                if (assistant != null) assistant.clearBuilding();
+                if (assistant != null) {
+                    assistant.clearBuilding();
+                    assistant.mineTile = null;
+                    assistant.isShooting = false;
+                }
                 if (controller != null) {
                     controller.target = null;
                     controller.attackEntity = null;
@@ -1837,7 +1948,14 @@ public class ProbeMod extends Mod {
                 entity = targetBuilding;
                 kind = "building";
             } else if (target.get("x") != null && target.get("y") != null) {
-                position = new Vec2(target.get("x").asFloat(), target.get("y").asFloat());
+                float tx = target.get("x").asFloat();
+                float ty = target.get("y").asFloat();
+                if (Float.isNaN(tx) || Float.isNaN(ty) || Float.isInfinite(tx) || Float.isInfinite(ty)
+                        || !Vars.world.tiles.in(World.toTile(tx), World.toTile(ty))) {
+                    replyError(command, "out_of_bounds", "Target is outside the map");
+                    return;
+                }
+                position = new Vec2(tx, ty);
                 kind = "position";
             } else {
                 replyError(command, "bad_request", "Target must contain unitId, buildingId, or x/y");
@@ -1917,6 +2035,9 @@ public class ProbeMod extends Mod {
             assistant.mineTimer = 0f;
             Op result = newOp("mine");
             result.status = "running";
+            result.mineStartAmount = assistant.stack == null ? 0 : assistant.stack.amount;
+            result.mineItem = drop;
+            result.mineTile = tile;
             int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
             if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.data = Jval.newObject()
@@ -2076,6 +2197,8 @@ public class ProbeMod extends Mod {
             result.buildX = x;
             result.buildY = y;
             result.buildBlock = block;
+            int buildTimeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
+            if (buildTimeoutTicks > 0) result.timeoutTick = Vars.state.tick + buildTimeoutTicks;
             result.data = Jval.newObject()
                     .put("block", blockName)
                     .put("x", x)
@@ -2186,6 +2309,14 @@ public class ProbeMod extends Mod {
         return null;
     }
 
+    private boolean configEquals(Object requested, Object applied) {
+        if (requested == null || applied == null) return requested == applied;
+        if (requested instanceof Item || applied instanceof Item) {
+            return String.valueOf(requested).equals(String.valueOf(applied));
+        }
+        return requested.equals(applied);
+    }
+
     private Op newOp(String kind) {
         pruneOps();
         Op op = new Op();
@@ -2193,6 +2324,7 @@ public class ProbeMod extends Mod {
         op.kind = kind;
         op.status = "queued";
         op.createdTick = Vars.state.tick;
+        op.startUnitId = assistant == null ? -1 : assistant.id;
         ops.put(op.id, op);
         return op;
     }
@@ -3695,6 +3827,10 @@ public class ProbeMod extends Mod {
         int buildX;
         int buildY;
         Block buildBlock;
+        int mineStartAmount;
+        Item mineItem;
+        Tile mineTile;
+        int startUnitId;
 
         Jval toJson() {
             Jval json = Jval.newObject()

@@ -17,6 +17,9 @@ const INPUT = new Set([
   "out_of_bounds",
   "bad_target",
   "unreachable",
+  "target_not_found",
+  "out_of_range",
+  "configure_rejected",
 ]);
 
 const RULE = new Set([
@@ -38,6 +41,8 @@ export function classifyError(code: string): { category: ErrorCategory; retryabl
   if (code === "game_paused") return { category: "world", retryable: true };
   if (code === "block_locked") return { category: "rule", retryable: false };
   if (code === "build_dropped") return { category: "world", retryable: false };
+  if (code === "deconstruct_dropped") return { category: "world", retryable: false };
+  if (code === "assistant_gone" || code === "target_gone") return { category: "world", retryable: false };
   if (WORLD.has(code)) return { category: "world", retryable: code === "stuck" };
   return { category: "internal", retryable: false };
 }

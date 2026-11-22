@@ -125,6 +125,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `get_tile` 返回 `config`；固定场景 sorter `configure {item:"copper"}` 回读 `"copper"`，switch `configure true/false` 分别回读 `"true"`/`"false"`。布尔配置曾因 `asInt()` 抛 `Not a number`，已改为 `asBool()`。
 - `get_config_schema`：probe 从真实 `Vars.content.block` 读取；固定场景 sorter `configurable=true` 且 values 含 `copper`，unloader 含 `north`，switch 字段为 `boolean`，message/processor 字段为 `string`。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。固定场景脚本现在默认以 `PROBE_REQUIRE_AUTH=1` 运行，seed、raw probe、MCP adapter 全部通过 token 握手。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
+- 状态一致性审计（2026-11-22）：`build`/`deconstruct`/`repair`/`mine` 的 op 只有在游戏状态真正变化后才结束；`build_dropped`、`deconstruct_dropped`、`target_gone`、`assistant_gone` 都会失败而不是假 done。`configure` 在调用后回读 `building.config()`，未应用则 `configure_rejected`。`stop` 会清空移动/攻击/跟随/采矿/建造目标并把 running op 标为 cancelled；`cancel` 对 mine/build/deconstruct/repair 做同样清理。助手死亡或附身换体后，旧 op 以 `assistant_gone` 结束。`mine` 以开始时携带量为基线，不会因为身上已有物品而立即 done。`command_units` 的目标 unit/building 不存在时返回 `target_not_found`。
 - 失败会返回错误或保持 running，不是假成功。
 
 限制：

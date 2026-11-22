@@ -153,6 +153,7 @@
 - [x] session `build_plan` 展开为 `build`/`deconstruct`，不再返回 Unknown op
 - [x] world reload 保留 sessionToken；bootstrap 仅在已使用后轮换
 - [x] build/build_plan 不再把“已入队”当“已落地”：campaign 未解锁返回 `block_locked`，build op 运行到目标 tile 出现；计划被引擎丢弃 `build_dropped`；Ground Zero fixture 显式 unlock
+- [x] 动作状态一致性审计：`deconstruct`/`repair`/`mine` 不再假成功；`configure` 回读；`stop`/`cancel` 清理全部目标；助手换体/死亡旧 op 失败 `assistant_gone`；`command_units` 目标不存在失败
 - [x] 自定义 `ai.probe.http` ServerSocket HTTP server：移除 `com.sun.net.httpserver`；桌面 `/session`、`/data`、`/mcp` 回归通过
 - [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
 - [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）

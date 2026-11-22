@@ -232,6 +232,10 @@ MCP server（Node/TypeScript）
 ## 5. 写工具
 
 所有写工具都返回 `ActionResult`（accepted/opId），并遵守权限矩阵。
+`status=done` 表示游戏状态已实际变化，不是“请求已入队”：build 等到 tile 出现方块，
+deconstruct 等到目标消失，mine 等到携带量增加，configure 等到 config 回读匹配；
+计划被引擎丢弃返回 `build_dropped`/`deconstruct_dropped`，目标消失返回 `target_gone`，
+助手死亡/换体返回 `assistant_gone`。
 所有工具还接受可选的 `idempotencyKey`；同一 key 的成功结果在 MCP 进程内复用，不会重复执行动作。
 工具注册可用 `MCP_ALLOWED_TOOLS` / `MCP_DENIED_TOOLS` 过滤；未注册的工具不会被 `listTools` 暴露。
 写工具可用 `MCP_WRITE_RATE_LIMIT`（每秒）限制，超限返回结构化 `rate_limited`。
