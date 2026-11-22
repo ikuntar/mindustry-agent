@@ -135,6 +135,9 @@
 - [ ] API key 只在伴生进程；日志脱敏
 - [x] mod 内 HTTP session API MVP：`/session` 一次性 bootstrap、`/context`、`/actions`、`/actions/{opId}`、`/guide`、LAN 绑定、Bearer session token
 - [x] session API 冒烟脚本 `scripts/session-api-smoke.mjs`
+- [x] `/events/wait` 长轮询：立即返回已有事件、超时返回 `timedOut=true`，事件到达唤醒
+- [x] `game_pause` / `game_resume` 事件；`context.paused` 常驻
+- [x] session prompt/guide 明确暂停规则：不得在 paused 时发动作、不得自动取消暂停
 - [x] 弹窗 session prompt 代码（`WorldLoadEvent` + `BaseDialog` + 剪贴板；编译通过，客户端 UI 未实测）
 - [x] 桌面客户端 v160.8 加载 mod 并启动 `/session`、`/data`、`/mcp`（WSLg 下 GL 窗口截图不可用；Xvfb 可截主菜单但 XTest 点击未进入地图）
 - [x] 弹窗 UI 视觉实测：Xvfb 自动加载 Fortress，截图显示 endpoint/token/6 步说明和 Copy/Close 按钮

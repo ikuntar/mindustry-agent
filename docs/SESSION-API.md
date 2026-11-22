@@ -165,10 +165,28 @@ GET  /context?detail=summary|full&radius=...&since=...
 GET  /capabilities
 GET  /content?type=units|blocks|items
 GET  /guide?topic=basics
+GET  /events/wait?since=N&timeoutMs=15000&types=...&limit=...
 GET  /actions/{opId}
 POST /actions
 POST /cancel
 ```
+
+`/events/wait` 是长轮询：
+
+- 如果 `since` 之后已有匹配事件，立即返回
+- 否则阻塞到事件到达或 `timeoutMs` 到期
+- `timeoutMs` 上限 30000ms；客户端 socket 超时应大于它
+- `types` 用逗号分隔；省略表示不过滤
+- 返回 `events`、`next`、`dropped`、`hasMore`、`timedOut`、`paused`、`gameOver`、`won`
+- `timedOut=true` 不是失败，只表示本次没有事件
+- 暂停/恢复会作为 `game_pause` / `game_resume` 事件写入；`context.paused` 也始终可查
+
+暂停规则必须写进 session prompt/guide：
+
+- 玩家可以随时暂停；暂停时模拟 tick 不推进
+- AI 不应在 `paused=true` 时发新动作
+- AI 不应把 `running` 动作当作仍在推进
+- AI 不能自动取消暂停；暂停是玩家控制
 
 动作：
 
@@ -476,6 +494,8 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /guide`：短游戏说明
 - `GET /tools`：10 个核心工具 JSON Schema
+- `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
+- `game_pause` / `game_resume` 事件 + `context.paused`
 - `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）
 - session server 的 `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON
 - 关闭游戏/进程退出后端口关闭，session token 与 bootstrap token 一起失效
@@ -504,6 +524,9 @@ tools 200 10
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
+emit 200
+events wait 200 1 false false
+events timeout 200 true
 data map 200 524304 MND1 sessionData 401 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
 guide 200 # Mindustry AI session
 data token refresh 200 true

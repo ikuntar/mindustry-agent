@@ -55,6 +55,20 @@ for (let i = 0; i < 30; i++) {
 }
 console.log("result", result.status, result.body.status, result.body.data?.code ?? result.body.data?.distance ?? "");
 
+const since = Number(context.body.eventsSince ?? 0);
+const waitPromise = call(`/events/wait?since=${since}&timeoutMs=3000&types=test`, { headers: auth });
+await new Promise((resolve) => setTimeout(resolve, 100));
+const emitted = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "emit_event", type: "test", data: { source: "smoke" } }),
+});
+const waited = await waitPromise;
+console.log("emit", emitted.status);
+console.log("events wait", waited.status, waited.body.events?.length, waited.body.timedOut, waited.body.paused);
+const waitTimeout = await call(`/events/wait?since=${waited.body.next}&timeoutMs=100`, { headers: auth });
+console.log("events timeout", waitTimeout.status, waitTimeout.body.timedOut);
+
 const map = await fetch(`${base}/data/map/latest`, { headers: dataAuth });
 const sessionMap = await fetch(`${base}/data/map/latest`, { headers: auth });
 const mapBytes = Buffer.from(await map.arrayBuffer());
@@ -98,3 +112,5 @@ if (sessionMap.status !== 401) process.exit(1);
 if (manifest.status !== 200 || events.status !== 200) process.exit(1);
 if (second.status !== 401) process.exit(1);
 if (refreshed.status !== 200 || oldData.status !== 401 || freshData.status !== 200) process.exit(1);
+if (waited.status !== 200 || !waited.body.events?.length || waited.body.timedOut) process.exit(1);
+if (waitTimeout.status !== 200 || !waitTimeout.body.timedOut) process.exit(1);
