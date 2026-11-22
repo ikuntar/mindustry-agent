@@ -61,6 +61,10 @@ console.log("reused bootstrap", second.status);
 
 const auth = { ...headers, authorization: `Bearer ${first.body.sessionToken}` };
 const dataAuth = { ...headers, authorization: `Bearer ${first.body.dataToken}` };
+const health = await call("/health", { headers: auth });
+console.log("health", health.status, health.body.tick, health.body.queueDepth, health.body.lastUpdateAgo);
+if (health.status !== 200 || typeof health.body.tick !== "number") process.exit(1);
+
 const index = await call("/", { headers: auth });
 console.log("index", index.status, index.body.control?.length, index.body.data?.length);
 if (index.status !== 200 || !Array.isArray(index.body.control) || !Array.isArray(index.body.data)) process.exit(1);
@@ -74,7 +78,7 @@ const tools = await call("/tools", { headers: auth });
 const expectedTools = [
   "get_context", "get_area", "get_tile", "query_area", "get_unit", "list_unit_types",
   "move_to", "attack", "mine", "build_plan", "withdraw", "deposit", "configure",
-  "deconstruct", "repair", "set_stance", "release", "follow",
+  "deconstruct", "repair", "set_stance", "release", "follow", "research",
   "get_action_result", "cancel", "stop",
 ];
 const toolNames = new Set((tools.body.tools ?? []).map((tool) => tool.name));
@@ -98,6 +102,14 @@ const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime",
 const missingContextFields = contextFields.filter((key) => !(key in (context.body ?? {})));
 console.log("context fields", missingContextFields.join(",") || "none");
 if (context.status !== 200 || missingContextFields.length > 0) process.exit(1);
+
+const cappedArea = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "query_area", x: Number(context.body.assistant?.x ?? 0), y: Number(context.body.assistant?.y ?? 0), radius: 1600 }),
+});
+console.log("query cap", cappedArea.status, cappedArea.body.radius, cappedArea.body.truncated?.radius);
+if (cappedArea.status !== 200 || cappedArea.body.radius > 256 || cappedArea.body.truncated?.radius !== true) process.exit(1);
 
 const targetX = Number(context.body.assistant?.x ?? 0) + 40;
 const targetY = Number(context.body.assistant?.y ?? 0);
@@ -201,7 +213,7 @@ console.log("data token rotation", oldData.status, freshData.status);
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
-if (tools.status !== 200 || tools.body.tools?.length !== 12) process.exit(1);
+if (tools.status !== 200 || tools.body.tools?.length !== 22) process.exit(1);
 if (forbidden.status !== 403 || plan.status !== 400 || !String(plan.body.message ?? "").includes("no placements")) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
 if (conditionalMap.status !== 304) process.exit(1);

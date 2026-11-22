@@ -19,6 +19,8 @@ import mindustry.game.EventType;
 import mindustry.game.Gamemode;
 import mindustry.game.Team;
 import mindustry.game.Rules;
+import mindustry.ctype.UnlockableContent;
+import mindustry.content.TechTree;
 import mindustry.gen.Building;
 import mindustry.gen.Call;
 import mindustry.gen.Groups;
@@ -150,6 +152,8 @@ public class ProbeMod extends Mod {
     private ProbeController controller;
     private long opSeq = 0;
     private int lastWave = -1;
+    private volatile long lastUpdateAt = 0L;
+    private volatile long lastUpdateTick = -1L;
 
     @Override
     public void init() {
@@ -252,6 +256,14 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private boolean currentPaused() {
+        try {
+            return Vars.state.isGame() && Vars.state.isPaused();
+        } catch (Throwable ignored) {
+            return pausedState;
+        }
+    }
+
     private void detectPauseChange() {
         boolean paused = Vars.state.isPaused();
         pausedState = paused;
@@ -329,6 +341,8 @@ public class ProbeMod extends Mod {
 
         gameOverState = Vars.state.gameOver;
         wonState = Vars.state.won;
+        lastUpdateAt = System.currentTimeMillis();
+        lastUpdateTick = (long) Vars.state.tick;
         detectPauseChange();
         detectWaveChange();
         if (!pausedState) ensureAssistant();
@@ -569,10 +583,20 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private boolean isPlayerUnit(Unit unit) {
+        if (unit == null) return false;
+        if (unit.isPlayer() || unit.controller() instanceof mindustry.gen.Player) return true;
+        for (mindustry.gen.Player player : Groups.player) {
+            if (player.unit() == unit) return true;
+        }
+        return !Vars.headless && Vars.player != null && Vars.player.unit() == unit;
+    }
+
     private void removePersistedAssistantBodies() {
+        if (Vars.net == null || !Vars.net.server()) return;
         Seq<Unit> stale = new Seq<>();
         for (Unit candidate : Groups.unit) {
-            if (candidate.flag() == ASSISTANT_FLAG) stale.add(candidate);
+            if (candidate.flag() == ASSISTANT_FLAG && !isPlayerUnit(candidate)) stale.add(candidate);
         }
         for (Unit candidate : stale) {
             Log.info("[ai-probe] removing persisted assistant body id=" + candidate.id);
@@ -581,10 +605,10 @@ public class ProbeMod extends Mod {
     }
 
     private void cleanupStrayAssistantBodies() {
-        if (assistant == null) return;
+        if (assistant == null || Vars.net == null || !Vars.net.server()) return;
         Seq<Unit> stray = new Seq<>();
         for (Unit candidate : Groups.unit) {
-            if (candidate != assistant
+            if (candidate != assistant && !isPlayerUnit(candidate)
                     && (candidate.controller() instanceof ProbeController || candidate.flag() == ASSISTANT_FLAG)) {
                 stray.add(candidate);
             }
@@ -623,7 +647,16 @@ public class ProbeMod extends Mod {
         unit.flag(ASSISTANT_FLAG);
         controller = new ProbeController();
         unit.controller(controller);
-        unit.add();
+        // Campaign tutorial saves can have Rules.unitCap=0. The assistant is
+        // explicitly outside the population cap, but the engine checks the cap
+        // inside Unit.add(); bypass it only for this add call.
+        boolean oldIgnoreUnitCap = team.ignoreUnitCap;
+        team.ignoreUnitCap = true;
+        try {
+            unit.add();
+        } finally {
+            team.ignoreUnitCap = oldIgnoreUnitCap;
+        }
         assistant = unit;
         homeBody = unit;
         Log.info("[ai-probe] assistant spawned: id=" + unit.id + " type=" + type.name + " team=" + team.name
@@ -967,11 +1000,14 @@ public class ProbeMod extends Mod {
                                 .put("item", stack.item.name)
                                 .put("amount", stack.amount));
                     }
+                    Jval blockResearch = researchJson(block);
                     blocks.add(Jval.newObject()
                             .put("name", block.name)
                             .put("size", block.size)
                             .put("health", block.health)
-                            .put("requirements", requirements));
+                            .put("requirements", requirements)
+                            .put("researched", block.unlockedNowHost())
+                            .put("researchCost", blockResearch));
                 }
                 data.put("blocks", blocks);
             }
@@ -984,7 +1020,9 @@ public class ProbeMod extends Mod {
                             .put("name", unit.name)
                             .put("health", unit.health)
                             .put("flying", unit.flying)
-                            .put("playerControllable", unit.playerControllable));
+                            .put("playerControllable", unit.playerControllable)
+                            .put("researched", unit.unlockedNowHost())
+                            .put("researchCost", researchJson(unit)));
                 }
                 data.put("units", units);
             }
@@ -1126,16 +1164,26 @@ public class ProbeMod extends Mod {
         if ("query_area".equals(op)) {
             float x = request.getFloat("x", 0f);
             float y = request.getFloat("y", 0f);
-            float radius = request.getFloat("radius", 20f);
+            float requestedRadius = request.getFloat("radius", 20f);
+            // This is a read command on the game thread. Keep one oversized
+            // query from freezing the control plane; use get_area for tiles.
+            float radius = Math.max(0f, Math.min(256f, requestedRadius));
+            int maxUnits = Math.max(1, Math.min(64, request.getInt("maxUnits", 64)));
+            int maxBuildings = Math.max(1, Math.min(64, request.getInt("maxBuildings", 64)));
             boolean includeUnits = request.getBool("includeUnits", true);
             boolean includeBuildings = request.getBool("includeBuildings", true);
             boolean includeEnemies = request.getBool("includeEnemies", false);
             Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
             Jval units = Jval.newArray();
+            boolean unitsTruncated = false;
             if (includeUnits) {
                 for (Unit unit : mindustry.gen.Groups.unit) {
                     if (!includeEnemies && unit.team != team) continue;
                     if (Math.hypot(unit.x - x, unit.y - y) > radius) continue;
+                    if (units.asArray().size >= maxUnits) {
+                        unitsTruncated = true;
+                        break;
+                    }
                     units.add(Jval.newObject()
                             .put("id", unit.id)
                             .put("type", unit.type.name)
@@ -1149,10 +1197,12 @@ public class ProbeMod extends Mod {
             }
 
             Jval buildings = Jval.newArray();
+            boolean buildingsTruncated = false;
             if (includeBuildings) {
                 int tileX = Vars.world.toTile(x);
                 int tileY = Vars.world.toTile(y);
                 int tileRadius = (int) Math.ceil(radius / 8f);
+                outer:
                 for (int dx = -tileRadius; dx <= tileRadius; dx++) {
                     for (int dy = -tileRadius; dy <= tileRadius; dy++) {
                         Tile tile = Vars.world.tile(tileX + dx, tileY + dy);
@@ -1160,6 +1210,10 @@ public class ProbeMod extends Mod {
                         if (building == null || building.team != team) continue;
                         if (tile.x != building.tile.x || tile.y != building.tile.y) continue;
                         if (Math.hypot(building.x - x, building.y - y) > radius) continue;
+                        if (buildings.asArray().size >= maxBuildings) {
+                            buildingsTruncated = true;
+                            break outer;
+                        }
                         Jval entry = Jval.newObject()
                                 .put("id", building.id)
                                 .put("block", building.block.name)
@@ -1192,7 +1246,12 @@ public class ProbeMod extends Mod {
             reply(command, Jval.newObject()
                     .put("x", x)
                     .put("y", y)
+                    .put("requestedRadius", requestedRadius)
                     .put("radius", radius)
+                    .put("truncated", Jval.newObject()
+                            .put("radius", requestedRadius > radius)
+                            .put("units", unitsTruncated)
+                            .put("buildings", buildingsTruncated))
                     .put("units", units)
                     .put("buildings", buildings));
             return;
@@ -1861,6 +1920,50 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("research".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            String name = request.getString("content", request.getString("block", request.getString("unit", "")));
+            UnlockableContent content = findResearchable(name);
+            if (content == null) {
+                replyError(command, "not_researchable", "Unknown or non-researchable content: " + name);
+                return;
+            }
+            if (content.unlockedNowHost()) {
+                replyError(command, "already_unlocked", "Content is already unlocked: " + content.name);
+                return;
+            }
+            ItemStack[] cost = researchCost(content);
+            if (cost == null || cost.length == 0) {
+                replyError(command, "no_research_cost", "Content has no research cost: " + content.name);
+                return;
+            }
+            if (!assistant.team.items().has(cost)) {
+                replyError(command, "insufficient_resources", "Core lacks research cost for " + content.name);
+                return;
+            }
+            for (ItemStack stack : cost) assistant.team.items().remove(stack.item, stack.amount);
+            content.unlock();
+            int parents = 0;
+            TechTree.TechNode node = content.techNode;
+            while (node != null && node.parent != null) {
+                node = node.parent;
+                if (node.content != null && !node.content.unlockedNowHost()) {
+                    node.content.unlock();
+                    parents++;
+                }
+            }
+            Events.fire(new EventType.ResearchEvent(content));
+            reply(command, Jval.newObject()
+                    .put("content", content.name)
+                    .put("researched", content.unlockedNowHost())
+                    .put("spent", stacksJson(cost))
+                    .put("parentsUnlocked", parents));
+            return;
+        }
+
         if ("deconstruct".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -2339,6 +2442,36 @@ public class ProbeMod extends Mod {
         replyError(command, "bad_request", "Unknown op " + op);
     }
 
+    private Jval researchJson(UnlockableContent content) {
+        return stacksJson(researchCost(content));
+    }
+
+    private UnlockableContent findResearchable(String name) {
+        if (name == null || name.trim().isEmpty()) return null;
+        Block block = Vars.content.block(name);
+        if (block != null) return block;
+        UnitType unit = Vars.content.unit(name);
+        return unit;
+    }
+
+    private ItemStack[] researchCost(UnlockableContent content) {
+        TechTree.TechNode node = content.techNode;
+        if (node != null && node.requirements != null && node.requirements.length > 0) {
+            return node.requirements;
+        }
+        return content.researchRequirements();
+    }
+
+    private Jval stacksJson(ItemStack[] stacks) {
+        Jval result = Jval.newArray();
+        if (stacks != null) {
+            for (ItemStack stack : stacks) {
+                result.add(Jval.newObject().put("item", stack.item.name).put("amount", stack.amount));
+            }
+        }
+        return result;
+    }
+
     private boolean opNeedsCapacity(String op) {
         switch (op) {
             case "move_to":
@@ -2502,9 +2635,12 @@ public class ProbeMod extends Mod {
     private Jval objectivesJson() {
         Jval objectives = Jval.newArray();
         if (Vars.state.rules.objectives == null) return objectives;
-        int count = 0;
+        Seq<mindustry.game.MapObjectives.MapObjective> all = new Seq<>();
         for (mindustry.game.MapObjectives.MapObjective objective : Vars.state.rules.objectives) {
-            if (objective == null || count++ >= 8) continue;
+            if (objective != null) all.add(objective);
+        }
+        for (int i = 0; i < all.size && i < 64; i++) {
+            mindustry.game.MapObjectives.MapObjective objective = all.get(i);
             String text = "";
             String details = "";
             try {
@@ -2512,13 +2648,130 @@ public class ProbeMod extends Mod {
                 details = objective.details();
             } catch (Throwable ignored) {
             }
-            objectives.add(Jval.newObject()
+            Jval parents = Jval.newArray();
+            if (objective.parents != null) {
+                for (mindustry.game.MapObjectives.MapObjective parent : objective.parents) {
+                    for (int p = 0; p < all.size; p++) {
+                        if (all.get(p) == parent) {
+                            parents.add(p);
+                            break;
+                        }
+                    }
+                }
+            }
+            Jval entry = Jval.newObject()
+                    .put("index", i)
+                    .put("type", objective.typeName())
                     .put("text", text == null ? "" : text)
                     .put("details", details == null ? "" : details)
                     .put("completed", objective.isCompleted())
-                    .put("hidden", objective.hidden));
+                    .put("hidden", objective.hidden)
+                    .put("parents", parents)
+                    .put("flagsAdded", stringArray(objective.flagsAdded))
+                    .put("flagsRemoved", stringArray(objective.flagsRemoved));
+            Jval progress = objectiveProgress(objective);
+            if (progress != null) entry.put("progress", progress);
+            objectives.add(entry);
         }
         return objectives;
+    }
+
+    private Jval stringArray(String[] values) {
+        Jval result = Jval.newArray();
+        if (values != null) for (String value : values) result.add(value);
+        return result;
+    }
+
+    private Jval objectiveProgress(mindustry.game.MapObjectives.MapObjective objective) {
+        Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
+        if (objective instanceof mindustry.game.MapObjectives.BuildCountObjective build) {
+            return Jval.newObject()
+                    .put("current", countTeamBlocks(team, build.block))
+                    .put("target", build.count)
+                    .put("unit", "blocks");
+        }
+        if (objective instanceof mindustry.game.MapObjectives.CoreItemObjective core) {
+            return Jval.newObject()
+                    .put("current", core.item == null ? 0 : team.items().get(core.item))
+                    .put("target", core.amount)
+                    .put("item", core.item == null ? "" : core.item.name);
+        }
+        if (objective instanceof mindustry.game.MapObjectives.ItemObjective item) {
+            return Jval.newObject()
+                    .put("current", item.item == null ? 0 : team.items().get(item.item))
+                    .put("target", item.amount)
+                    .put("item", item.item == null ? "" : item.item.name);
+        }
+        if (objective instanceof mindustry.game.MapObjectives.UnitCountObjective unit) {
+            return Jval.newObject()
+                    .put("current", countTeamUnits(team, unit.unit))
+                    .put("target", unit.count)
+                    .put("unit", unit.unit == null ? "" : unit.unit.name);
+        }
+        if (objective instanceof mindustry.game.MapObjectives.TimerObjective timer) {
+            return Jval.newObject()
+                    .put("current", reflectedFloat(timer, "countup"))
+                    .put("target", timer.duration)
+                    .put("unit", "seconds");
+        }
+        if (objective instanceof mindustry.game.MapObjectives.FlagObjective flag) {
+            boolean set = flag.flag != null && Vars.state.rules.objectiveFlags.contains(flag.flag);
+            return Jval.newObject()
+                    .put("current", set ? 1 : 0)
+                    .put("target", 1)
+                    .put("flag", flag.flag == null ? "" : flag.flag);
+        }
+        if (objective instanceof mindustry.game.MapObjectives.DestroyBlocksObjective blocks) {
+            return Jval.newObject()
+                    .put("current", blocks.progress())
+                    .put("target", blocks.positions == null ? 0 : blocks.positions.length)
+                    .put("unit", "blocks");
+        }
+        return null;
+    }
+
+    private int countTeamBlocks(Team team, Block block) {
+        if (block == null) return 0;
+        int count = 0;
+        for (Building building : Groups.build) {
+            if (building.team == team && building.block == block) count++;
+        }
+        return count;
+    }
+
+    private int countTeamUnits(Team team, UnitType type) {
+        if (type == null) return 0;
+        int count = 0;
+        for (Unit unit : team.data().units) {
+            if (unit.type == type && !unit.dead) count++;
+        }
+        return count;
+    }
+
+    private float reflectedFloat(Object object, String fieldName) {
+        try {
+            java.lang.reflect.Field field = object.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.getFloat(object);
+        } catch (Throwable ignored) {
+            return 0f;
+        }
+    }
+
+    private Jval researchedJson() {
+        Jval result = Jval.newArray();
+        if (Vars.state.rules.researched != null) {
+            for (UnlockableContent content : Vars.state.rules.researched) result.add(content.name);
+        }
+        return result;
+    }
+
+    private Jval objectiveFlagsJson() {
+        Jval flags = Jval.newArray();
+        if (Vars.state.rules.objectiveFlags != null) {
+            for (String flag : Vars.state.rules.objectiveFlags) flags.add(flag);
+        }
+        return flags;
     }
 
     private Jval rulesJson() {
@@ -2535,7 +2788,9 @@ public class ProbeMod extends Mod {
                 .put("buildCostMultiplier", rules.buildCostMultiplier)
                 .put("blockHealthMultiplier", rules.blockHealthMultiplier)
                 .put("unitBuildSpeedMultiplier", rules.unitBuildSpeedMultiplier)
-                .put("objectives", objectivesJson());
+                .put("objectives", objectivesJson())
+                .put("objectiveFlags", objectiveFlagsJson())
+                .put("researched", researchedJson());
         if (rules.sector != null) {
             json.put("sector", Jval.newObject()
                     .put("id", rules.sector.id)
@@ -2877,6 +3132,31 @@ public class ProbeMod extends Mod {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
+            if ("/health".equals(path)) {
+                if (!"GET".equals(method)) {
+                    sendText(exchange, 405, "method not allowed", "text/plain", false);
+                    return;
+                }
+                if (!sessionAuthorized(exchange)) {
+                    sendText(exchange, 401, "unauthorized", "text/plain", false);
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                Jval health = Jval.newObject()
+                        .put("inGame", Vars.state.isGame())
+                        .put("tick", lastUpdateTick)
+                        .put("paused", currentPaused())
+                        .put("queueDepth", queue.size())
+                        .put("ops", ops.size())
+                        .put("lastUpdateAt", lastUpdateAt)
+                        .put("lastUpdateAgo", lastUpdateAt <= 0 ? -1 : now - lastUpdateAt)
+                        .put("eventSeq", eventSeq)
+                        .put("mapRevision", mapRevision)
+                        .put("gameOver", Vars.state.isGame() && Vars.state.gameOver)
+                        .put("won", Vars.state.isGame() && Vars.state.won);
+                sendText(exchange, 200, health.toString(Jval.Jformat.plain), "application/json", false);
+                return;
+            }
             if ("/".equals(path)) {
                 if (!"GET".equals(method)) {
                     sendText(exchange, 405, "method not allowed", "text/plain", false);
@@ -2892,6 +3172,7 @@ public class ProbeMod extends Mod {
                         .put("guideVersion", 2)
                         .put("control", Jval.newArray()
                                 .add("/session")
+                                .add("/health")
                                 .add("/context")
                                 .add("/capabilities")
                                 .add("/content")
@@ -3487,8 +3768,8 @@ public class ProbeMod extends Mod {
                 .put("hasMore", hasMore)
                 .put("timedOut", timedOut)
                 .put("timeoutMs", timeoutMs)
-                .put("paused", pausedState)
-                .put("gameOver", gameOverState)
+                .put("paused", currentPaused())
+                .put("gameOver", Vars.state.isGame() && Vars.state.gameOver)
                 .put("won", wonState)
                 .put("eventSeq", eventSeq);
         sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
@@ -3523,6 +3804,7 @@ public class ProbeMod extends Mod {
             case "withdraw":
             case "deposit":
             case "configure":
+            case "research":
             case "deconstruct":
             case "repair":
             case "set_stance":
@@ -3864,7 +4146,9 @@ public class ProbeMod extends Mod {
                 inputSchema(Jval.newObject()
                         .put("x", property("number").put("description", "world x in pixels"))
                         .put("y", property("number").put("description", "world y in pixels"))
-                        .put("radius", property("number").put("description", "radius in pixels"))
+                        .put("radius", property("number").put("description", "radius in pixels, capped at 256").put("maximum", 256))
+                        .put("maxUnits", property("integer").put("maximum", 64))
+                        .put("maxBuildings", property("integer").put("maximum", 64))
                         .put("includeUnits", property("boolean"))
                         .put("includeBuildings", property("boolean"))
                         .put("includeEnemies", property("boolean")),
@@ -3941,6 +4225,13 @@ public class ProbeMod extends Mod {
                         .put("y", property("integer"))
                         .put("value", Jval.newObject()),
                         Jval.newArray().add("x").add("y").add("value"))));
+        tools.add(tool("research",
+                "Research a locked block or unit using the team's core resources.",
+                inputSchema(Jval.newObject()
+                        .put("content", property("string").put("description", "block/unit name"))
+                        .put("block", property("string"))
+                        .put("unit", property("string")),
+                        Jval.newArray().add("content"))));
         tools.add(tool("deconstruct",
                 "Deconstruct buildings at tile coordinates; returns an opId.",
                 inputSchema(Jval.newObject()

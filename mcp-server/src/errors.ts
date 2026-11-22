@@ -21,7 +21,10 @@ const INPUT = new Set([
   "target_not_found",
   "out_of_range",
   "configure_rejected",
+  "not_researchable",
 ]);
+
+const RESEARCH_RULE = new Set(["already_unlocked", "no_research_cost"]);
 
 const RULE = new Set([
   "wrong_team",
@@ -39,6 +42,7 @@ export function classifyError(code: string): { category: ErrorCategory; retryabl
   if (INPUT.has(code)) return { category: "input", retryable: false };
   if (RULE.has(code)) return { category: "rule", retryable: false };
   if (code === "insufficient_resources") return { category: "resource", retryable: false };
+  if (RESEARCH_RULE.has(code)) return { category: "rule", retryable: false };
   if (code === "game_paused") return { category: "world", retryable: true };
   if (code === "block_locked") return { category: "rule", retryable: false };
   if (code === "build_dropped") return { category: "world", retryable: false };

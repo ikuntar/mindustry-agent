@@ -127,7 +127,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。固定场景脚本现在默认以 `PROBE_REQUIRE_AUTH=1` 运行，seed、raw probe、MCP adapter 全部通过 token 握手。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
 - 状态一致性审计（2026-11-22）：`build`/`deconstruct`/`repair`/`mine` 的 op 只有在游戏状态真正变化后才结束；`build_dropped`、`deconstruct_dropped`、`target_gone`、`assistant_gone` 都会失败而不是假 done。`configure` 在调用后回读 `building.config()`，未应用则 `configure_rejected`。`stop` 会清空移动/攻击/跟随/采矿/建造目标并把 running op 标为 cancelled；`cancel` 对 mine/build/deconstruct/repair 做同样清理。助手死亡或附身换体后，旧 op 以 `assistant_gone` 结束。`mine` 以开始时携带量为基线，不会因为身上已有物品而立即 done。`command_units` 的目标 unit/building 不存在时返回 `target_not_found`。
 - HTTP 健壮性（2026-11-22）：畸形 request line、空请求、超大 header、chunked body 均返回 400 并关闭 socket；连接数上限 64；accept 瞬时异常不再停服；`eventSeq`/`mapRevision` 改为 volatile，`/events/wait` 的 gameOver/won 读游戏线程缓存；`dataBaseUrl` 不再回显客户端 `Host`。
-- 会话入口收口（2026-11-22）：`/context` 只接受 `detail/radius/since/includeEnemies/maxUnits/maxBytes`；`/mcp` 的 `tools/call` 同样走 21 个工具白名单，`build_plan` 走 session 展开路径。`/context?op=...` 和 `/mcp {name:"set_paused"}` 均实测被拒。
+- 会话入口收口（2026-11-22）：`/context` 只接受 `detail/radius/since/includeEnemies/maxUnits/maxBytes`；`/mcp` 的 `tools/call` 同样走 22 个工具白名单，`build_plan` 走 session 展开路径。`/context?op=...` 和 `/mcp {name:"set_paused"}` 均实测被拒。
 - 会话/数据面审计（2026-11-22）：get_area 改为行优先并返回 coverage.next；context 返回 resourceCapacity/resourcesFull 与 core items；map drop_id 改为 item.id+1 并附 items/dropIds；/content、/capabilities、/cancel、/stop 已接入；get_action_result.waitMs 已轮询；build_plan required 为空；cancel/stop 进入工具表；pruneOps 不再淘汰 running；304 带 ETag/Cache-Control 且 HEAD 无 body；/events/wait 独立 8 连接配额，超限 429；session /actions 支持 idempotencyKey（LRU 256，按 session token 隔离）。
 - 命令超时（2026-11-22）：队列 Command 带 `started/cancelled`；HTTP 超时未开始时 503 `not_executed` 且不会执行，已开始则 504 `execution_unknown`。实测游戏线程 stall 6.5s 时返回 503、`moved=0`。
 - 失败会返回错误或保持 running，不是假成功。
@@ -155,3 +155,8 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - issue #27（2026-11-22）：新增鉴权后的 `GET /` 端点索引；`?topic=build` 改为引用 `get_tile`/`configure`，不再出现 `canvas.`/`get_config_schema`；SESSION-API 数据面补充 `drop_id=0 或 item.id+1` 与 `dropIds` 解码说明。
 
 - issue #28（2026-11-22）：context 增加 mission/objectives/tutorial/rules（winWave、waveTimer、建造速度/成本/返还/血量倍率、sector.captureWave）；新增 wave_start/wave_end 事件（wave 变化时发出）。guide 增加 waveTimer=false/tutorial 停手询问规则，并把 sector 规则指向 context.rules。
+
+- issue #29（2026-11-23）：新增 `research` 动作（`content`/`block`/`unit`），按 TechTree 要求扣除核心资源并解锁目标/父节点；`/content` 的 blocks/units 增加 `researched`/`researchCost`，`/context.rules.researched` 暴露研究集合；guide 更新研究路径。
+- issue #30（2026-11-23）：`/context.objectives` 返回全部（上限 64），补 `type/progress/parents/flagsAdded/flagsRemoved`，`rules.objectiveFlags`；Ground Zero fixture 实测 17 条。
+- issue #31（2026-11-23）：新增直连 `GET /health`；`events/wait.paused` 直接读当前状态；`query_area` 半径上限 256px、units/buildings 各 64 条并返回 `truncated`。实测 session smoke：health 200、query cap 256、context fields 完整。
+- 崩溃（2026-11-23）：客户端 `ValidateException: Player attempted to control invalid unit`。日志显示清理 stray assistant 后触发；cleanup/持久 body 清理现在跳过所有 player 控制的单位，并限制为服务端执行，避免删除玩家当前身体。

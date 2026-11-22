@@ -159,10 +159,13 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 
 ### 控制面（小 JSON）
 
+`GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。
+
 `/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。
 
 ```text
 POST /session
+GET  /health
 GET  /
 GET  /context?detail=summary|full&radius=...&since=...
 GET  /capabilities
@@ -220,6 +223,8 @@ campaign 未解锁返回 `block_locked`。
 `move_to` / `get_area` 的 `x/y` 是世界像素坐标（8 px = 1 tile），`mine`/`build`/
 `configure`/`deconstruct` 的 `x/y` 是 tile 坐标；session prompt 和 `/tools` 都标了单位。
 
+`research` 使用 `{ "content": "duo" }`（也可用 `block`/`unit`），消耗队伍核心资源并解锁科技；`/content?type=blocks|units` 返回 `researched` 与 `researchCost`，`/context.rules.researched` 是当前研究集合。
+
 返回：
 
 ```json
@@ -231,7 +236,7 @@ campaign 未解锁返回 `block_locked`。
 ```json
 {
   "apiVersion": 1,
-  "control": ["/session", "/context", "/capabilities", "/content", "/guide", "/tools", "/actions", "/actions/{opId}", "/events/wait", "/cancel", "/stop", "/session/data-token", "/mcp"],
+  "control": ["/session", "/health", "/context", "/capabilities", "/content", "/guide", "/tools", "/actions", "/actions/{opId}", "/events/wait", "/cancel", "/stop", "/session/data-token", "/mcp"],
   "data": ["/data/manifest/latest", "/data/map/latest", "/data/map/{revision}", "/data/map/{revision}/chunk/{x}/{y}", "/data/events/latest", "/data/events/{revision}/page/{cursor}"]
 }
 ```
@@ -319,7 +324,7 @@ POST /mcp   MCP Streamable HTTP
 - `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-ai`、
   `Mcp-Session-Id`
 - `notifications/initialized`：202，无 body
-- `tools/list`：21 个核心工具
+- `tools/list`：22 个核心工具
 - `tools/call`：复用现有游戏动作队列，返回 MCP text content
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -337,7 +342,7 @@ POST /mcp   MCP Streamable HTTP
 - 许多 host 不支持热重载，首次配置后要重启。
 - 本项目的推荐流程是 session prompt，不依赖 MCP 配置。
 - MCP 和 REST 共享同一份工具 schema 与游戏动作队列，避免行为漂移。
-- 当前暴露 21 个核心工具（原 12 个 + 读 tile/area/unit/类型 + deconstruct/repair/set_stance/release/follow），其余内部调试 op 不搬。
+- 当前暴露 22 个核心工具（原 12 个 + 读 tile/area/unit/类型 + research/deconstruct/repair/set_stance/release/follow），其余内部调试 op 不搬。
 
 ## 9. 弹窗设计
 
@@ -419,13 +424,13 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
 - `/actions/{opId}`：动作状态轮询
 - `/guide`：完整游戏知识指南；`?topic=build|economy` 追加主题
-- `/tools`：21 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/deconstruct/repair/set_stance/release/follow/get_action_result/cancel/stop）
+- `/tools`：22 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/follow/get_action_result/cancel/stop）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
 
 待完成：
 
-- 21 个核心工具的显式 schema/错误码表
+- 22 个核心工具的显式 schema/错误码表
 - `/data/map` + Range、`/data/events` NDJSON 迁移进 mod
 - session token 失效/刷新按钮
 - 弹窗/UX
@@ -458,7 +463,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 部分完成：
 
 - `POST /mcp` 的 `initialize`、`notifications/initialized`、`tools/list`、`tools/call`、`ping`
-- 21 个核心工具与 REST 共用 `toolsJson()` schema
+- 22 个核心工具与 REST 共用 `toolsJson()` schema
 - `Mcp-Session-Id`
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -525,7 +530,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /`：控制面/数据面端点索引
 - `GET /guide`：完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 mod jar）
-- `GET /tools`：21 个核心工具 JSON Schema
+- `GET /tools`：22 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
 - `game_pause` / `game_resume` / `wave_start` / `wave_end` 事件 + `context.paused`
 - `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）
@@ -552,7 +557,7 @@ node scripts/mcp-http-smoke.mjs
 ```text
 session 200 true
 reused bootstrap 401
-tools 200 21
+tools 200 22
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
@@ -572,7 +577,7 @@ MCP 冒烟：
 session 200
 initialize 200 mindustry-ai 2024-11-05
 initialized notification 202
-tools/list 200 21
+tools/list 200 22
 tools/call get_context 200 Fortress 928 584
 tools/call move_to 200 op-1 running
 tools/call get_action_result done
@@ -582,7 +587,7 @@ unknown method 200 -32601
 官方 SDK：
 
 ```text
-sdk tools 21
+sdk tools 22
 sdk resources 1
 sdk guide true
 sdk prompts 3

@@ -26,6 +26,8 @@ Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
 - 地图有宽度和高度；越界会被拒绝。用 `get_context` 的 `worldWidth/worldHeight`
   和 `get_area` 的 `coverage` 判断边界。
 - 游戏以 tick 推进；`get_context.tick` 是当前 tick。暂停时 tick 不增长。
+- `GET /health` 不经过命令队列；如果 `lastUpdateAgo` 持续增大或 `queueDepth` 积压，
+  说明模拟线程卡住/繁忙，先停止动作并报告，不要反复重试。
 - `gameOver=true` 或 `won=true` 后不要继续发写动作；先读上下文确认结果。
 
 ## 3. 队伍、核心和失败条件
@@ -164,7 +166,9 @@ Serpulo 常见物品：
   和 `/events/wait` 的 `game_pause`/`game_resume`/`wave_start`/`wave_end` 事件可用于观察。
 - `waveTimer=false` 表示不会自动开始下一波；它可能是教学/指导任务阶段。
   `get_context.mission`、`objectives`、`tutorial` 和 `rules` 会给出当前任务信息；
-  如果 `tutorial=true` 或 wave 长时间不推进，应该停下来询问玩家，而不是继续扩张。
+  objective 的 `type`/`progress`/`parents` 用来判断还缺什么，`rules.objectiveFlags`
+  是地图逻辑设置的 flag（例如给炮塔供弹会推进教学）。如果 `tutorial=true` 或 wave
+  长时间不推进，应该停下来询问玩家，而不是继续扩张。
 - 核心血量降到 0 通常失败；不要在没有防御的情况下把全部资源投入扩张。
 - 防守优先级通常是：核心路径 > 电力 > 弹药供应 > 生产扩张。
 - 4 波、9 波等“capture wave”是战役区域的目标；具体胜利条件读
@@ -192,7 +196,9 @@ Serpulo 常见物品：
 - Ground Zero 是早期区域，核心通常是 `core-shard`，以铜/铅和基础生产线为主；
   早期目标是稳定采集、建立传送带/工厂、建基础炮塔并守住核心。
 - 科技树通过研究解锁方块；未解锁的方块在战役中不能建造。AI 遇到
-  `block_locked` 时应该研究/换用已解锁方块，而不是反复重试同一个方块。
+  `block_locked` 时可以用 `research {content:"duo"}` 消耗核心资源研究，或换用已解锁方块；
+  不要反复重试同一个方块。研究前先看 `GET /content?type=blocks` 的 `researched` 和
+  `researchCost`；资源不足或研究入口不可用时停下来让玩家处理。
 - `get_context.rules` 提供当前只读规则摘要：`modeName`、`waveTimer`、`waveSending`、
   `winWave`、建造速度/成本/拆除返还/建筑血量倍率，以及 `sector`（id/name/preset/captureWave）。
   这些是 agent 能读到的全部规则；不要臆造未暴露的规则字段。
