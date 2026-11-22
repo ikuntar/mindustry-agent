@@ -160,12 +160,16 @@ Serpulo 常见物品：
 - 炮塔需要弹药；不同炮塔接受不同物品/液体，部分炮塔需要冷却液。
 - 墙壁用于阻挡地面单位，但不能阻挡飞行单位；不要把墙当成万能防御。
 - 敌人从地图边缘/波次生成点进攻，目标是核心和建筑。
-- 波次之间有准备时间；`get_context` 的 `wave`、`wavetime`、`enemies` 和
-  `/events/wait` 的 `game_pause`/`game_resume`/`wave_*` 事件可用于观察。
+- 波次之间有准备时间；`get_context` 的 `wave`、`wavetime`、`waveTimer`、`enemies`
+  和 `/events/wait` 的 `game_pause`/`game_resume`/`wave_start`/`wave_end` 事件可用于观察。
+- `waveTimer=false` 表示不会自动开始下一波；它可能是教学/指导任务阶段。
+  `get_context.mission`、`objectives`、`tutorial` 和 `rules` 会给出当前任务信息；
+  如果 `tutorial=true` 或 wave 长时间不推进，应该停下来询问玩家，而不是继续扩张。
 - 核心血量降到 0 通常失败；不要在没有防御的情况下把全部资源投入扩张。
 - 防守优先级通常是：核心路径 > 电力 > 弹药供应 > 生产扩张。
 - 4 波、9 波等“capture wave”是战役区域的目标；具体胜利条件读
-  `get_context.winWave` 和当前 sector 规则。
+  `get_context.rules`（含 `winWave`、`sector.captureWave`、波次和倍率）以及
+  `get_context.objectives`。
 
 ## 10. 单位和单位生产
 
@@ -189,6 +193,9 @@ Serpulo 常见物品：
   早期目标是稳定采集、建立传送带/工厂、建基础炮塔并守住核心。
 - 科技树通过研究解锁方块；未解锁的方块在战役中不能建造。AI 遇到
   `block_locked` 时应该研究/换用已解锁方块，而不是反复重试同一个方块。
+- `get_context.rules` 提供当前只读规则摘要：`modeName`、`waveTimer`、`waveSending`、
+  `winWave`、建造速度/成本/拆除返还/建筑血量倍率，以及 `sector`（id/name/preset/captureWave）。
+  这些是 agent 能读到的全部规则；不要臆造未暴露的规则字段。
 - 区域胜利后可以继续探索、发射到其他区域；不同星球（Serpulo/Erekir）有不同
   资源和科技，不能把 Serpulo 的配方套到 Erekir。
 - 地图数据和 `get_area` 只反映当前世界；切换地图/读档后要重新读
@@ -207,7 +214,7 @@ Serpulo 常见物品：
 
 ## 13. 推荐的开局检查清单（Ground Zero / 早期区域）
 
-1. `GET /context?detail=summary`：确认地图、核心、助手、资源、wave。
+1. `GET /context?detail=summary`：确认地图、核心、助手、资源、wave、mission/objectives/tutorial。
 2. `GET /capabilities`：确认 buildSpeed/buildRange/mineRange/武器。
 3. `GET /content?type=blocks&query=conveyor` 等：确认当前解锁方块的造价。
 4. 用 `get_area` 找铜/铅矿和空地；用 `mine` 或钻机建立采集。

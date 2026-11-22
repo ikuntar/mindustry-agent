@@ -153,3 +153,5 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - issue #25/#26（2026-11-22）：会话 `tools` 从 12 扩到 21，补 `get_tile/query_area/get_unit/list_unit_types/deconstruct/repair/set_stance/release/follow`；`context` 增加 `wavetime/waveTimer`。`newOp` 在 256 个活跃 op 时返回 `op_capacity`，session 映射 503，避免 ops 无上限增长。
 
 - issue #27（2026-11-22）：新增鉴权后的 `GET /` 端点索引；`?topic=build` 改为引用 `get_tile`/`configure`，不再出现 `canvas.`/`get_config_schema`；SESSION-API 数据面补充 `drop_id=0 或 item.id+1` 与 `dropIds` 解码说明。
+
+- issue #28（2026-11-22）：context 增加 mission/objectives/tutorial/rules（winWave、waveTimer、建造速度/成本/返还/血量倍率、sector.captureWave）；新增 wave_start/wave_end 事件（wave 变化时发出）。guide 增加 waveTimer=false/tutorial 停手询问规则，并把 sector 规则指向 context.rules。

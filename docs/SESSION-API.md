@@ -159,7 +159,7 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 
 ### 控制面（小 JSON）
 
-`/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。
+`/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。
 
 ```text
 POST /session
@@ -527,7 +527,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
 - `GET /guide`：完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 mod jar）
 - `GET /tools`：21 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
-- `game_pause` / `game_resume` 事件 + `context.paused`
+- `game_pause` / `game_resume` / `wave_start` / `wave_end` 事件 + `context.paused`
 - `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）
 - session server 的 `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON
 - 关闭游戏/进程退出后端口关闭，session token 与 bootstrap token 一起失效

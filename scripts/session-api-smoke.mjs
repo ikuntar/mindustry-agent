@@ -94,6 +94,10 @@ const plan = await call("/actions", {
 console.log("session action gate", forbidden.status, plan.status, plan.body.message ?? plan.body.code);
 const context = await call("/context?detail=summary", { headers: auth });
 console.log("context", context.status, context.body.map, context.body.assistant?.x, context.body.assistant?.y);
+const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime", "waveTimer"];
+const missingContextFields = contextFields.filter((key) => !(key in (context.body ?? {})));
+console.log("context fields", missingContextFields.join(",") || "none");
+if (context.status !== 200 || missingContextFields.length > 0) process.exit(1);
 
 const targetX = Number(context.body.assistant?.x ?? 0) + 40;
 const targetY = Number(context.body.assistant?.y ?? 0);

@@ -149,6 +149,7 @@ public class ProbeMod extends Mod {
     private boolean writesEnabled = true;
     private ProbeController controller;
     private long opSeq = 0;
+    private int lastWave = -1;
 
     @Override
     public void init() {
@@ -266,6 +267,25 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private void detectWaveChange() {
+        int wave = Vars.state.wave;
+        if (lastWave < 0) {
+            lastWave = wave;
+            return;
+        }
+        if (wave == lastWave) return;
+        addEvent("wave_end", Jval.newObject()
+                .put("wave", lastWave)
+                .put("next", wave)
+                .put("tick", Vars.state.tick));
+        addEvent("wave_start", Jval.newObject()
+                .put("wave", wave)
+                .put("enemies", Vars.state.enemies)
+                .put("winWave", Vars.state.rules.winWave)
+                .put("tick", Vars.state.tick));
+        lastWave = wave;
+    }
+
     private void reset() {
         removePersistedAssistantBodies();
         assistant = null;
@@ -280,6 +300,7 @@ public class ProbeMod extends Mod {
             eventLog.notifyAll();
         }
         eventSeq = 0;
+        lastWave = Vars.state.wave;
         pauseKnown = false;
         pausedState = false;
         synchronized (idempotentResponses) {
@@ -309,6 +330,7 @@ public class ProbeMod extends Mod {
         gameOverState = Vars.state.gameOver;
         wonState = Vars.state.won;
         detectPauseChange();
+        detectWaveChange();
         if (!pausedState) ensureAssistant();
         cleanupStrayAssistantBodies();
 
@@ -2467,6 +2489,63 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private String rulesMission() {
+        String mission = Vars.state.rules.mission;
+        return mission == null ? "" : mission;
+    }
+
+    private boolean tutorialStage() {
+        return !Vars.state.rules.waveTimer
+                && (!rulesMission().trim().isEmpty() || objectivesJson().asArray().size > 0);
+    }
+
+    private Jval objectivesJson() {
+        Jval objectives = Jval.newArray();
+        if (Vars.state.rules.objectives == null) return objectives;
+        int count = 0;
+        for (mindustry.game.MapObjectives.MapObjective objective : Vars.state.rules.objectives) {
+            if (objective == null || count++ >= 8) continue;
+            String text = "";
+            String details = "";
+            try {
+                text = objective.text();
+                details = objective.details();
+            } catch (Throwable ignored) {
+            }
+            objectives.add(Jval.newObject()
+                    .put("text", text == null ? "" : text)
+                    .put("details", details == null ? "" : details)
+                    .put("completed", objective.isCompleted())
+                    .put("hidden", objective.hidden));
+        }
+        return objectives;
+    }
+
+    private Jval rulesJson() {
+        Rules rules = Vars.state.rules;
+        Jval json = Jval.newObject()
+                .put("modeName", rules.modeName == null ? "" : rules.modeName)
+                .put("mission", rulesMission())
+                .put("waveTimer", rules.waveTimer)
+                .put("waveSending", rules.waveSending)
+                .put("waves", rules.waves)
+                .put("winWave", rules.winWave)
+                .put("buildSpeedMultiplier", rules.buildSpeedMultiplier)
+                .put("deconstructRefundMultiplier", rules.deconstructRefundMultiplier)
+                .put("buildCostMultiplier", rules.buildCostMultiplier)
+                .put("blockHealthMultiplier", rules.blockHealthMultiplier)
+                .put("unitBuildSpeedMultiplier", rules.unitBuildSpeedMultiplier)
+                .put("objectives", objectivesJson());
+        if (rules.sector != null) {
+            json.put("sector", Jval.newObject()
+                    .put("id", rules.sector.id)
+                    .put("name", rules.sector.name())
+                    .put("preset", rules.sector.preset == null ? "" : rules.sector.preset.name)
+                    .put("captureWave", rules.sector.preset == null ? -1 : rules.sector.preset.captureWave));
+        }
+        return json;
+    }
+
     private Jval context(int radius, int since, boolean includeEnemies, int maxUnits, int maxBytes) {
         Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         Jval data = Jval.newObject()
@@ -2488,6 +2567,10 @@ public class ProbeMod extends Mod {
                 .put("campaign", Vars.state.isCampaign())
                 .put("sector", Vars.state.hasSector() ? Vars.state.getSector().name() : "")
                 .put("winWave", Vars.state.rules.winWave)
+                .put("mission", rulesMission())
+                .put("objectives", objectivesJson())
+                .put("tutorial", tutorialStage())
+                .put("rules", rulesJson())
                 .put("eventsSince", eventSeq);
 
         Jval eventByType = Jval.newObject();
