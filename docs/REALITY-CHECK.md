@@ -58,6 +58,7 @@ defaultTeam = sharded
 - `get_context` 返回真实地图/队伍/核心/资源/助手。
 - 自定义 `UnitController` 能控制真实单位移动；`moveAt` 接收的是**期望速度向量**，不是目标点；直接传目标会冲到地图边界。
 - `build` 走真实 `BuildPlan` + `BuilderComp` 后可以完成：`query_area` 能从 MCP 侧读回 `conveyor`（health 45），不是只返回 accepted。
+- Ground Zero 测试服曾出现 `build` 返回成功但方块不落地：手动 `host` sector 地图没有建立 campaign 科技树，`conveyor.unlockedNowHost()` 为 false；`Build.validPlace` 不检查解锁，`BuilderComp.updateBuildLogic` 会静默丢弃计划。现在 `build` 对 campaign 未解锁返回 `block_locked`，op 只有目标 tile 真正出现方块才 `done`，计划被移除则 `failed/build_dropped`；`scripts/start-ground-zero-server.sh` 作为测试 fixture 显式 unlock 方块。
 - 关键发现：`spawnedByCore=true` 的非 `Player` 单位会被 `UnitComp.update()` 每帧 `Call.unitDespawn`。助手身体必须 `spawnedByCore=false`，用自己的 `isHome` 标记；附身时显式 despawn home body。
 - 助手身体从核心类型生成（例如 `gamma`/`alpha`），`isAI=false`、`isPlayer=false`，因此不可被原版 `unitControl` 附身，符合设计。
 

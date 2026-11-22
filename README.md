@@ -54,7 +54,7 @@ mindustry-ai/
 - [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔+传送带供弹防守；真实本地 LLM 固定移动任务已跑通
 - [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、omp、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
 - [x] 单 mod + session API：mod 内 `/session` 一次性 bootstrap、`/context`、`/actions`、`/actions/{opId}`、`/guide`、`/tools`（10 个核心 schema）、`/events/wait` 长轮询、LAN 绑定已实现并通过 `scripts/session-api-smoke.mjs`；客户端弹窗已在 Xvfb + Fortress 自动加载下视觉验收，剪贴板断言未做
-- [x] 会话动作面加固：10 个工具白名单、暂停写门控 `game_paused`、`build_plan` 展开、world reload 保留 sessionToken
+- [x] 会话动作面加固：10 个工具白名单、暂停写门控 `game_paused`、`build_plan` 展开、world reload 保留 sessionToken；build op 只有方块真正落地才 `done`，campaign 未解锁 `block_locked`，计划丢弃 `build_dropped`
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON 已挂载；`If-None-Match` 返回 304；`session-api-smoke` 把地图写入 `/tmp/mindustry-session-map.bin` 并验证 Range 206；实际 `curl -o` 已验证；`POST /session/data-token` 可轮换 data token
 - [x] 可选 MCP `/mcp`：initialize/tools/list/tools/call/ping + guide resources + 3 个 prompts，`mcp-http-smoke` 通过；官方 MCP SDK connect/list/call/resources/prompts 通过；REST 仍是主路径
 - [x] 可移植 HTTP server：`ai.probe.http` ServerSocket 实现，桌面 `/session`、`/data`、`/mcp` 回归通过

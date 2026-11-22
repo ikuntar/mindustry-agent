@@ -36,6 +36,8 @@ export function classifyError(code: string): { category: ErrorCategory; retryabl
   if (RULE.has(code)) return { category: "rule", retryable: false };
   if (code === "insufficient_resources") return { category: "resource", retryable: false };
   if (code === "game_paused") return { category: "world", retryable: true };
+  if (code === "block_locked") return { category: "rule", retryable: false };
+  if (code === "build_dropped") return { category: "world", retryable: false };
   if (WORLD.has(code)) return { category: "world", retryable: code === "stuck" };
   return { category: "internal", retryable: false };
 }

@@ -367,6 +367,51 @@ public class ProbeMod extends Mod {
                             .put("amount", assistant.stack.amount);
                     assistant.mineTile = null;
                 }
+            } else if ("build".equals(op.kind)) {
+                if (op.buildBlock == null) continue;
+                Tile target = Vars.world.tiles.in(op.buildX, op.buildY)
+                        ? Vars.world.tile(op.buildX, op.buildY)
+                        : null;
+                if (target != null && target.block() == op.buildBlock) {
+                    op.status = "done";
+                    op.progress = 1f;
+                    op.data = Jval.newObject()
+                            .put("block", op.buildBlock.name)
+                            .put("x", op.buildX)
+                            .put("y", op.buildY)
+                            .put("queued", false)
+                            .put("built", true);
+                    continue;
+                }
+                BuildPlan active = null;
+                for (BuildPlan plan : assistant.plans()) {
+                    if (plan.x == op.buildX && plan.y == op.buildY) {
+                        active = plan;
+                        break;
+                    }
+                }
+                if (active != null) {
+                    op.progress = Math.max(0f, Math.min(0.99f, active.progress));
+                    op.data = Jval.newObject()
+                            .put("block", op.buildBlock.name)
+                            .put("x", op.buildX)
+                            .put("y", op.buildY)
+                            .put("queued", true)
+                            .put("built", false);
+                    continue;
+                }
+                op.status = "failed";
+                op.progress = 0f;
+                op.data = Jval.newObject()
+                        .put("block", op.buildBlock.name)
+                        .put("x", op.buildX)
+                        .put("y", op.buildY)
+                        .put("queued", false)
+                        .put("built", false)
+                        .put("code", "build_dropped")
+                        .put("message", Vars.state.isCampaign() && !op.buildBlock.unlockedNowHost()
+                                ? "Block is not unlocked in this campaign"
+                                : "Build plan was dropped by the game");
             } else if ("deconstruct".equals(op.kind)) {
                 boolean remaining = false;
                 if (op.targetTiles != null) {
@@ -568,6 +613,40 @@ public class ProbeMod extends Mod {
                     ? mindustry.core.GameState.State.paused
                     : mindustry.core.GameState.State.playing);
             reply(command, Jval.newObject().put("paused", paused));
+            return;
+        }
+
+        if ("get_build_state".equals(op)) {
+            // Probe/debug helper for build diagnostics; not part of the MCP surface.
+            if (assistant == null) {
+                replyError(command, "no_assistant", "No assistant body");
+                return;
+            }
+            Jval plans = Jval.newArray();
+            for (BuildPlan plan : assistant.plans()) {
+                plans.add(Jval.newObject()
+                        .put("x", plan.x)
+                        .put("y", plan.y)
+                        .put("block", plan.block == null ? null : plan.block.name)
+                        .put("breaking", plan.breaking)
+                        .put("progress", plan.progress)
+                        .put("initialized", plan.initialized)
+                        .put("stuck", plan.stuck));
+            }
+            reply(command, Jval.newObject()
+                    .put("plans", plans)
+                    .put("updateBuilding", assistant.updateBuilding())
+                    .put("canBuild", assistant.canBuild())
+                    .put("buildSpeed", assistant.type.buildSpeed)
+                    .put("buildSpeedMultiplier", assistant.buildSpeedMultiplier())
+                    .put("buildRange", assistant.type.buildRange)
+                    .put("core", assistant.core() != null)
+                    .put("blockUnlocked", Vars.content.block("conveyor").unlockedNowHost())
+                    .put("environmentBuildable", Vars.content.block("conveyor").environmentBuildable())
+                    .put("campaign", Vars.state.isCampaign())
+                    .put("editor", Vars.state.isEditor())
+                    .put("x", assistant.tileX())
+                    .put("y", assistant.tileY()));
             return;
         }
 
@@ -1969,6 +2048,10 @@ public class ProbeMod extends Mod {
                 replyError(command, "cannot_build", "Assistant body has buildSpeed <= 0");
                 return;
             }
+            if (Vars.state.isCampaign() && !block.unlockedNowHost()) {
+                replyError(command, "block_locked", "Block " + blockName + " is not unlocked in this campaign");
+                return;
+            }
             if (block.requirements.length > 0 && !team.items().has(block.requirements)) {
                 StringBuilder missing = new StringBuilder();
                 for (ItemStack stack : block.requirements) {
@@ -1988,8 +2071,11 @@ public class ProbeMod extends Mod {
             assistant.updateBuilding(true);
             assistant.addBuild(new BuildPlan(x, y, rotation, block));
             Op result = newOp("build");
-            result.status = "done";
+            result.status = "running";
             result.progress = 0f;
+            result.buildX = x;
+            result.buildY = y;
+            result.buildBlock = block;
             result.data = Jval.newObject()
                     .put("block", blockName)
                     .put("x", x)
@@ -2892,7 +2978,7 @@ public class ProbeMod extends Mod {
 
         Jval payload = Jval.newObject()
                 .put("opId", lastOpId)
-                .put("status", failed ? "failed" : "done")
+                .put("status", failed ? "failed" : "queued")
                 .put("data", Jval.newObject().put("results", results))
                 .put("paused", pausedState);
         sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
@@ -3606,6 +3692,9 @@ public class ProbeMod extends Mod {
         Building targetBuilding;
         Vec2 targetPosition;
         Jval targetTiles;
+        int buildX;
+        int buildY;
+        Block buildBlock;
 
         Jval toJson() {
             Jval json = Jval.newObject()

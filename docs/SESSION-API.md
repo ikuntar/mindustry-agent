@@ -193,7 +193,9 @@ POST /cancel
 
 会话 `/actions` 只允许 `/tools` 暴露的 10 个名字；内部调试 op 仍只走本地 probe
 socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
-返回 `{opId,status,data:{results}}`。
+返回 `{opId,status,data:{results}}`；`status=queued` 只表示已入队，单块 build 的
+op 要等目标 tile 真正出现方块才 `done`，计划被引擎丢弃则 `failed/build_dropped`，
+campaign 未解锁返回 `block_locked`。
 
 动作：
 

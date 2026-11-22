@@ -250,6 +250,8 @@ MCP server（Node/TypeScript）
 - `build_plan { placements: [{block,x,y,rotation?,config?}], deconstruct?: [{x,y}], allowPartial? }`
   - 逐块校验、扣费、建造；`allowPartial=false` 时任一失败整单拒绝。
   - 最大 256 个 placement。
+  - 返回 `status=queued` 和 `data.results`；每块的实际生命周期由子 op 跟踪。
+  - 单块 `build` 返回 `running`，直到目标 tile 出现该 block 才 `done`；计划被引擎丢弃时 `failed`、`data.code=build_dropped`；campaign 未解锁时 `block_locked`。
 - `deconstruct { targets[], timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `repair { x, y, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 
