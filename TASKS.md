@@ -166,7 +166,8 @@
 - [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources/prompts 通过
 - [x] MCP `resources/list` / `resources/read`：`mindustry://guide`
 - [x] `/guide` 改为完整游戏知识指南
-- [x] 助手唯一性：context 暴露 assistantBodies；respawn while possessing 恢复借体；清理遗留 ProbeController 身体（`docs/GAME-GUIDE.md` 打进 jar，约 6K 字符）：规则/资源/生产/电力/防御/单位/战役/AI 边界；MCP resource 与 session `/guide` 共用；session prompt 要求先读 `/guide`
+- [x] 助手唯一性：context 暴露 assistantBodies；respawn while possessing 恢复借体；清理遗留 ProbeController 身体
+- [x] save/load 助手去重：spawn 写持久 Unit.flag；world load 先删除同 flag 旧 home，避免每次读档多 alpha（`docs/GAME-GUIDE.md` 打进 jar，约 6K 字符）：规则/资源/生产/电力/防御/单位/战役/AI 边界；MCP resource 与 session `/guide` 共用；session prompt 要求先读 `/guide`
 - [x] MCP `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
 - [ ] MCP GET SSE、完整兼容性矩阵
 - [ ] 存档/读档记忆处理

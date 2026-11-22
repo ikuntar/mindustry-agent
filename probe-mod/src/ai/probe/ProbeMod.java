@@ -99,6 +99,8 @@ public class ProbeMod extends Mod {
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
     private static final String VERSION = "0.1.0";
+    // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
+    private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
     private static final int MAX_OPS = 256;
 
     private final String token = UUID.randomUUID().toString();
@@ -265,6 +267,7 @@ public class ProbeMod extends Mod {
     }
 
     private void reset() {
+        removePersistedAssistantBodies();
         assistant = null;
         homeBody = null;
         savedController = null;
@@ -542,11 +545,25 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private void removePersistedAssistantBodies() {
+        Seq<Unit> stale = new Seq<>();
+        for (Unit candidate : Groups.unit) {
+            if (candidate.flag() == ASSISTANT_FLAG) stale.add(candidate);
+        }
+        for (Unit candidate : stale) {
+            Log.info("[ai-probe] removing persisted assistant body id=" + candidate.id);
+            candidate.remove();
+        }
+    }
+
     private void cleanupStrayAssistantBodies() {
         if (assistant == null) return;
         Seq<Unit> stray = new Seq<>();
         for (Unit candidate : Groups.unit) {
-            if (candidate != assistant && candidate.controller() instanceof ProbeController) stray.add(candidate);
+            if (candidate != assistant
+                    && (candidate.controller() instanceof ProbeController || candidate.flag() == ASSISTANT_FLAG)) {
+                stray.add(candidate);
+            }
         }
         for (Unit candidate : stray) {
             // Only one ProbeController body may exist. A second one is a
@@ -579,6 +596,7 @@ public class ProbeMod extends Mod {
         // Do NOT set spawnedByCore here: the engine despawns any non-player unit
         // with that flag on its next update. The probe tracks home bodies itself.
         unit.spawnedByCore(false);
+        unit.flag(ASSISTANT_FLAG);
         controller = new ProbeController();
         unit.controller(controller);
         unit.add();

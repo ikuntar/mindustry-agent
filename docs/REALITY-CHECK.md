@@ -147,3 +147,5 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 不要直接用服务端 `js` 当生产接口；probe 只是过渡验证。
 
 - 助手身份诊断（2026-11-22）：`get_context.assistantBodies` 只扫描 `ProbeController`；实机观察到的多个 alpha 中，只有当前助手是 ProbeController，其他是玩家身体（Player）或普通 CommandAI。`respawn` while possessing 会先恢复借体控制器再生成新 home；`cleanupStrayAssistantBodies` 会清理遗留的 ProbeController 身体。
+
+- 存档/读档（2026-11-22）：助手 home body 会随 unit 保存；旧实现读档后 `reset()` 清空指针但保留旧单位，再 spawn 新 home，累积 alpha。现在 spawn 时写 `Unit.flag=ASSISTANT_FLAG`，world load 先按 flag 删除旧 home，再生成；`cleanupStrayAssistantBodies` 也识别 flag。
