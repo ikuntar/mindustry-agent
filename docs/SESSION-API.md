@@ -188,6 +188,13 @@ POST /cancel
 - AI 不应把 `running` 动作当作仍在推进
 - AI 不能自动取消暂停；暂停是玩家控制
 
+服务端已把这条规则做成硬门控：`paused=true` 时 `/actions` 的写 op 返回
+`game_paused`，只读 op 继续可用；`ensureAssistant()` 在暂停期间也不会自动重生。
+
+会话 `/actions` 只允许 `/tools` 暴露的 10 个名字；内部调试 op 仍只走本地 probe
+socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
+返回 `{opId,status,data:{results}}`。
+
 动作：
 
 ```json
@@ -357,7 +364,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 ## 10. 生命周期
 
 - `init()`：启动 socket、数据面、HTTP session server；端口冲突时目前只记录错误，不递增重试。
-- world load：轮换 bootstrap token、清空 session token；客户端显示弹窗。
+- world load：保留已有 `sessionToken`，清空 ops/events；若 bootstrap 已被使用则轮换一次给新会话；客户端显示弹窗。
 - world unload / game exit：当前进程退出后端口关闭、token 失效；显式关闭和删除 discovery 仍待补。
 - 进程崩溃：端口关闭，token 自然失效；不保证清理文件，但默认文件不保存 session token。
 - 重启：新 bootstrap token，不存在旧 token 复用。

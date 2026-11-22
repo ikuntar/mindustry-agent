@@ -35,6 +35,7 @@ export function classifyError(code: string): { category: ErrorCategory; retryabl
   if (INPUT.has(code)) return { category: "input", retryable: false };
   if (RULE.has(code)) return { category: "rule", retryable: false };
   if (code === "insufficient_resources") return { category: "resource", retryable: false };
+  if (code === "game_paused") return { category: "world", retryable: true };
   if (WORLD.has(code)) return { category: "world", retryable: code === "stuck" };
   return { category: "internal", retryable: false };
 }

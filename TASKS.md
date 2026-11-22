@@ -148,6 +148,10 @@
 - [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt
 - [x] session/context 带 `version`，用于识别旧 jar
+- [x] 暂停硬门控：`/actions` 写 op 返回 `game_paused`，只读 op 放行；暂停期间不自动重生
+- [x] session `/actions` 按 10 个 `/tools` 名字白名单；内部 debug op 只能走本地 probe token，`get_capabilities` 实测 403
+- [x] session `build_plan` 展开为 `build`/`deconstruct`，不再返回 Unknown op
+- [x] world reload 保留 sessionToken；bootstrap 仅在已使用后轮换
 - [x] 自定义 `ai.probe.http` ServerSocket HTTP server：移除 `com.sun.net.httpserver`；桌面 `/session`、`/data`、`/mcp` 回归通过
 - [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
 - [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）

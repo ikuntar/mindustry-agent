@@ -274,9 +274,12 @@ public class ProbeMod extends Mod {
         }
         mapRevision = 0;
         lastMapCaptureTick = -1;
-        sessionBootstrapToken = UUID.randomUUID().toString();
-        sessionToken = "";
-        sessionBootstrapUsed = false;
+        if (sessionBootstrapUsed) {
+            // A live session keeps working across world reloads; rotate the
+            // one-time bootstrap so a new harness can still start a new session.
+            sessionBootstrapToken = UUID.randomUUID().toString();
+            sessionBootstrapUsed = false;
+        }
         if (EXPOSE_SESSION) writeDiscovery();
         Log.info("[ai-probe] world loaded, waiting for requests");
     }
@@ -288,7 +291,7 @@ public class ProbeMod extends Mod {
         }
 
         detectPauseChange();
-        ensureAssistant();
+        if (!pausedState) ensureAssistant();
 
         long tick = (long) Vars.state.tick;
         if (mapSnapshotNeeded(tick)) {
@@ -558,8 +561,23 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("set_paused".equals(op)) {
+            // Probe/debug helper for pause-boundary tests; not part of the MCP surface.
+            boolean paused = request.getBool("paused", true);
+            Vars.state.set(paused
+                    ? mindustry.core.GameState.State.paused
+                    : mindustry.core.GameState.State.playing);
+            reply(command, Jval.newObject().put("paused", paused));
+            return;
+        }
+
         if (!writesEnabled && !isReadOnlyOp(op)) {
             replyError(command, "writes_disabled", "Probe writes are disabled");
+            return;
+        }
+
+        if (pausedState && !isReadOnlyOp(op)) {
+            replyError(command, "game_paused", "Game is paused");
             return;
         }
 
@@ -2537,6 +2555,18 @@ public class ProbeMod extends Mod {
                     }
                     request.put("op", kind.asString());
                 }
+                String sessionOp = request.getString("op", "");
+                if (!sessionActionAllowed(sessionOp)) {
+                    sendText(exchange, 403, Jval.newObject()
+                            .put("code", "forbidden")
+                            .put("message", "Op is not exposed through the session API")
+                            .toString(Jval.Jformat.plain), "application/json", false);
+                    return;
+                }
+                if ("build_plan".equals(sessionOp)) {
+                    handleBuildPlan(exchange, request);
+                    return;
+                }
                 request.put("token", token);
                 sendCommandResult(exchange, request);
                 return;
@@ -2791,6 +2821,81 @@ public class ProbeMod extends Mod {
                 .put("won", Vars.state.won)
                 .put("eventSeq", eventSeq);
         sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
+    }
+
+    private boolean sessionActionAllowed(String op) {
+        switch (op) {
+            case "get_context":
+            case "get_area":
+            case "move_to":
+            case "attack":
+            case "mine":
+            case "build_plan":
+            case "withdraw":
+            case "deposit":
+            case "configure":
+            case "get_action_result":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void handleBuildPlan(HttpExchange exchange, Jval request) throws Exception {
+        Jval placements = request.get("placements");
+        Jval deconstruct = request.get("deconstruct");
+        boolean hasPlacements = placements != null && placements.isArray() && !placements.asArray().isEmpty();
+        boolean hasDeconstruct = deconstruct != null && deconstruct.isArray() && !deconstruct.asArray().isEmpty();
+        if (!hasPlacements && !hasDeconstruct) {
+            sendText(exchange, 400, Jval.newObject()
+                    .put("code", "bad_request")
+                    .put("message", "build_plan has no placements or deconstruct targets")
+                    .toString(Jval.Jformat.plain), "application/json", false);
+            return;
+        }
+
+        boolean allowPartial = request.getBool("allowPartial", false);
+        Jval results = Jval.newArray();
+        boolean failed = false;
+        String lastOpId = "";
+
+        if (hasPlacements) {
+            for (Jval placement : placements.asArray()) {
+                Jval build = Jval.read(placement.toString(Jval.Jformat.plain));
+                build.put("op", "build").put("token", token);
+                Jval response = runGameCommand(build);
+                results.add(response);
+                if (response.getBool("ok", false)) {
+                    Jval data = response.get("data");
+                    if (data != null && data.get("opId") != null) lastOpId = data.getString("opId", lastOpId);
+                } else {
+                    failed = true;
+                    if (!allowPartial) break;
+                }
+            }
+        }
+        if (hasDeconstruct && (!failed || allowPartial)) {
+            Jval targets = Jval.newArray();
+            for (Jval target : deconstruct.asArray()) targets.add(target);
+            Jval remove = Jval.newObject()
+                    .put("op", "deconstruct")
+                    .put("token", token)
+                    .put("targets", targets);
+            Jval response = runGameCommand(remove);
+            results.add(response);
+            if (!response.getBool("ok", false)) failed = true;
+            else {
+                Jval data = response.get("data");
+                if (data != null && data.get("opId") != null) lastOpId = data.getString("opId", lastOpId);
+            }
+        }
+
+        Jval payload = Jval.newObject()
+                .put("opId", lastOpId)
+                .put("status", failed ? "failed" : "done")
+                .put("data", Jval.newObject().put("results", results))
+                .put("paused", pausedState);
+        sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
     }
 
     private String readSmallBody(HttpExchange exchange) throws IOException {
