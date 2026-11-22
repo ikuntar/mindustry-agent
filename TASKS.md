@@ -143,7 +143,11 @@
 - [x] 弹窗 UI 视觉实测：Xvfb 自动加载 Fortress，截图显示 endpoint/token/6 步说明和 Copy/Close 按钮
 - [ ] `Copy session prompt` 剪贴板内容断言
 - [ ] 桌面客户端/真机人工点击验收
-- [x] 10 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema
+- [x] 10 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
+- [x] session prompt 先给出 `GET /tools`，再给动作示例
+- [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过
+- [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt
+- [x] session/context 带 `version`，用于识别旧 jar
 - [x] 自定义 `ai.probe.http` ServerSocket HTTP server：移除 `com.sun.net.httpserver`；桌面 `/session`、`/data`、`/mcp` 回归通过
 - [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
 - [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）

@@ -612,7 +612,7 @@ public class ProbeMod extends Mod {
                 replyError(command, "op_not_found", "Unknown opId " + opId);
                 return;
             }
-            reply(command, result.toJson());
+            reply(command, result.toJson().put("paused", pausedState));
             return;
         }
 
@@ -2113,6 +2113,7 @@ public class ProbeMod extends Mod {
     private Jval context(int radius, int since, boolean includeEnemies, int maxUnits, int maxBytes) {
         Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         Jval data = Jval.newObject()
+                .put("version", VERSION)
                 .put("tick", Vars.state.tick)
                 .put("timeMs", Time.millis())
                 .put("map", Vars.state.map == null ? "" : Vars.state.map.name())
@@ -2439,6 +2440,7 @@ public class ProbeMod extends Mod {
                             .put("dataTokenExpires", dataTokenExpires)
                             .put("apiVersion", 1)
                             .put("promptVersion", 1)
+                            .put("modVersion", VERSION)
                             .put("endpoint", requestDataBaseUrl(exchange).replace("/data", ""))
                             .put("expires", "game-process");
                     sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
@@ -2922,18 +2924,18 @@ public class ProbeMod extends Mod {
                         .put("maxBytes", property("integer").put("maximum", 65536)),
                         Jval.newArray())));
         tools.add(tool("get_area",
-                "Read a bounded tile window; never returns the full map.",
+                "Read a bounded window around world coordinates in pixels (8 px per tile); returns tile coordinates.",
                 inputSchema(Jval.newObject()
-                        .put("x", property("number"))
-                        .put("y", property("number"))
+                        .put("x", property("number").put("description", "world x in pixels"))
+                        .put("y", property("number").put("description", "world y in pixels"))
                         .put("radius", property("number").put("maximum", 24))
                         .put("maxTiles", property("integer").put("maximum", 512)),
                         Jval.newArray().add("x").add("y").add("radius"))));
         tools.add(tool("move_to",
-                "Move the assistant body to a tile coordinate; returns an opId.",
+                "Move the assistant body to world coordinates in pixels (8 px per tile); returns an opId.",
                 inputSchema(Jval.newObject()
-                        .put("x", property("number"))
-                        .put("y", property("number"))
+                        .put("x", property("number").put("description", "world x in pixels"))
+                        .put("y", property("number").put("description", "world y in pixels"))
                         .put("arriveRadius", property("number"))
                         .put("timeoutTicks", property("integer").put("maximum", 1200)),
                         Jval.newArray().add("x").add("y"))));
@@ -3016,12 +3018,13 @@ public class ProbeMod extends Mod {
                 + "Use this game API for this session only.\n"
                 + "1. POST /session with Authorization: Bearer <bootstrap token>.\n"
                 + "2. Use the returned sessionToken as Authorization: Bearer <sessionToken>.\n"
-                + "3. GET /context?detail=summary for the current state.\n"
-                + "4. POST /actions with {\"kind\":\"move_to\",\"x\":...,\"y\":...} and poll GET /actions/{opId}.\n"
-                + "5. GET /guide for game rules.\n"
-                + "6. Use GET /events/wait?since=N&timeoutMs=15000&types=... to wait for events; timedOut=true means no event.\n"
-                + "7. If context paused=true, the player paused the game: do not issue actions and never unpause it yourself.\n"
-                + "8. Use the returned dataToken (not sessionToken) with GET /data/map/latest; write large files to disk.\n"
+                + "3. GET /tools for the action names, required fields, and units.\n"
+                + "4. GET /context?detail=summary for the current state.\n"
+                + "5. POST /actions with {\"kind\":\"move_to\",\"x\":...,\"y\":...}; x/y are world pixels, not tiles. Poll GET /actions/{opId}.\n"
+                + "6. GET /guide for game rules.\n"
+                + "7. Use GET /events/wait?since=N&timeoutMs=15000&types=... to wait for events; timedOut=true means no event.\n"
+                + "8. If context paused=true, the player paused the game: do not issue actions and never unpause it yourself.\n"
+                + "9. Use the returned dataToken (not sessionToken) with GET /data/map/latest; write large files to disk. dataToken expires; use POST /session/data-token to rotate it, and use ETag/If-None-Match for maps.\n"
                 + "The bootstrap token is single-use. Everything expires when the game closes.\n";
     }
 
@@ -3131,6 +3134,12 @@ public class ProbeMod extends Mod {
                     }
                 } else {
                     sendText(exchange, 404, "not found", "text/plain", false);
+                    return;
+                }
+
+                String ifNoneMatch = exchange.getRequestHeaders().getFirst("If-None-Match");
+                if (ifNoneMatch != null && ifNoneMatch.equals(etag)) {
+                    exchange.sendResponseHeaders(304, -1);
                     return;
                 }
 

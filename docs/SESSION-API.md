@@ -200,6 +200,9 @@ POST /cancel
 }
 ```
 
+`move_to` / `get_area` 的 `x/y` 是世界像素坐标（8 px = 1 tile），`mine`/`build`/
+`configure`/`deconstruct` 的 `x/y` 是 tile 坐标；session prompt 和 `/tools` 都标了单位。
+
 返回：
 
 ```json
@@ -224,9 +227,9 @@ GET /data/events/{revision}/page/{cursor}
 特点：
 
 - 二进制/NDJSON，不包成 MCP JSON。
-- 支持 `Content-Length`、`Content-Range`、`ETag`/revision。
+- 支持 `Content-Length`、`Content-Range`、`ETag`/revision；`If-None-Match` 命中返回 `304`。
 - token 用 header，不放 URL。
-- `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`）；`/data` 只接受 data token，控制面只接受 session token。
+- `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`、`modVersion`）；`/data` 只接受 data token，控制面只接受 session token。
 - `POST /session/data-token` 用 session token 轮换 data token；旧 data token 立即 401。
 - 旧的 `dataToken` 仍可访问本地 `46501`；session server `/data` 使用同一个 data token，不做控制面越权。
 - manifest 的 `access.baseUrl` 按请求 Host 返回，LAN 客户端拿到的是 `http://<host>:47600/data`。
@@ -524,10 +527,11 @@ tools 200 10
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
+timeout data failed timeout false
 emit 200
 events wait 200 1 false false
 events timeout 200 true
-data map 200 524304 MND1 sessionData 401 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
+data map 200 524304 MND1 sessionData 401 etag 304 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
 guide 200 # Mindustry AI session
 data token refresh 200 true
 data token rotation 401 200

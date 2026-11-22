@@ -202,7 +202,8 @@ MCP server（Node/TypeScript）
 
 参数：`{ "x": 20, "y": 20, "radius": 6, "maxTiles": 256 }`。
 
-只读 bounded tile window，供没有代码执行能力的 host 使用：
+只读 bounded window，供没有代码执行能力的 host 使用。`x/y` 是**世界像素坐标**
+（8 px = 1 tile），返回的 tile 条目是 tile 坐标；不返回全图：
 - `radius` 以 tile 为单位，最大 24
 - 默认最多 256 个 tile，最大 512
 - 返回 `{x,y,radius,tiles:[{x,y,block,team,drop?,solid,items?,ammoTotal?}],truncated}`
@@ -220,7 +221,7 @@ MCP server（Node/TypeScript）
 
 ### `get_action_result`
 
-参数：`{ "opId": "op-12", "waitMs": 0 }`。返回 `ActionResult`。
+参数：`{ "opId": "op-12", "waitMs": 0 }`。返回 `ActionResult`。失败时 `data` 保留失败原因（如 `code=timeout`），并带 `paused` 表示当前游戏是否暂停；暂停时 op 可能保持 `running`，客户端必须结合 `paused` 判断。
 
 ### `get_action_log`
 
@@ -237,7 +238,7 @@ MCP server（Node/TypeScript）
 
 ### 单位
 
-- `move_to { x, y, arriveRadius?, timeoutTicks? }`；`timeoutTicks` 超时后 op `failed`，`data.code=timeout`。
+- `move_to { x, y, arriveRadius?, timeoutTicks? }`；`x/y` 是世界像素坐标（8 px = 1 tile），不是 tile；`timeoutTicks` 超时后 op `failed`，`data.code=timeout`。
 - `attack { target: { unitId? | buildingId? | x?, y? }, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `follow { unitId, distance?, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `mine { x, y, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。

@@ -250,10 +250,10 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
     "get_area",
     {
       description:
-        "Read a bounded tile window for hosts without code execution. Returns block/team/drop/solid per tile, never the full map.",
+        "Read a bounded window around world coordinates in pixels (8 px per tile); returns tile coordinates. Never returns the full map.",
       inputSchema: {
-        x: z.number(),
-        y: z.number(),
+        x: z.number().describe("world x in pixels"),
+        y: z.number().describe("world y in pixels"),
         radius: z.number().int().positive().max(24),
         maxTiles: z.number().int().positive().max(512).optional(),
       },
@@ -300,10 +300,10 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   server.registerTool(
     "move_to",
     {
-      description: "Move the assistant body to a tile coordinate. Returns an operation to poll.",
+      description: "Move the assistant body to world coordinates in pixels (8 px per tile). Returns an operation to poll.",
       inputSchema: {
-        x: z.number(),
-        y: z.number(),
+        x: z.number().describe("world x in pixels"),
+        y: z.number().describe("world y in pixels"),
         arriveRadius: z.number().positive().optional(),
         timeoutTicks: z.number().int().min(0).max(1200).optional(),
       },

@@ -55,6 +55,24 @@ for (let i = 0; i < 30; i++) {
 }
 console.log("result", result.status, result.body.status, result.body.data?.code ?? result.body.data?.distance ?? "");
 
+const timeoutMove = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({
+    kind: "move_to",
+    x: Number(context.body.assistant?.x ?? 0) + 120,
+    y: Number(context.body.assistant?.y ?? 0),
+    timeoutTicks: 1,
+  }),
+});
+let timeoutResult;
+for (let i = 0; i < 30; i++) {
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  timeoutResult = await call(`/actions/${timeoutMove.body.opId}`, { headers: auth });
+  if (timeoutResult.body.status && timeoutResult.body.status !== "running") break;
+}
+console.log("timeout data", timeoutResult.body.status, timeoutResult.body.data?.code, timeoutResult.body.paused);
+
 const since = Number(context.body.eventsSince ?? 0);
 const waitPromise = call(`/events/wait?since=${since}&timeoutMs=3000&types=test`, { headers: auth });
 await new Promise((resolve) => setTimeout(resolve, 100));
@@ -70,6 +88,10 @@ const waitTimeout = await call(`/events/wait?since=${waited.body.next}&timeoutMs
 console.log("events timeout", waitTimeout.status, waitTimeout.body.timedOut);
 
 const map = await fetch(`${base}/data/map/latest`, { headers: dataAuth });
+const mapEtag = map.headers.get("etag");
+const conditionalMap = await fetch(`${base}/data/map/latest`, {
+  headers: { ...dataAuth, "if-none-match": mapEtag },
+});
 const sessionMap = await fetch(`${base}/data/map/latest`, { headers: auth });
 const mapBytes = Buffer.from(await map.arrayBuffer());
 fs.writeFileSync("/tmp/mindustry-session-map.bin", mapBytes);
@@ -84,6 +106,7 @@ console.log(
   "data",
   "map", map.status, mapBytes.length, mapBytes.subarray(0, 4).toString("ascii"),
   "sessionData", sessionMap.status,
+  "etag", conditionalMap.status,
   "range", range.status, rangeBytes.length, range.headers.get("content-range"),
   "manifest", manifest.status, manifest.body.access?.baseUrl,
   "events", events.status, eventsBody.split("\n").filter(Boolean).length,
@@ -108,9 +131,11 @@ if (context.status !== 200 || action.status !== 200 || result.status !== 200 || 
 }
 if (tools.status !== 200 || tools.body.tools?.length !== 10) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
+if (conditionalMap.status !== 304) process.exit(1);
 if (sessionMap.status !== 401) process.exit(1);
 if (manifest.status !== 200 || events.status !== 200) process.exit(1);
 if (second.status !== 401) process.exit(1);
 if (refreshed.status !== 200 || oldData.status !== 401 || freshData.status !== 200) process.exit(1);
 if (waited.status !== 200 || !waited.body.events?.length || waited.body.timedOut) process.exit(1);
 if (waitTimeout.status !== 200 || !waitTimeout.body.timedOut) process.exit(1);
+if (timeoutResult.body.status !== "failed" || timeoutResult.body.data?.code !== "timeout" || timeoutResult.body.paused !== false) process.exit(1);
