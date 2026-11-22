@@ -307,6 +307,7 @@ public class ProbeMod extends Mod {
         wonState = Vars.state.won;
         detectPauseChange();
         if (!pausedState) ensureAssistant();
+        cleanupStrayAssistantBodies();
 
         long tick = (long) Vars.state.tick;
         if (mapSnapshotNeeded(tick)) {
@@ -538,6 +539,20 @@ public class ProbeMod extends Mod {
                     if (op.targetUnit != null && controller.followTarget == op.targetUnit) controller.followTarget = null;
                 }
             }
+        }
+    }
+
+    private void cleanupStrayAssistantBodies() {
+        if (assistant == null) return;
+        Seq<Unit> stray = new Seq<>();
+        for (Unit candidate : Groups.unit) {
+            if (candidate != assistant && candidate.controller() instanceof ProbeController) stray.add(candidate);
+        }
+        for (Unit candidate : stray) {
+            // Only one ProbeController body may exist. A second one is a
+            // stale body from an aborted possess/respawn; remove it.
+            Log.warn("[ai-probe] removing stray assistant body id=" + candidate.id);
+            candidate.remove();
         }
     }
 
@@ -1697,6 +1712,14 @@ public class ProbeMod extends Mod {
                 return;
             }
             if (possessing) {
+                Unit borrowed = assistant;
+                if (borrowed != null) {
+                    if (savedController != null) {
+                        borrowed.controller(savedController);
+                    } else {
+                        borrowed.controller(new IdleController());
+                    }
+                }
                 possessing = false;
                 savedController = null;
                 assistant = null;
@@ -2458,6 +2481,22 @@ public class ProbeMod extends Mod {
                     .put("itemAmount", assistant.stack == null ? 0 : assistant.stack.amount);
         }
         data.put("assistant", assistantJson);
+
+        Jval assistantBodies = Jval.newArray();
+        for (Unit candidate : Groups.unit) {
+            if (!(candidate.controller() instanceof ProbeController)) continue;
+            assistantBodies.add(Jval.newObject()
+                    .put("id", candidate.id)
+                    .put("type", candidate.type.name)
+                    .put("team", candidate.team.id)
+                    .put("x", candidate.x)
+                    .put("y", candidate.y)
+                    .put("health", candidate.health)
+                    .put("dead", candidate.dead)
+                    .put("isHome", !possessing && candidate == homeBody)
+                    .put("controller", candidate.controller().getClass().getSimpleName()));
+        }
+        data.put("assistantBodies", assistantBodies);
 
         Jval resources = Jval.newObject();
         Jval resourceCapacity = Jval.newObject();

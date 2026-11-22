@@ -159,7 +159,7 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 
 ### 控制面（小 JSON）
 
-`/context` 摘要包含 `resourceCapacity`、`resourcesFull` 和 core `items`/`itemCapacity`。
+`/context` 摘要包含 `resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。
 
 ```text
 POST /session

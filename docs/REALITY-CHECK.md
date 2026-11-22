@@ -145,3 +145,5 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 仍未完成：`deconstruct`/`repair`/`cancel`、`follow` 稳定验收、真实事件日志。
 - 版本基线默认 v160.8；BEK/MindustryX 的 v154 代码只作参考，不作为主干。
 - 不要直接用服务端 `js` 当生产接口；probe 只是过渡验证。
+
+- 助手身份诊断（2026-11-22）：`get_context.assistantBodies` 只扫描 `ProbeController`；实机观察到的多个 alpha 中，只有当前助手是 ProbeController，其他是玩家身体（Player）或普通 CommandAI。`respawn` while possessing 会先恢复借体控制器再生成新 home；`cleanupStrayAssistantBodies` 会清理遗留的 ProbeController 身体。
