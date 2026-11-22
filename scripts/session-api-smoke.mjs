@@ -62,7 +62,16 @@ console.log("reused bootstrap", second.status);
 const auth = { ...headers, authorization: `Bearer ${first.body.sessionToken}` };
 const dataAuth = { ...headers, authorization: `Bearer ${first.body.dataToken}` };
 const tools = await call("/tools", { headers: auth });
-console.log("tools", tools.status, tools.body.tools?.length);
+const expectedTools = [
+  "get_context", "get_area", "get_tile", "query_area", "get_unit", "list_unit_types",
+  "move_to", "attack", "mine", "build_plan", "withdraw", "deposit", "configure",
+  "deconstruct", "repair", "set_stance", "release", "follow",
+  "get_action_result", "cancel", "stop",
+];
+const toolNames = new Set((tools.body.tools ?? []).map((tool) => tool.name));
+const missingTools = expectedTools.filter((name) => !toolNames.has(name));
+console.log("tools", tools.status, tools.body.tools?.length, "missing", missingTools.join(",") || "none");
+if (tools.status !== 200 || missingTools.length > 0) process.exit(1);
 const forbidden = await call("/actions", {
   method: "POST",
   headers: auth,

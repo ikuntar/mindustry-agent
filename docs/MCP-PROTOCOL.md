@@ -63,6 +63,7 @@ MCP server（Node/TypeScript）
 | `no_core` | 没有可重生核心 |
 | `queue_full` | 动作队列满 |
 | `op_not_found` | opId 不存在/过期 |
+| `op_capacity` | 活跃 op 达到 256 上限，拒绝新动作（HTTP 503） |
 | `internal_error` | 未预期错误 |
 
 ---

@@ -334,6 +334,8 @@ public class ProbeMod extends Mod {
             }
             try {
                 handle(command);
+            } catch (OpCapacityException capacity) {
+                replyError(command, "op_capacity", "Too many live game operations");
             } catch (Throwable error) {
                 Log.err("[ai-probe] command failed", error);
                 replyError(command, "internal_error", "internal game command failed");
@@ -726,6 +728,14 @@ public class ProbeMod extends Mod {
             String supplied = request.getString("writerToken", "");
             if (writerToken.isEmpty() || !writerToken.equals(supplied) || System.currentTimeMillis() >= writerExpires) {
                 replyError(command, "writer_required", "A writer lease is required for this operation");
+                return;
+            }
+        }
+
+        if (opNeedsCapacity(op)) {
+            pruneOps();
+            if (ops.size() >= MAX_OPS) {
+                replyError(command, "op_capacity", "Too many live game operations");
                 return;
             }
         }
@@ -2307,6 +2317,21 @@ public class ProbeMod extends Mod {
         replyError(command, "bad_request", "Unknown op " + op);
     }
 
+    private boolean opNeedsCapacity(String op) {
+        switch (op) {
+            case "move_to":
+            case "attack":
+            case "mine":
+            case "build":
+            case "deconstruct":
+            case "repair":
+            case "follow":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private boolean isReadOnlyOp(String op) {
         switch (op) {
             case "hello":
@@ -2415,6 +2440,7 @@ public class ProbeMod extends Mod {
 
     private Op newOp(String kind) {
         pruneOps();
+        if (ops.size() >= MAX_OPS) throw new OpCapacityException();
         Op op = new Op();
         op.id = "op-" + (++opSeq);
         op.kind = kind;
@@ -2435,7 +2461,7 @@ public class ProbeMod extends Mod {
                 }
             }
             // Never evict a live op: clients would get op_not_found for a valid
-            // running operation. If every slot is live, allow temporary growth.
+            // running operation. If every slot is live, newOp rejects with 503.
             if (terminal == null) return;
             ops.remove(terminal.id);
         }
@@ -2451,6 +2477,8 @@ public class ProbeMod extends Mod {
                 .put("worldWidth", Vars.world.width())
                 .put("worldHeight", Vars.world.height())
                 .put("wave", Vars.state.wave)
+                .put("wavetime", Vars.state.wavetime)
+                .put("waveTimer", Vars.state.rules.waveTimer)
                 .put("enemies", Vars.state.enemies)
                 .put("team", team.id)
                 .put("teamName", team.name)
@@ -3364,6 +3392,10 @@ public class ProbeMod extends Mod {
         switch (op) {
             case "get_context":
             case "get_area":
+            case "get_tile":
+            case "query_area":
+            case "get_unit":
+            case "list_unit_types":
             case "move_to":
             case "attack":
             case "mine":
@@ -3371,6 +3403,11 @@ public class ProbeMod extends Mod {
             case "withdraw":
             case "deposit":
             case "configure":
+            case "deconstruct":
+            case "repair":
+            case "set_stance":
+            case "release":
+            case "follow":
             case "get_action_result":
             case "cancel":
             case "stop":
@@ -3549,7 +3586,7 @@ public class ProbeMod extends Mod {
             String code = error == null ? "error" : error.getString("code", "error");
             if ("unauthorized".equals(code)) status = 401;
             else if ("not_found".equals(code) || "unit_not_found".equals(code) || "building_not_found".equals(code)) status = 404;
-            else if ("no_world".equals(code)) status = 503;
+            else if ("no_world".equals(code) || "op_capacity".equals(code)) status = 503;
             body = (error == null ? response : error).toString(Jval.Jformat.plain);
         }
         if (cacheKey != null && status < 500) {
@@ -3696,6 +3733,30 @@ public class ProbeMod extends Mod {
                         .put("radius", property("number").put("maximum", 24))
                         .put("maxTiles", property("integer").put("maximum", 512)),
                         Jval.newArray().add("x").add("y").add("radius"))));
+        tools.add(tool("get_tile",
+                "Read one tile in tile coordinates, including block, team, drop, health, rotation, items and config.",
+                inputSchema(Jval.newObject()
+                        .put("x", property("integer").put("description", "tile x"))
+                        .put("y", property("integer").put("description", "tile y")),
+                        Jval.newArray().add("x").add("y"))));
+        tools.add(tool("query_area",
+                "Read units and buildings within a radius around world coordinates in pixels (8 px per tile).",
+                inputSchema(Jval.newObject()
+                        .put("x", property("number").put("description", "world x in pixels"))
+                        .put("y", property("number").put("description", "world y in pixels"))
+                        .put("radius", property("number").put("description", "radius in pixels"))
+                        .put("includeUnits", property("boolean"))
+                        .put("includeBuildings", property("boolean"))
+                        .put("includeEnemies", property("boolean")),
+                        Jval.newArray().add("x").add("y"))));
+        tools.add(tool("get_unit",
+                "Read one unit by unitId, including controller and cargo.",
+                inputSchema(Jval.newObject()
+                        .put("unitId", property("integer")),
+                        Jval.newArray().add("unitId"))));
+        tools.add(tool("list_unit_types",
+                "List unit type names and ids available in this game.",
+                inputSchema(Jval.newObject(), Jval.newArray())));
         tools.add(tool("move_to",
                 "Move the assistant body to world coordinates in pixels (8 px per tile); returns an opId.",
                 inputSchema(Jval.newObject()
@@ -3760,6 +3821,44 @@ public class ProbeMod extends Mod {
                         .put("y", property("integer"))
                         .put("value", Jval.newObject()),
                         Jval.newArray().add("x").add("y").add("value"))));
+        tools.add(tool("deconstruct",
+                "Deconstruct buildings at tile coordinates; returns an opId.",
+                inputSchema(Jval.newObject()
+                        .put("targets", Jval.newObject()
+                                .put("type", "array")
+                                .put("items", Jval.newObject()
+                                        .put("type", "object")
+                                        .put("properties", Jval.newObject()
+                                                .put("x", property("integer"))
+                                                .put("y", property("integer")))))
+                        .put("timeoutTicks", property("integer").put("maximum", 1200)),
+                        Jval.newArray().add("targets"))));
+        tools.add(tool("repair",
+                "Repair a same-team damaged building by buildingId or tile coordinates.",
+                inputSchema(Jval.newObject()
+                        .put("buildingId", property("integer"))
+                        .put("x", property("integer"))
+                        .put("y", property("integer"))
+                        .put("timeoutTicks", property("integer").put("maximum", 1200)),
+                        Jval.newArray())));
+        tools.add(tool("set_stance",
+                "Set a UnitStance on same-team CommandAI units.",
+                inputSchema(Jval.newObject()
+                        .put("stance", property("string"))
+                        .put("unitIds", Jval.newObject()
+                                .put("type", "array")
+                                .put("items", property("integer"))),
+                        Jval.newArray().add("stance").add("unitIds"))));
+        tools.add(tool("release",
+                "Release a possessed body; it returns to its AI controller and a new home body spawns at a core.",
+                inputSchema(Jval.newObject(), Jval.newArray())));
+        tools.add(tool("follow",
+                "Follow a unit by unitId at an optional distance in pixels.",
+                inputSchema(Jval.newObject()
+                        .put("unitId", property("integer"))
+                        .put("distance", property("number"))
+                        .put("timeoutTicks", property("integer").put("maximum", 1200)),
+                        Jval.newArray().add("unitId"))));
         tools.add(tool("get_action_result",
                 "Get or briefly wait for an action result by opId.",
                 inputSchema(Jval.newObject()
@@ -4172,6 +4271,12 @@ public class ProbeMod extends Mod {
             } catch (IOException error) {
                 Log.err("[ai-probe] write failed", error);
             }
+        }
+    }
+
+    private static final class OpCapacityException extends RuntimeException {
+        OpCapacityException() {
+            super("too many live operations");
         }
     }
 

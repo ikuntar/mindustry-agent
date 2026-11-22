@@ -5,6 +5,7 @@ const TRANSIENT = new Set([
   "probe_closed",
   "timeout",
   "busy",
+  "op_capacity",
   "rate_limited",
   "temporarily_unavailable",
 ]);
