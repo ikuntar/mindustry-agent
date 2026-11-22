@@ -2794,6 +2794,43 @@ public class ProbeMod extends Mod {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
+            if ("/".equals(path)) {
+                if (!"GET".equals(method)) {
+                    sendText(exchange, 405, "method not allowed", "text/plain", false);
+                    return;
+                }
+                if (!sessionAuthorized(exchange)) {
+                    sendText(exchange, 401, "unauthorized", "text/plain", false);
+                    return;
+                }
+                Jval index = Jval.newObject()
+                        .put("apiVersion", 1)
+                        .put("modVersion", VERSION)
+                        .put("guideVersion", 2)
+                        .put("control", Jval.newArray()
+                                .add("/session")
+                                .add("/context")
+                                .add("/capabilities")
+                                .add("/content")
+                                .add("/guide")
+                                .add("/tools")
+                                .add("/actions")
+                                .add("/actions/{opId}")
+                                .add("/events/wait")
+                                .add("/cancel")
+                                .add("/stop")
+                                .add("/session/data-token")
+                                .add("/mcp"))
+                        .put("data", Jval.newArray()
+                                .add("/data/manifest/latest")
+                                .add("/data/map/latest")
+                                .add("/data/map/{revision}")
+                                .add("/data/map/{revision}/chunk/{x}/{y}")
+                                .add("/data/events/latest")
+                                .add("/data/events/{revision}/page/{cursor}"));
+                sendText(exchange, 200, index.toString(Jval.Jformat.plain), "application/json", false);
+                return;
+            }
             if ("/guide".equals(path)) {
                 if (!"GET".equals(method)) {
                     sendText(exchange, 405, "method not allowed", "text/plain", false);
@@ -3608,7 +3645,7 @@ public class ProbeMod extends Mod {
         StringBuilder guide = new StringBuilder(gameGuide());
         if ("build".equals(topic)) {
             guide.append(System.lineSeparator())
-                    .append("Build: rotation is clockwise; use canvas.get_tile/get_config_schema; build_plan supports placements and/or deconstruct.")
+                    .append("Build: rotation is clockwise; use get_tile to inspect block/config and configure to change it; build_plan supports placements and/or deconstruct.")
                     .append(System.lineSeparator());
         } else if ("economy".equals(topic)) {
             guide.append(System.lineSeparator())

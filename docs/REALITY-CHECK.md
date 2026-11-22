@@ -151,3 +151,5 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 存档/读档（2026-11-22）：助手 home body 会随 unit 保存；旧实现读档后 `reset()` 清空指针但保留旧单位，再 spawn 新 home，累积 alpha。现在 spawn 时写 `Unit.flag=ASSISTANT_FLAG`，world load 先按 flag 删除旧 home，再生成；`cleanupStrayAssistantBodies` 也识别 flag。
 
 - issue #25/#26（2026-11-22）：会话 `tools` 从 12 扩到 21，补 `get_tile/query_area/get_unit/list_unit_types/deconstruct/repair/set_stance/release/follow`；`context` 增加 `wavetime/waveTimer`。`newOp` 在 256 个活跃 op 时返回 `op_capacity`，session 映射 503，避免 ops 无上限增长。
+
+- issue #27（2026-11-22）：新增鉴权后的 `GET /` 端点索引；`?topic=build` 改为引用 `get_tile`/`configure`，不再出现 `canvas.`/`get_config_schema`；SESSION-API 数据面补充 `drop_id=0 或 item.id+1` 与 `dropIds` 解码说明。

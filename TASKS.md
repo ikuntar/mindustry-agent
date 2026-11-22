@@ -146,6 +146,7 @@
 - [x] 21 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
 - [x] issue #25：guide 引用的 `get_tile/query_area/deconstruct/repair/set_stance/release/follow` 已纳入 session `/tools`；`wavetime/waveTimer` 已加入 context
 - [x] issue #26：活跃 op 达到 `MAX_OPS=256` 时返回 `op_capacity`（HTTP 503），不再无上限增长
+- [x] issue #27：`GET /` 端点索引；build topic 修正；SESSION-API 补 drop_id 编码
 - [x] session prompt 先给出 `GET /tools`，再给动作示例
 - [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt

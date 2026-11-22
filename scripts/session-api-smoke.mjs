@@ -61,6 +61,15 @@ console.log("reused bootstrap", second.status);
 
 const auth = { ...headers, authorization: `Bearer ${first.body.sessionToken}` };
 const dataAuth = { ...headers, authorization: `Bearer ${first.body.dataToken}` };
+const index = await call("/", { headers: auth });
+console.log("index", index.status, index.body.control?.length, index.body.data?.length);
+if (index.status !== 200 || !Array.isArray(index.body.control) || !Array.isArray(index.body.data)) process.exit(1);
+
+const guideBuild = await call("/guide?topic=build", { headers: auth });
+const guideText = String(guideBuild.body);
+console.log("guide build", guideBuild.status, guideText.includes("get_config_schema") || guideText.includes("canvas."));
+if (guideBuild.status !== 200 || guideText.includes("get_config_schema") || guideText.includes("canvas.")) process.exit(1);
+
 const tools = await call("/tools", { headers: auth });
 const expectedTools = [
   "get_context", "get_area", "get_tile", "query_area", "get_unit", "list_unit_types",

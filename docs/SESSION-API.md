@@ -140,7 +140,7 @@ Do this for this game session only:
 1. POST /session with the bootstrap token and keep the returned session token.
 2. GET /context?detail=summary to inspect the game.
 3. Use POST /actions for writes; poll GET /actions/{opId} until done/failed.
-4. GET /guide?topic=basics for game rules.
+4. GET /guide for complete game rules; optional GET /guide?topic=build or topic=economy for a short checklist.
 5. Do not use mock state. Do not ask questions. The token is valid only while
    this game is running.
 
@@ -163,10 +163,11 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 
 ```text
 POST /session
+GET  /
 GET  /context?detail=summary|full&radius=...&since=...
 GET  /capabilities
 GET  /content?type=units|blocks|items
-GET  /guide?topic=basics
+GET  /guide?topic=build|economy
 GET  /events/wait?since=N&timeoutMs=15000&types=...&limit=...
 GET  /actions/{opId}
 POST /actions
@@ -225,6 +226,16 @@ campaign 未解锁返回 `block_locked`。
 { "opId": "op-1", "status": "running" }
 ```
 
+`GET /` 返回控制面/数据面端点索引（需要 session token）：
+
+```json
+{
+  "apiVersion": 1,
+  "control": ["/session", "/context", "/capabilities", "/content", "/guide", "/tools", "/actions", "/actions/{opId}", "/events/wait", "/cancel", "/stop", "/session/data-token", "/mcp"],
+  "data": ["/data/manifest/latest", "/data/map/latest", "/data/map/{revision}", "/data/map/{revision}/chunk/{x}/{y}", "/data/events/latest", "/data/events/{revision}/page/{cursor}"]
+}
+```
+
 小结果直接 JSON；不要返回全图。
 
 ### 数据面（大结果）
@@ -244,6 +255,7 @@ GET /data/events/{revision}/page/{cursor}
 
 - 二进制/NDJSON，不包成 MCP JSON。
 - 支持 `Content-Length`、`Content-Range`、`ETag`/revision；`If-None-Match` 命中返回 `304`。
+- raw 地图层 `drop_id` 的编码是 `0=无矿，item.id+1=该物品`；例如 copper 的 `drop_id=1`。客户端必须用 manifest 的 `schema.items` / `schema.dropIds` 解码，不能把 `drop_id == item.id` 当作矿。
 - token 用 header，不放 URL。
 - `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`、`modVersion`）；`/data` 只接受 data token，控制面只接受 session token。
 - `POST /session/data-token` 用 session token 轮换 data token；旧 data token 立即 401。
@@ -285,8 +297,8 @@ curl -fsS -H "Authorization: Bearer ***" \
    - 写动作异步，轮询
    - 不要使用 mock
 2. **按需 guide**
-   - `GET /guide?topic=basics`
-   - 主题：basics/actions/economy/defense/campaign/safety
+   - `GET /guide?topic=build|economy`
+   - 当前实现主题：build/economy；guide 正文本身已覆盖完整游戏知识
    - 后续可映射成 MCP resources `mindustry://guide/*`
 3. **任务模板（可选）**
    - MCP prompts：`play-campaign`、`defend-core` 等
@@ -511,6 +523,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
 - `POST /actions`：接受 `{kind,...}` 或 `{op,...}`，入队到现有 `handle`，
   返回 `opId`；支持已有动作，不复制游戏逻辑
 - `GET /actions/{opId}`：入队 `get_action_result`
+- `GET /`：控制面/数据面端点索引
 - `GET /guide`：完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 mod jar）
 - `GET /tools`：21 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
