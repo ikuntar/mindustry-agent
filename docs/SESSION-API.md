@@ -176,6 +176,7 @@ POST /cancel
 - 如果 `since` 之后已有匹配事件，立即返回
 - 否则阻塞到事件到达或 `timeoutMs` 到期
 - `timeoutMs` 上限 30000ms；客户端 socket 超时应大于它
+- 命令队列超时：游戏线程未取到命令时返回 `503 not_executed`（可安全重试）；已开始执行但 5s 未完成返回 `504 execution_unknown`（不可假定未执行，重试必须带同一 `idempotencyKey`）；未开始的命令标记 cancelled，不会再执行。
 - `types` 用逗号分隔；省略表示不过滤
 - 返回 `events`、`next`、`dropped`、`hasMore`、`timedOut`、`paused`、`gameOver`、`won`
 - `timedOut=true` 不是失败，只表示本次没有事件

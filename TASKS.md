@@ -154,6 +154,8 @@
 - [x] world reload 保留 sessionToken；bootstrap 仅在已使用后轮换
 - [x] build/build_plan 不再把“已入队”当“已落地”：campaign 未解锁返回 `block_locked`，build op 运行到目标 tile 出现；计划被引擎丢弃 `build_dropped`；Ground Zero fixture 显式 unlock
 - [x] 动作状态一致性审计：`deconstruct`/`repair`/`mine` 不再假成功；`configure` 回读；`stop`/`cancel` 清理全部目标；助手换体/死亡旧 op 失败 `assistant_gone`；`command_units` 目标不存在失败
+- [x] HTTP 会话入口加固：`/context` query 白名单、`/mcp` tools/call 白名单、`build_plan` MCP 路径；畸形请求 400、socket 关闭、accept 异常继续、连接上限/header 上限、chunked 拒绝
+- [x] 命令超时取消：未取到命令 503 `not_executed` 且不执行；已开始 504 `execution_unknown`；`eventSeq`/`mapRevision` volatile，Host 不回显
 - [x] 自定义 `ai.probe.http` ServerSocket HTTP server：移除 `com.sun.net.httpserver`；桌面 `/session`、`/data`、`/mcp` 回归通过
 - [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
 - [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）

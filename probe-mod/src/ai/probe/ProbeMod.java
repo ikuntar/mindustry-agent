@@ -117,7 +117,7 @@ public class ProbeMod extends Mod {
     private String writerClient = "";
     private long writerExpires = 0;
     private final Map<Long, MapSnapshot> mapSnapshots = new LinkedHashMap<>();
-    private long mapRevision = 0;
+    private volatile long mapRevision = 0;
     private long lastMapCaptureTick = -1;
     private final String dataBaseUrl = System.getenv().getOrDefault(
             "PROBE_DATA_BASE", "http://127.0.0.1:" + DATA_PORT + "/data");
@@ -127,8 +127,10 @@ public class ProbeMod extends Mod {
     private boolean lastPaused = false;
     private boolean pauseKnown = false;
     private volatile boolean pausedState = false;
+    private volatile boolean gameOverState = false;
+    private volatile boolean wonState = false;
     private final Seq<Jval> eventLog = new Seq<>();
-    private long eventSeq = 0;
+    private volatile long eventSeq = 0;
     private Unit assistant;
     private Unit homeBody;
     private UnitController savedController;
@@ -290,6 +292,8 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        gameOverState = Vars.state.gameOver;
+        wonState = Vars.state.won;
         detectPauseChange();
         if (!pausedState) ensureAssistant();
 
@@ -301,6 +305,18 @@ public class ProbeMod extends Mod {
         for (int i = 0; i < 50; i++) {
             Command command = queue.poll();
             if (command == null) break;
+            synchronized (command) {
+                if (command.cancelled) {
+                    command.send(Jval.newObject()
+                            .put("id", command.request.getInt("id", 0))
+                            .put("ok", false)
+                            .put("error", Jval.newObject()
+                                    .put("code", "not_executed")
+                                    .put("message", "Command timed out before the game thread picked it up")));
+                    continue;
+                }
+                command.started = true;
+            }
             try {
                 handle(command);
             } catch (Throwable error) {
@@ -2615,9 +2631,9 @@ public class ProbeMod extends Mod {
     }
 
     private String requestDataBaseUrl(HttpExchange exchange) {
-        String host = exchange.getRequestHeaders().getFirst("Host");
-        if (host == null || host.trim().isEmpty()) return preferredSessionUrl() + "/data";
-        return "http://" + host + "/data";
+        // Never reflect the client-controlled Host header into a URL that the
+        // harness may paste into a prompt or reuse as a data endpoint.
+        return preferredSessionUrl() + "/data";
     }
 
     private boolean sessionAuthorized(HttpExchange exchange) {
@@ -2727,6 +2743,10 @@ public class ProbeMod extends Mod {
                         int eq = pair.indexOf('=');
                         if (eq <= 0) continue;
                         String key = pair.substring(0, eq);
+                        if (!contextQueryAllowed(key)) {
+                            sendText(exchange, 400, "invalid query parameter: " + key, "text/plain", false);
+                            return;
+                        }
                         String value = pair.substring(eq + 1);
                         try {
                             request.put(key, Integer.parseInt(value));
@@ -2912,7 +2932,36 @@ public class ProbeMod extends Mod {
                 Jval arguments = params == null ? null : params.get("arguments");
                 if (name.isEmpty()) {
                     response.put("error", Jval.newObject().put("code", -32602).put("message", "missing tool name"));
+                } else if (!sessionActionAllowed(name)) {
+                    response.put("error", Jval.newObject().put("code", -32602).put("message", "tool is not exposed through the session API: " + name));
                 } else {
+                    if ("build_plan".equals(name)) {
+                        Jval payload;
+                        try {
+                            payload = executeBuildPlan(arguments == null || !arguments.isObject()
+                                    ? Jval.newObject()
+                                    : Jval.read(arguments.toString(Jval.Jformat.plain)));
+                        } catch (CommandTimeoutException timeout) {
+                            response.put("error", Jval.newObject()
+                                    .put("code", -32000)
+                                    .put("message", timeout.started
+                                            ? "game command execution unknown after 5s"
+                                            : "game command not executed after 5s"));
+                            sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
+                            return;
+                        }
+                        boolean failed = payload.get("status") != null && "failed".equals(payload.getString("status", ""));
+                        if (payload.get("code") != null) failed = true;
+                        Jval result = Jval.newObject()
+                                .put("content", Jval.newArray().add(Jval.newObject()
+                                        .put("type", "text")
+                                        .put("text", (failed && payload.get("error") != null
+                                                ? payload.get("error") : payload).toString(Jval.Jformat.plain))))
+                                .put("isError", failed);
+                        response.put("result", result);
+                        sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
+                        return;
+                    }
                     Jval actionRequest = arguments == null || !arguments.isObject()
                             ? Jval.newObject()
                             : Jval.read(arguments.toString(Jval.Jformat.plain));
@@ -2920,6 +2969,17 @@ public class ProbeMod extends Mod {
                     Jval command;
                     try {
                         command = runGameCommand(actionRequest);
+                    } catch (CommandTimeoutException timeout) {
+                        response.put("error", Jval.newObject()
+                                .put("code", -32000)
+                                .put("message", timeout.started
+                                        ? "game command execution unknown after 5s"
+                                        : "game command not executed after 5s")
+                                .put("data", Jval.newObject()
+                                        .put("code", timeout.started ? "execution_unknown" : "not_executed")
+                                        .put("retryable", !timeout.started)));
+                        sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
+                        return;
                     } catch (Throwable error) {
                         response.put("error", Jval.newObject().put("code", -32603).put("message", "game command timed out"));
                         sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
@@ -2954,8 +3014,18 @@ public class ProbeMod extends Mod {
 
     private Jval runGameCommand(Jval request) throws Exception {
         CompletableFuture<Jval> future = new CompletableFuture<>();
-        queue.add(new Command(request, future::complete));
-        return future.get(5, TimeUnit.SECONDS);
+        Command command = new Command(request, future::complete);
+        queue.add(command);
+        try {
+            return future.get(5, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.TimeoutException error) {
+            boolean started;
+            synchronized (command) {
+                started = command.started;
+                if (!started) command.cancelled = true;
+            }
+            throw new CommandTimeoutException(started);
+        }
     }
 
     private void handleEventWait(HttpExchange exchange) throws Exception {
@@ -3035,10 +3105,24 @@ public class ProbeMod extends Mod {
                 .put("timedOut", timedOut)
                 .put("timeoutMs", timeoutMs)
                 .put("paused", pausedState)
-                .put("gameOver", Vars.state.gameOver)
-                .put("won", Vars.state.won)
+                .put("gameOver", gameOverState)
+                .put("won", wonState)
                 .put("eventSeq", eventSeq);
         sendText(exchange, 200, response.toString(Jval.Jformat.plain), "application/json", false);
+    }
+
+    private boolean contextQueryAllowed(String key) {
+        switch (key) {
+            case "detail":
+            case "radius":
+            case "since":
+            case "includeEnemies":
+            case "maxUnits":
+            case "maxBytes":
+                return true;
+            default:
+                return false;
+        }
     }
 
     private boolean sessionActionAllowed(String op) {
@@ -3060,16 +3144,20 @@ public class ProbeMod extends Mod {
     }
 
     private void handleBuildPlan(HttpExchange exchange, Jval request) throws Exception {
+        Jval payload = executeBuildPlan(request);
+        int status = payload.get("code") != null ? 400 : 200;
+        sendText(exchange, status, payload.toString(Jval.Jformat.plain), "application/json", false);
+    }
+
+    private Jval executeBuildPlan(Jval request) throws Exception {
         Jval placements = request.get("placements");
         Jval deconstruct = request.get("deconstruct");
         boolean hasPlacements = placements != null && placements.isArray() && !placements.asArray().isEmpty();
         boolean hasDeconstruct = deconstruct != null && deconstruct.isArray() && !deconstruct.asArray().isEmpty();
         if (!hasPlacements && !hasDeconstruct) {
-            sendText(exchange, 400, Jval.newObject()
+            return Jval.newObject()
                     .put("code", "bad_request")
-                    .put("message", "build_plan has no placements or deconstruct targets")
-                    .toString(Jval.Jformat.plain), "application/json", false);
-            return;
+                    .put("message", "build_plan has no placements or deconstruct targets");
         }
 
         boolean allowPartial = request.getBool("allowPartial", false);
@@ -3081,7 +3169,16 @@ public class ProbeMod extends Mod {
             for (Jval placement : placements.asArray()) {
                 Jval build = Jval.read(placement.toString(Jval.Jformat.plain));
                 build.put("op", "build").put("token", token);
-                Jval response = runGameCommand(build);
+                Jval response;
+                try {
+                    response = runGameCommand(build);
+                } catch (CommandTimeoutException timeout) {
+                    response = Jval.newObject()
+                            .put("ok", false)
+                            .put("error", Jval.newObject()
+                                    .put("code", timeout.started ? "execution_unknown" : "not_executed")
+                                    .put("message", "build command timed out"));
+                }
                 results.add(response);
                 if (response.getBool("ok", false)) {
                     Jval data = response.get("data");
@@ -3099,7 +3196,16 @@ public class ProbeMod extends Mod {
                     .put("op", "deconstruct")
                     .put("token", token)
                     .put("targets", targets);
-            Jval response = runGameCommand(remove);
+            Jval response;
+            try {
+                response = runGameCommand(remove);
+            } catch (CommandTimeoutException timeout) {
+                response = Jval.newObject()
+                        .put("ok", false)
+                        .put("error", Jval.newObject()
+                                .put("code", timeout.started ? "execution_unknown" : "not_executed")
+                                .put("message", "deconstruct command timed out"));
+            }
             results.add(response);
             if (!response.getBool("ok", false)) failed = true;
             else {
@@ -3113,7 +3219,7 @@ public class ProbeMod extends Mod {
                 .put("status", failed ? "failed" : "queued")
                 .put("data", Jval.newObject().put("results", results))
                 .put("paused", pausedState);
-        sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
+        return payload;
     }
 
     private String readSmallBody(HttpExchange exchange) throws IOException {
@@ -3137,9 +3243,20 @@ public class ProbeMod extends Mod {
     }
 
     private void sendCommandResult(HttpExchange exchange, Jval request) throws Exception {
-        CompletableFuture<Jval> future = new CompletableFuture<>();
-        queue.add(new Command(request, future::complete));
-        Jval response = future.get(5, TimeUnit.SECONDS);
+        Jval response;
+        try {
+            response = runGameCommand(request);
+        } catch (CommandTimeoutException timeout) {
+            Jval payload = Jval.newObject()
+                    .put("code", timeout.started ? "execution_unknown" : "not_executed")
+                    .put("message", timeout.started
+                            ? "Game thread started the command but did not finish within 5s"
+                            : "Command timed out before the game thread picked it up")
+                    .put("retryable", !timeout.started);
+            sendText(exchange, timeout.started ? 504 : 503,
+                    payload.toString(Jval.Jformat.plain), "application/json", false);
+            return;
+        }
         if (response.getBool("ok", false)) {
             Jval data = response.get("data");
             sendText(exchange, 200, (data == null ? Jval.newObject() : data).toString(Jval.Jformat.plain), "application/json", false);
@@ -3689,6 +3806,8 @@ public class ProbeMod extends Mod {
         final Jval request;
         final BufferedWriter out;
         final Consumer<Jval> sink;
+        volatile boolean started;
+        volatile boolean cancelled;
 
         Command(Jval request, BufferedWriter out) {
             this.request = request;
@@ -3716,6 +3835,14 @@ public class ProbeMod extends Mod {
             } catch (IOException error) {
                 Log.err("[ai-probe] write failed", error);
             }
+        }
+    }
+
+    private static final class CommandTimeoutException extends Exception {
+        final boolean started;
+        CommandTimeoutException(boolean started) {
+            super(started ? "game command already started" : "game command not started");
+            this.started = started;
         }
     }
 

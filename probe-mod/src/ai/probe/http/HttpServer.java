@@ -1,6 +1,7 @@
 package ai.probe.http;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -8,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
 
 /**
@@ -15,9 +17,11 @@ import java.util.function.Consumer;
  * dependency-free. Each request gets one connection; responses close it.
  */
 public final class HttpServer {
+    private static final int MAX_CONNECTIONS = 64;
     private final InetSocketAddress address;
     private final int backlog;
     private final Map<String, Consumer<HttpExchange>> contexts = new LinkedHashMap<>();
+    private final Semaphore permits = new Semaphore(MAX_CONNECTIONS);
     private Executor executor = Executors.newCachedThreadPool();
     private ServerSocket server;
     private volatile boolean running;
@@ -53,20 +57,47 @@ public final class HttpServer {
         while (running) {
             try {
                 Socket socket = server.accept();
+                if (!permits.tryAcquire()) {
+                    closeQuietly(socket);
+                    continue;
+                }
                 socket.setSoTimeout(15000);
-                executor.execute(() -> handle(socket));
+                try {
+                    executor.execute(() -> {
+                        try {
+                            handle(socket);
+                        } finally {
+                            permits.release();
+                        }
+                    });
+                } catch (RuntimeException error) {
+                    permits.release();
+                    closeQuietly(socket);
+                    arc.util.Log.err("[ai-probe] http executor rejected connection", error);
+                }
             } catch (IOException error) {
-                if (running) {
-                    // A closed server or transient accept failure: stop looping
-                    // rather than spamming a log every frame.
+                if (!running || server == null || server.isClosed()) {
                     running = false;
+                    return;
+                }
+                // A transient accept failure (EMFILE, reset, ...) must not
+                // permanently disable the data/session HTTP server.
+                arc.util.Log.err("[ai-probe] http accept failed; continuing", error);
+                try {
+                    Thread.sleep(50L);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    running = false;
+                    return;
                 }
             }
         }
     }
 
     private void handle(Socket socket) {
-        try (HttpExchange exchange = new HttpExchange(socket)) {
+        HttpExchange exchange = null;
+        try {
+            exchange = new HttpExchange(socket);
             Consumer<HttpExchange> handler = find(exchange.getRequestURI().getPath());
             if (handler == null) {
                 exchange.sendResponseHeaders(404, 0);
@@ -74,7 +105,34 @@ public final class HttpServer {
                 handler.accept(exchange);
             }
         } catch (Throwable error) {
+            if (exchange == null) {
+                sendBadRequest(socket);
+            }
             arc.util.Log.err("[ai-probe] http handler failed", error);
+        } finally {
+            if (exchange != null) {
+                exchange.close();
+            } else {
+                closeQuietly(socket);
+            }
+        }
+    }
+
+    private void sendBadRequest(Socket socket) {
+        try {
+            OutputStream out = socket.getOutputStream();
+            out.write(("HTTP/1.1 400 Bad Request\r\n"
+                    + "Content-Length: 0\r\n"
+                    + "Connection: close\r\n\r\n").getBytes("US-ASCII"));
+            out.flush();
+        } catch (IOException ignored) {
+        }
+    }
+
+    private void closeQuietly(Socket socket) {
+        try {
+            socket.close();
+        } catch (IOException ignored) {
         }
     }
 

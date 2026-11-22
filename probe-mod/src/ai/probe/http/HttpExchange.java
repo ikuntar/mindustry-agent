@@ -37,21 +37,37 @@ public final class HttpExchange implements AutoCloseable {
         this.input = new BufferedInputStream(socket.getInputStream());
         this.output = new BufferedOutputStream(socket.getOutputStream());
 
-        String requestLine = readLine(input);
+        String requestLine = readLine(input, System.currentTimeMillis() + 15000L);
         if (requestLine == null || requestLine.isEmpty()) {
             throw new IOException("empty request");
         }
+        long requestDeadline = System.currentTimeMillis() + 15000L;
         String[] parts = requestLine.split(" ");
         if (parts.length < 2) throw new IOException("bad request line");
         this.method = parts[0].toUpperCase(Locale.ROOT);
         String target = parts[1];
-        this.uri = URI.create(target);
+        try {
+            this.uri = URI.create(target);
+        } catch (IllegalArgumentException error) {
+            throw new IOException("bad request target", error);
+        }
 
         String line;
-        while ((line = readLine(input)) != null && !line.isEmpty()) {
+        int headerCount = 0;
+        int headerBytes = 0;
+        while ((line = readLine(input, requestDeadline)) != null && !line.isEmpty()) {
+            headerCount++;
+            headerBytes += line.length() + 2;
+            if (headerCount > 100 || headerBytes > 32768) {
+                throw new IOException("request headers too large");
+            }
             int colon = line.indexOf(':');
             if (colon <= 0) continue;
             requestHeaders.set(line.substring(0, colon), line.substring(colon + 1).trim());
+        }
+        String transferEncoding = requestHeaders.getFirst("Transfer-Encoding");
+        if (transferEncoding != null && !"identity".equalsIgnoreCase(transferEncoding.trim())) {
+            throw new IOException("transfer encoding is not supported");
         }
     }
 
@@ -111,11 +127,12 @@ public final class HttpExchange implements AutoCloseable {
         }
     }
 
-    private static String readLine(InputStream input) throws IOException {
+    private static String readLine(InputStream input, long deadline) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         int previous = -1;
         int value;
         while ((value = input.read()) != -1) {
+            if (System.currentTimeMillis() > deadline) throw new IOException("request timeout");
             if (value == '\n') break;
             if (previous == '\r') {
                 buffer.write('\r');
@@ -144,6 +161,7 @@ public final class HttpExchange implements AutoCloseable {
             case 429: return "Too Many Requests";
             case 500: return "Internal Server Error";
             case 503: return "Service Unavailable";
+            case 504: return "Gateway Timeout";
             default: return "Status";
         }
     }
