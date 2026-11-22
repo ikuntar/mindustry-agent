@@ -6,6 +6,9 @@ agent loop 的 host 直接调用本项目的 MCP server，而不是在本项目�
 产品化方向（单 mod、每局 session prompt、一次性 token、LAN HTTP API、可选 MCP）
 见 `docs/SESSION-API.md`。当前文档描述的是已经可用的开发/测试接入方式。
 
+Harness 会话的第一轮应先 `GET /guide`：它返回完整的 `docs/GAME-GUIDE.md`
+（游戏规则、资源、生产、电力、防御、单位、战役、AI 边界），不是仅工具字段说明。
+
 ## 职责边界
 
 - **Host/harness 负责**：目标、长期计划、重试策略、上下文管理、模型选择。

@@ -45,7 +45,9 @@ import ai.probe.http.HttpServer;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -2833,7 +2835,7 @@ public class ProbeMod extends Mod {
                             .put("apiVersion", 1)
                             .put("promptVersion", 1)
                             .put("modVersion", VERSION)
-                            .put("guideVersion", 1)
+                            .put("guideVersion", 2)
                             .put("endpoint", requestDataBaseUrl(exchange).replace("/data", ""))
                             .put("expires", "game-process");
                     sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
@@ -3523,6 +3525,17 @@ public class ProbeMod extends Mod {
     }
 
     private String gameGuide() {
+        try (InputStream stream = ProbeMod.class.getResourceAsStream("/ai/probe/game-guide.md")) {
+            if (stream != null) {
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                byte[] chunk = new byte[8192];
+                int read;
+                while ((read = stream.read(chunk)) != -1) buffer.write(chunk, 0, read);
+                return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+            }
+        } catch (IOException error) {
+            Log.err("[ai-probe] failed to read game guide", error);
+        }
         return "# Mindustry AI session\n\n"
                 + "You control the assistant unit, not the human player.\n"
                 + "Start with GET /context?detail=summary.\n"
@@ -3720,6 +3733,7 @@ public class ProbeMod extends Mod {
                 + "Endpoint: " + endpoint + "\n"
                 + "Bootstrap token: " + sessionBootstrapToken + "\n\n"
                 + "Use this game API for this session only.\n"
+                + "0. Read GET /guide first: it is the complete Mindustry primer, not just API notes.\n"
                 + "1. POST /session with Authorization: Bearer <bootstrap token>.\n"
                 + "2. Use the returned sessionToken as Authorization: Bearer <sessionToken>.\n"
                 + "3. GET /tools for the action names, required fields, and units.\n"

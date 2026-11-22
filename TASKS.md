@@ -165,6 +165,7 @@
 - [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；12 个核心工具
 - [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources/prompts 通过
 - [x] MCP `resources/list` / `resources/read`：`mindustry://guide`
+- [x] `/guide` 改为完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 jar，约 6K 字符）：规则/资源/生产/电力/防御/单位/战役/AI 边界；MCP resource 与 session `/guide` 共用；session prompt 要求先读 `/guide`
 - [x] MCP `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
 - [ ] MCP GET SSE、完整兼容性矩阵
 - [ ] 存档/读档记忆处理

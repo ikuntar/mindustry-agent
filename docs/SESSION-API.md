@@ -66,7 +66,7 @@ EndpointInfo:
   lanUrls: [http://192.168.1.23:47600, ...]
   protocolVersion: 1
   toolCount: 10
-  guideVersion: 1
+  guideVersion: 2
 ```
 
 弹窗显示当前可用的局域网地址；用户选一个复制。
@@ -291,7 +291,7 @@ curl -fsS -H "Authorization: Bearer ***" \
    - MCP prompts：`play-campaign`、`defend-core` 等
    - 不支持 prompts 的 harness 可以忽略
 
-guide 是 mod 内置 Markdown，版本随 mod 走；不安装 skill。
+guide 是 mod 内置 Markdown（`docs/GAME-GUIDE.md`），版本随 mod 走；不只是工具说明，而是完整游戏规则/资源/生产/电力/防御/单位/战役知识。
 
 ## 8. 可选 MCP 兼容层
 
@@ -405,7 +405,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/context`：有界摘要，`detail=summary/full`
 - `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
 - `/actions/{opId}`：动作状态轮询
-- `/guide`：短游戏说明；`?topic=build|economy` 追加主题
+- `/guide`：完整游戏知识指南；`?topic=build|economy` 追加主题
 - `/tools`：12 个核心工具的 JSON Schema（get_context/get_area/move_to/attack/mine/build_plan/withdraw/deposit/configure/get_action_result/cancel/stop）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
@@ -510,7 +510,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
 - `POST /actions`：接受 `{kind,...}` 或 `{op,...}`，入队到现有 `handle`，
   返回 `opId`；支持已有动作，不复制游戏逻辑
 - `GET /actions/{opId}`：入队 `get_action_result`
-- `GET /guide`：短游戏说明
+- `GET /guide`：完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 mod jar）
 - `GET /tools`：12 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
 - `game_pause` / `game_resume` 事件 + `context.paused`
@@ -547,7 +547,7 @@ emit 200
 events wait 200 1 false false
 events timeout 200 true
 data map 200 524304 MND1 sessionData 401 etag 304 range 206 16 bytes 0-15/524304 manifest 200 ... events 200
-guide 200 # Mindustry AI session
+guide 200 # Mindustry 游戏知识指南
 data token refresh 200 true
 data token rotation 401 200
 ```

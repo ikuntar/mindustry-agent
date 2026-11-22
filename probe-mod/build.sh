@@ -14,6 +14,8 @@ rm -rf "$ROOT/build"
 mkdir -p "$ROOT/build/classes"
 find "$ROOT/src" -name '*.java' -print0 | xargs -0 javac -source 17 -target 17 -cp "$JAR" -d "$ROOT/build/classes"
 cp "$ROOT/mod.json" "$ROOT/build/classes/"
+mkdir -p "$ROOT/build/classes/ai/probe"
+cp "$ROOT/../docs/GAME-GUIDE.md" "$ROOT/build/classes/ai/probe/game-guide.md"
 jar --create --file "$ROOT/build/ai-probe.jar" -C "$ROOT/build/classes" .
 
 echo "built: $ROOT/build/ai-probe.jar"
