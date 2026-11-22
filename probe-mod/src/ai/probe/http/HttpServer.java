@@ -18,10 +18,12 @@ import java.util.function.Consumer;
  */
 public final class HttpServer {
     private static final int MAX_CONNECTIONS = 64;
+    private static final int MAX_EVENT_CONNECTIONS = 8;
     private final InetSocketAddress address;
     private final int backlog;
     private final Map<String, Consumer<HttpExchange>> contexts = new LinkedHashMap<>();
     private final Semaphore permits = new Semaphore(MAX_CONNECTIONS);
+    private final Semaphore eventPermits = new Semaphore(MAX_EVENT_CONNECTIONS);
     private Executor executor = Executors.newCachedThreadPool();
     private ServerSocket server;
     private volatile boolean running;
@@ -67,7 +69,8 @@ public final class HttpServer {
                         try {
                             handle(socket);
                         } finally {
-                            permits.release();
+                            // handle() releases the connection permit; event
+                            // long-polls release it early and use a separate quota.
                         }
                     });
                 } catch (RuntimeException error) {
@@ -96,9 +99,22 @@ public final class HttpServer {
 
     private void handle(Socket socket) {
         HttpExchange exchange = null;
+        boolean permitHeld = true;
+        boolean eventPermitHeld = false;
         try {
             exchange = new HttpExchange(socket);
-            Consumer<HttpExchange> handler = find(exchange.getRequestURI().getPath());
+            String path = exchange.getRequestURI().getPath();
+            if ("/events/wait".equals(path)) {
+                if (!eventPermits.tryAcquire()) {
+                    exchange.getResponseHeaders().set("Retry-After", "1");
+                    exchange.sendResponseHeaders(429, 0);
+                    return;
+                }
+                eventPermitHeld = true;
+                permits.release();
+                permitHeld = false;
+            }
+            Consumer<HttpExchange> handler = find(path);
             if (handler == null) {
                 exchange.sendResponseHeaders(404, 0);
             } else {
@@ -110,6 +126,8 @@ public final class HttpServer {
             }
             arc.util.Log.err("[ai-probe] http handler failed", error);
         } finally {
+            if (eventPermitHeld) eventPermits.release();
+            if (permitHeld) permits.release();
             if (exchange != null) {
                 exchange.close();
             } else {

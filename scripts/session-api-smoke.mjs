@@ -179,7 +179,7 @@ console.log("data token rotation", oldData.status, freshData.status);
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
-if (tools.status !== 200 || tools.body.tools?.length !== 10) process.exit(1);
+if (tools.status !== 200 || tools.body.tools?.length !== 12) process.exit(1);
 if (forbidden.status !== 403 || plan.status !== 400 || !String(plan.body.message ?? "").includes("no placements")) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
 if (conditionalMap.status !== 304) process.exit(1);

@@ -156,6 +156,9 @@ MCP server（Node/TypeScript）
     "width": 256,
     "height": 256,
     "layers": ["block_id", "team", "drop_id", "solid"],
+    "drop_id": "0=none, item.id+1 otherwise; see dropIds",
+    "dropIds": {"copper": 1, "lead": 2, "...": "..."},
+    "items": {"copper": 0, "lead": 1, "...": "..."},
     "dtype": "int16-le",
     "coord": "tile"
   },
@@ -206,7 +209,7 @@ MCP server（Node/TypeScript）
 （8 px = 1 tile），返回的 tile 条目是 tile 坐标；不返回全图：
 - `radius` 以 tile 为单位，最大 24
 - 默认最多 256 个 tile，最大 512
-- 返回 `{x,y,radius,tiles:[{x,y,block,team,drop?,solid,items?,ammoTotal?}],truncated}`
+- 返回 `{x,y,radius,tiles:[{x,y,block,team,drop?,solid,items?,ammoTotal?}],truncated,coverage:{x0,y0,x1,y1,next?}}`；`maxTiles` 按行优先截断，`coverage.next` 是第一个未返回的 tile
 - 不返回全图；需要大范围分析时用 `get_map_summary` + 数据面
 
 ### `query_area`

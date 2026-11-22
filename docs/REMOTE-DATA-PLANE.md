@@ -263,6 +263,7 @@ print({
 - 地图支持单段 `Range`（206/416），chunk 大小 32；事件支持 cursor 分页，响应头 `X-Next-Cursor`/`X-Has-More`，暂未实现 Range。
 - 数据 token 有 TTL；discovery 发布 `dataTokenExpires`，过期返回 410。
 - 当前 probe 格式为 **raw-v1**（`MND1` 头 + int16 层），不是最终 npz/zarr；事件为 NDJSON，不是最终 Parquet。
+- `drop_id` 编码：0 表示无矿；有矿为 `item.id + 1`（copper=1），manifest 的 `schema.items` / `schema.dropIds` 给出映射。
 - discovery/manifest 返回 `dataBaseUrl`/`dataToken`/ref。
 - 本地 dev 仍可用 `file://`，但标记为 dev-only。
 

@@ -508,11 +508,15 @@ export class ProbeGameAdapter implements GameAdapter {
   }
 
   async getActionResult(opId: string, waitMs = 0): Promise<ActionResult> {
-    // Probe completes or runs actions immediately; waitMs is only a small
-    // client-side delay for callers that expect polling semantics.
-    if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(waitMs, 200)));
-    const raw = await this.call("get_action_result", { opId });
-    return this.mapResult(raw);
+    const deadline = Date.now() + Math.max(0, Math.min(waitMs, 5000));
+    let result = this.mapResult(await this.call("get_action_result", { opId }));
+    while (waitMs > 0
+      && (result.status === "running" || result.status === "queued")
+      && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      result = this.mapResult(await this.call("get_action_result", { opId }));
+    }
+    return result;
   }
 
   // ---------------------------------------------------------------- actions

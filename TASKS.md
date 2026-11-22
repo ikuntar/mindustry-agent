@@ -143,7 +143,7 @@
 - [x] 弹窗 UI 视觉实测：Xvfb 自动加载 Fortress，截图显示 endpoint/token/6 步说明和 Copy/Close 按钮
 - [ ] `Copy session prompt` 剪贴板内容断言
 - [ ] 桌面客户端/真机人工点击验收
-- [x] 10 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
+- [x] 12 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
 - [x] session prompt 先给出 `GET /tools`，再给动作示例
 - [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt
@@ -162,7 +162,7 @@
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
 - [x] `/data` data token 轮换：`POST /session/data-token`，旧 token 立即 401
 - [ ] `/data` Parquet 事件
-- [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；10 个核心工具
+- [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；12 个核心工具
 - [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources/prompts 通过
 - [x] MCP `resources/list` / `resources/read`：`mindustry://guide`
 - [x] MCP `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -171,7 +171,11 @@
 - [ ] 跨区块/跨地图重生
 - [ ] 本地主机/专用服/其他玩家可见性
 - [x] 重连、版本握手
-- [x] 动作幂等：MCP 工具接受可选 `idempotencyKey`；成功结果在进程内缓存（最多 256 个），重复 key 返回同一 `opId`，固定场景实测两次 `move_to` 返回同一动作
+- [x] 动作幂等：MCP 与 session `/actions` 都接受可选 `idempotencyKey`；按 session token 隔离，LRU 256，重复 key 返回同一结果/opId
+
+- [x] 会话补全：`/content`、`/capabilities`、`/cancel`、`/stop`；`get_action_result.waitMs` 轮询；`build_plan` required 为空，支持 deconstruct-only；cancel/stop 进入工具表
+- [x] 数据面可读性：`get_area` 行优先 + `coverage.next`；context 带 `resourceCapacity/resourcesFull` 和 core items；map `drop_id=item.id+1` 并附 `items/dropIds`
+- [x] 资源/事件/HTTP：`pruneOps` 不再淘汰 running；304 带 ETag/Cache-Control，304 reason 和 HEAD 无 body；`/events/wait` 独立 8 连接配额，超限 429
 
 ## 未决项
 

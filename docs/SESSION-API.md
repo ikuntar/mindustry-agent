@@ -151,13 +151,15 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 要点：
 
 - prompt 不是 MCP 配置的替代品；它是“本局 API 会话语义”。
-- token 只在本局有效，关闭游戏失效。
+- token 只在本进程有效；sessionToken 跨 world reload 保留，bootstrap 每次 world reload 轮换，dataToken 默认 1h。
 - 不要求 harness 修改全局配置或安装 skill。
 - 不承诺所有 harness 都能自动配置 MCP；有 shell/HTTP 的 harness 用 REST 即可。
 
 ## 6. REST API
 
 ### 控制面（小 JSON）
+
+`/context` 摘要包含 `resourceCapacity`、`resourcesFull` 和 core `items`/`itemCapacity`。
 
 ```text
 POST /session
@@ -169,6 +171,8 @@ GET  /events/wait?since=N&timeoutMs=15000&types=...&limit=...
 GET  /actions/{opId}
 POST /actions
 POST /cancel
+GET  /capabilities
+GET  /content?type=blocks|items|units|liquids&query=&limit=
 ```
 
 `/events/wait` 是长轮询：
@@ -178,9 +182,10 @@ POST /cancel
 - `timeoutMs` 上限 30000ms；客户端 socket 超时应大于它
 - 命令队列超时：游戏线程未取到命令时返回 `503 not_executed`（可安全重试）；已开始执行但 5s 未完成返回 `504 execution_unknown`（不可假定未执行，重试必须带同一 `idempotencyKey`）；未开始的命令标记 cancelled，不会再执行。
 - `types` 用逗号分隔；省略表示不过滤
+- `/actions` 接受可选 `idempotencyKey`（1..128 字符，按 session token 隔离，LRU 256）：重复 key 返回第一次结果/opId，不再执行动作。
+- `get_action_result.waitMs` 会轮询 op 状态，最多 5s；`build`/`deconstruct`/`repair` 默认 1200 tick 超时，显式 `timeoutTicks=0` 可关闭。
 - 返回 `events`、`next`、`dropped`、`hasMore`、`timedOut`、`paused`、`gameOver`、`won`
 - `timedOut=true` 不是失败，只表示本次没有事件
-- 暂停/恢复会作为 `game_pause` / `game_resume` 事件写入；`context.paused` 也始终可查
 
 暂停规则必须写进 session prompt/guide：
 
@@ -192,7 +197,7 @@ POST /cancel
 服务端已把这条规则做成硬门控：`paused=true` 时 `/actions` 的写 op 返回
 `game_paused`，只读 op 继续可用；`ensureAssistant()` 在暂停期间也不会自动重生。
 
-会话 `/actions` 只允许 `/tools` 暴露的 10 个名字；内部调试 op 仍只走本地 probe
+会话 `/actions` 只允许 `/tools` 暴露的 12 个名字；内部调试 op 仍只走本地 probe
 socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
 返回 `{opId,status,data:{results}}`；`status=queued` 只表示已入队，单块 build 的
 op 要等目标 tile 真正出现方块才 `done`，计划被引擎丢弃则 `failed/build_dropped`，
@@ -301,7 +306,7 @@ POST /mcp   MCP Streamable HTTP
 - `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-ai`、
   `Mcp-Session-Id`
 - `notifications/initialized`：202，无 body
-- `tools/list`：10 个核心工具
+- `tools/list`：12 个核心工具
 - `tools/call`：复用现有游戏动作队列，返回 MCP text content
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -319,7 +324,7 @@ POST /mcp   MCP Streamable HTTP
 - 许多 host 不支持热重载，首次配置后要重启。
 - 本项目的推荐流程是 session prompt，不依赖 MCP 配置。
 - MCP 和 REST 共享同一份工具 schema 与游戏动作队列，避免行为漂移。
-- 第一版只暴露 10 个核心工具，不搬 27 个。
+- 第一版只暴露 12 个核心工具，不搬 27 个。
 
 ## 9. 弹窗设计
 
@@ -400,14 +405,14 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/context`：有界摘要，`detail=summary/full`
 - `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
 - `/actions/{opId}`：动作状态轮询
-- `/guide`：短游戏说明
-- `/tools`：10 个核心工具的 JSON Schema（get_context/get_area/move_to/attack/mine/build_plan/withdraw/deposit/configure/get_action_result）
+- `/guide`：短游戏说明；`?topic=build|economy` 追加主题
+- `/tools`：12 个核心工具的 JSON Schema（get_context/get_area/move_to/attack/mine/build_plan/withdraw/deposit/configure/get_action_result/cancel/stop）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
 
 待完成：
 
-- 10 个核心工具的显式 schema/错误码表
+- 12 个核心工具的显式 schema/错误码表
 - `/data/map` + Range、`/data/events` NDJSON 迁移进 mod
 - session token 失效/刷新按钮
 - 弹窗/UX
@@ -440,7 +445,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 部分完成：
 
 - `POST /mcp` 的 `initialize`、`notifications/initialized`、`tools/list`、`tools/call`、`ping`
-- 10 个核心工具与 REST 共用 `toolsJson()` schema
+- 12 个核心工具与 REST 共用 `toolsJson()` schema
 - `Mcp-Session-Id`
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -506,7 +511,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
   返回 `opId`；支持已有动作，不复制游戏逻辑
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /guide`：短游戏说明
-- `GET /tools`：10 个核心工具 JSON Schema
+- `GET /tools`：12 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
 - `game_pause` / `game_resume` 事件 + `context.paused`
 - `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）
@@ -533,7 +538,7 @@ node scripts/mcp-http-smoke.mjs
 ```text
 session 200 true
 reused bootstrap 401
-tools 200 10
+tools 200 12
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
@@ -553,7 +558,7 @@ MCP 冒烟：
 session 200
 initialize 200 mindustry-ai 2024-11-05
 initialized notification 202
-tools/list 200 10
+tools/list 200 12
 tools/call get_context 200 Fortress 928 584
 tools/call move_to 200 op-1 running
 tools/call get_action_result done
@@ -563,7 +568,7 @@ unknown method 200 -32601
 官方 SDK：
 
 ```text
-sdk tools 10
+sdk tools 12
 sdk resources 1
 sdk guide true
 sdk prompts 3
