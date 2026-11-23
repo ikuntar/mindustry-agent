@@ -191,3 +191,5 @@
 ## 未决项
 
 见 `docs/OPEN-QUESTIONS.md`。未落 TASKS 的设计项视为未收尾。
+
+- [x] 自定义 `ai-probe-ai-alpha` 类型：复制 alpha 能力，`playerControllable=false`，避免玩家死亡时原版自动选中助手导致 ValidateException

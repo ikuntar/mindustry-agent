@@ -60,7 +60,7 @@ defaultTeam = sharded
 - `build` 走真实 `BuildPlan` + `BuilderComp` 后可以完成：`query_area` 能从 MCP 侧读回 `conveyor`（health 45），不是只返回 accepted。
 - Ground Zero 测试服曾出现 `build` 返回成功但方块不落地：手动 `host` sector 地图没有建立 campaign 科技树，`conveyor.unlockedNowHost()` 为 false；`Build.validPlace` 不检查解锁，`BuilderComp.updateBuildLogic` 会静默丢弃计划。现在 `build` 对 campaign 未解锁返回 `block_locked`，op 只有目标 tile 真正出现方块才 `done`，计划被移除则 `failed/build_dropped`；`scripts/start-ground-zero-server.sh` 作为测试 fixture 显式 unlock 方块。
 - 关键发现：`spawnedByCore=true` 的非 `Player` 单位会被 `UnitComp.update()` 每帧 `Call.unitDespawn`。助手身体必须 `spawnedByCore=false`，用自己的 `isHome` 标记；附身时显式 despawn home body。
-- 助手身体从核心类型生成（例如 `gamma`/`alpha`），`isAI=false`、`isPlayer=false`，因此不可被原版 `unitControl` 附身，符合设计。
+- 助手身体使用 mod 自定义 `ai-probe-ai-alpha`（参数由核心类型复制，外观基于 alpha），`playerControllable=false`、`isAI=false`、`isPlayer=false`，避免被原版自动控制逻辑选中。
 
 ### MCP 真实 adapter 验证
 
@@ -82,7 +82,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 指挥：probe 生成同队 dagger；`command_units {command:"move"}` 后其位置变化；`set_stance {stance:"holdPosition"}` 成功。
 - `stop` 清理移动/攻击目标。
 - `mine`：在可达的 sand tile 上实测完成，assistant 获得 sand 1。
-- `possess` / `release`：同队 dagger 附身后 `assistant.id` 变为 dagger，`isHome=false/possessing=true`；原 home body 被 despawn；release 后 dagger 恢复控制器，核心生成新 alpha，`isHome=true`。
+- `possess` / `release`：同队 dagger 附身后 `assistant.id` 变为 dagger，`isHome=false/possessing=true`；原 home body 被 despawn；release 后 dagger 恢复控制器，核心生成新的辅助身体，`isHome=true`。
 - `attack` 支持三种目标：`unitId`（单位）、`buildingId`（建筑）和 `x,y`（坐标）；建筑实测 220→0，坐标实测 done/inRange，`unitId` 实测 dagger health `150→141`。4 波后的低血助手不作为 unitId 验收路径。
 - `build_plan`：固定场景一次提交 2 个 conveyor `(112,73)`/`(113,73)`，op 完成且 `query_area` 两个 tile 都存在；多块提交路径已验收。
 - `respawn`：probe 接受 `coreId`，只在目标核心属于助手队伍且 `allowSpawn` 时生成；MCP 固定场景实测从第二个核心重生，坐标 `968,584`、coreId `228`，home body id 变化。无核心时返回 `no_core`；核心重建后自动生成新 home body（id `247`，坐标 `972,582`）。
@@ -159,4 +159,5 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - issue #29（2026-11-23）：新增 `research` 动作（`content`/`block`/`unit`），按 TechTree 要求扣除核心资源并解锁目标/父节点；`/content` 的 blocks/units 增加 `researched`/`researchCost`，`/context.rules.researched` 暴露研究集合；guide 更新研究路径。
 - issue #30（2026-11-23）：`/context.objectives` 返回全部（上限 64），补 `type/progress/parents/flagsAdded/flagsRemoved`，`rules.objectiveFlags`；Ground Zero fixture 实测 17 条。
 - issue #31（2026-11-23）：新增直连 `GET /health`；`events/wait.paused` 直接读当前状态；`query_area` 半径上限 256px、units/buildings 各 64 条并返回 `truncated`。实测 session smoke：health 200、query cap 256、context fields 完整。
-- 崩溃（2026-11-23）：客户端 `ValidateException: Player attempted to control invalid unit`。日志显示清理 stray assistant 后触发；cleanup/持久 body 清理现在跳过所有 player 控制的单位，并限制为服务端执行，避免删除玩家当前身体。
+- 崩溃（2026-11-23）：客户端 `ValidateException: Player attempted to control invalid unit`。日志与 `InputHandler.update` 实现显示：玩家死亡后原版会找 `type == controlledType && playerControllable && !dead` 的最近单位并自动 `unitControl`；助手若用普通 `alpha` 类型会被选中，而 `ProbeController` 不是 AI controller，服务端校验失败。
+  修复：助手改为 mod 内的 `ai-probe-ai-alpha` 类型（从 alpha 复制外观/武器/采矿/建造参数，`playerControllable=false`、`useUnitCap=false`、hidden），因此不会被原版自动复活逻辑选中；同时保留 player/justSwitch 保护和 `playerTransitioning` 清理门控。

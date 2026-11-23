@@ -152,8 +152,43 @@ public class ProbeMod extends Mod {
     private ProbeController controller;
     private long opSeq = 0;
     private int lastWave = -1;
+    private UnitType assistantType;
     private volatile long lastUpdateAt = 0L;
     private volatile long lastUpdateTick = -1L;
+
+    private void copyAssistantTypeVisuals() {
+        if (assistantType == null) return;
+        UnitType base = Vars.content.unit("alpha");
+        if (base == null) return;
+        assistantType.region = base.region;
+        assistantType.uiIcon = base.uiIcon;
+        assistantType.fullIcon = base.fullIcon;
+    }
+
+    @Override
+    public void loadContent() {
+        UnitType base = Vars.content.unit("alpha");
+        if (base == null) return;
+        UnitType type = new UnitType("ai-alpha");
+        for (java.lang.reflect.Field field : UnitType.class.getFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+            String name = field.getName();
+            if (name.equals("name") || name.equals("id") || name.equals("minfo")
+                    || name.equals("constructor") || name.equals("localizedName")
+                    || name.equals("description") || name.equals("details")) continue;
+            try {
+                field.set(type, field.get(base));
+            } catch (Throwable ignored) {
+            }
+        }
+        type.playerControllable = false;
+        type.useUnitCap = false;
+        type.alwaysUnlocked = true;
+        type.hidden = true;
+        Vars.content.handleContent(type);
+        assistantType = type;
+        Log.info("[ai-probe] registered assistant unit type: " + type.name);
+    }
 
     @Override
     public void init() {
@@ -161,6 +196,7 @@ public class ProbeMod extends Mod {
         Events.on(EventType.WorldLoadEvent.class, event -> reset());
         if (!Vars.headless) {
             Events.on(EventType.WorldLoadEvent.class, event -> showSessionDialog());
+            Events.on(EventType.ClientLoadEvent.class, event -> copyAssistantTypeVisuals());
         }
         if (!Vars.headless && "1".equals(System.getenv("PROBE_TEST_AUTOLOAD"))) {
             Events.on(EventType.ClientLoadEvent.class, event -> Time.run(90f, () -> {
@@ -587,13 +623,24 @@ public class ProbeMod extends Mod {
         if (unit == null) return false;
         if (unit.isPlayer() || unit.controller() instanceof mindustry.gen.Player) return true;
         for (mindustry.gen.Player player : Groups.player) {
-            if (player.unit() == unit) return true;
+            // InputHandler keeps these transient references while switching
+            // bodies; deleting either unit can trigger ValidateException.
+            if (player.unit() == unit || player.justSwitchFrom() == unit || player.justSwitchTo() == unit) return true;
         }
-        return !Vars.headless && Vars.player != null && Vars.player.unit() == unit;
+        return !Vars.headless && Vars.player != null
+                && (Vars.player.unit() == unit || Vars.player.justSwitchFrom() == unit || Vars.player.justSwitchTo() == unit);
+    }
+
+    private boolean playerTransitioning() {
+        for (mindustry.gen.Player player : Groups.player) {
+            Unit unit = player.unit();
+            if (unit == null || unit.dead || !unit.isValid()) return true;
+        }
+        return false;
     }
 
     private void removePersistedAssistantBodies() {
-        if (Vars.net == null || !Vars.net.server()) return;
+        if (playerTransitioning()) return;
         Seq<Unit> stale = new Seq<>();
         for (Unit candidate : Groups.unit) {
             if (candidate.flag() == ASSISTANT_FLAG && !isPlayerUnit(candidate)) stale.add(candidate);
@@ -605,7 +652,7 @@ public class ProbeMod extends Mod {
     }
 
     private void cleanupStrayAssistantBodies() {
-        if (assistant == null || Vars.net == null || !Vars.net.server()) return;
+        if (assistant == null || playerTransitioning()) return;
         Seq<Unit> stray = new Seq<>();
         for (Unit candidate : Groups.unit) {
             if (candidate != assistant && !isPlayerUnit(candidate)
@@ -635,7 +682,7 @@ public class ProbeMod extends Mod {
     private void spawnAssistantAt(CoreBuild core) {
         if (core == null) return;
         Team team = core.team;
-        UnitType type = ((CoreBlock) core.block).unitType;
+        UnitType type = assistantType != null ? assistantType : ((CoreBlock) core.block).unitType;
         Unit unit = type.create(team);
         unit.x = core.x;
         unit.y = core.y;
