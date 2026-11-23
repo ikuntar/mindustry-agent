@@ -235,12 +235,13 @@ respawn(core = null):
 | `get_content` | 方块/单位/物品/液体注册表 |
 | `get_events` | 自 `since` 以来的事件（波次、核心受击、建筑被拆、单位死亡、资源阈值等） |
 | `query_area` | 局部区域单位/建筑 |
-| `get_config_schema` | 某方块的配置值类型 |
+| `get_config_schema` | 某方块配置字段/合法值；UnitFactory 方案索引 |
+| `get_tech_tree` | 科技树节点、父/子、成本、objectives、researched |
 | `get_action_result` | 按 `opId` 查询/等待动作结果 |
 
 ### 写工具
 
-> 下表是完整目标/旧 Node MCP 的工具面；当前 mod session API 有 27 个；`command_units`/`possess`/`respawn`/`pause`/`resume` 已进入正常工具面。缺口和实现顺序见 `docs/PLAYER-PARITY.md`。
+> 下表是完整目标/旧 Node MCP 的工具面；当前 mod session API 有 34 个；`command_units`/`possess`/`respawn`/`pause`/`resume`/`control_building`/工厂与科技树读工具/`boost`/payload 已进入正常工具面。缺口和实现顺序见 `docs/PLAYER-PARITY.md`。
 
 
 | 工具 | 作用 |
@@ -261,6 +262,11 @@ respawn(core = null):
 | `possess` | 附身同队 AI 单位 |
 | `release` | 解控，回核心生成 home body |
 | `respawn` | 死亡后在指定/默认核心重生 |
+| `control_building` | 控制同队 ControlBlock 建筑（非单位附身） |
+| `release_building` | 退出建筑控制，保留建筑 |
+| `boost` | 按 canBoost 开关飞行单位加速 |
+| `pickup_payload` | payload 能力单位拾取建筑/单位 |
+| `drop_payload` | 在当前位置投放 payload |
 | `cancel` | 取消动作 |
 
 ### 异步语义

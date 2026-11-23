@@ -204,7 +204,19 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
 `game_paused`，只读 op 和 `resume` 继续可用；`ensureAssistant()` 在暂停期间
 也不会自动重生。
 
-会话 `/actions` 只允许 `/tools` 暴露的 27 个名字；内部调试 op 仍只走本地 probe
+玩家能力动作（同一白名单）：
+
+- `control_building {buildingId|x,y}` / `release_building`：`ControlBlock` 建筑控制，
+  不是单位 `possess`；`get_context.control` 报告 building/pseudo-unit identity。
+- `boost {enabled}`：仅 `UnitType.canBoost`；被动 abilities 由单位类型自动运行。
+- `pickup_payload {target}` / `drop_payload`：仅 `Payloadc` body；payload conveyor
+  按建筑自身接收规则，不额外造 `enter_payload`。
+- `get_config_schema {block}`：返回可配置字段和合法值；`UnitFactory` 的 `value`
+  是 `plans[].index`，不是生产队列。
+- `get_tech_tree {content?,limit?}`：只读 parent/children、成本、objectives、
+  researched、blockedReason；研究仍是逐节点 `research`，无队列。
+
+会话 `/actions` 只允许 `/tools` 暴露的 34 个名字；内部调试 op 仍只走本地 probe
 socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
 返回 `{opId,status,data:{results}}`；`status=queued` 只表示已入队，单块 build 的
 op 要等目标 tile 真正出现方块才 `done`，计划被引擎丢弃则 `failed/build_dropped`，
@@ -326,7 +338,7 @@ POST /mcp   MCP Streamable HTTP
 - `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-ai`、
   `Mcp-Session-Id`
 - `notifications/initialized`：202，无 body
-- `tools/list`：27 个核心工具
+- `tools/list`：34 个核心工具
 - `tools/call`：复用现有游戏动作队列，返回 MCP text content
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -344,7 +356,7 @@ POST /mcp   MCP Streamable HTTP
 - 许多 host 不支持热重载，首次配置后要重启。
 - 本项目的推荐流程是 session prompt，不依赖 MCP 配置。
 - MCP 和 REST 共享同一份工具 schema 与游戏动作队列，避免行为漂移。
-- 当前暴露 27 个核心工具（22 个基础 + `possess`/`respawn`/`pause`/`resume`/`command_units`），其余内部调试 op 不搬。
+- 当前暴露 34 个核心工具（27 个基础 + `get_config_schema`/`get_tech_tree`/`control_building`/`release_building`/`boost`/`pickup_payload`/`drop_payload`），其余内部调试 op 不搬。
 
 ## 9. 弹窗设计
 
@@ -426,13 +438,13 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
 - `/actions/{opId}`：动作状态轮询
 - `/guide`：完整游戏知识指南；`?topic=build|economy` 追加主题
-- `/tools`：27 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/possess/respawn/pause/resume/command_units/follow/get_action_result/cancel/stop）
+- `/tools`：34 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/possess/respawn/pause/resume/command_units/control_building/release_building/boost/pickup_payload/drop_payload/get_config_schema/get_tech_tree/follow/get_action_result/cancel/stop）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
 
 待完成：
 
-- 27 个核心工具的显式 schema/错误码表
+- 34 个核心工具的 schema 已接入 `/tools`，错误码随动作读写回
 - `/data/map` + Range、`/data/events` NDJSON 迁移进 mod
 - session token 失效/刷新按钮
 - 弹窗/UX
@@ -465,7 +477,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 部分完成：
 
 - `POST /mcp` 的 `initialize`、`notifications/initialized`、`tools/list`、`tools/call`、`ping`
-- 27 个核心工具与 REST 共用 `toolsJson()` schema
+- 34 个核心工具与 REST 共用 `toolsJson()` schema
 - `Mcp-Session-Id`
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -532,7 +544,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /`：控制面/数据面端点索引
 - `GET /guide`：完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 mod jar）
-- `GET /tools`：27 个核心工具 JSON Schema
+- `GET /tools`：34 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
 - `game_pause` / `game_resume` / `wave_start` / `wave_end` 事件 + `context.paused`
 - `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）

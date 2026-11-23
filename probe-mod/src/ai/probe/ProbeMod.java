@@ -22,6 +22,8 @@ import mindustry.game.Rules;
 import mindustry.ctype.UnlockableContent;
 import mindustry.content.TechTree;
 import mindustry.gen.Building;
+import mindustry.gen.BlockUnitc;
+import mindustry.gen.Payloadc;
 import mindustry.gen.Call;
 import mindustry.gen.Groups;
 import mindustry.gen.Teamc;
@@ -30,15 +32,24 @@ import mindustry.mod.Mod;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.Liquid;
+import mindustry.type.LiquidStack;
+import mindustry.type.PayloadStack;
 import mindustry.type.UnitType;
 import mindustry.ui.dialogs.BaseDialog;
 import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.core.World;
 import mindustry.world.Tile;
+import mindustry.world.blocks.ControlBlock;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.CoreBlock.CoreBuild;
 import mindustry.world.blocks.defense.turrets.Turret;
+import mindustry.world.blocks.payloads.Payload;
+import mindustry.world.blocks.payloads.UnitPayload;
+import mindustry.world.blocks.payloads.BuildPayload;
+import mindustry.world.blocks.units.UnitFactory;
+import mindustry.world.blocks.units.Reconstructor;
+import mindustry.world.blocks.units.UnitAssembler;
 import mindustry.world.blocks.environment.Floor;
 import mindustry.world.modules.ItemModule;
 
@@ -154,6 +165,9 @@ public class ProbeMod extends Mod {
     private int lastWave = -1;
     private UnitType assistantType;
     private final Map<String, UnitType> assistantTypes = new LinkedHashMap<>();
+    private Building controlledBuilding;
+    private boolean controllingBuilding;
+    private UnitController savedBuildingController;
     private volatile long lastUpdateAt = 0L;
     private volatile long lastUpdateTick = -1L;
 
@@ -663,6 +677,53 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private Jval payloadJson(Unit unit) {
+        Jval result = Jval.newArray();
+        if (unit instanceof Payloadc payloadc) {
+            for (Payload payload : payloadc.payloads()) {
+                result.add(Jval.newObject()
+                        .put("type", payload instanceof UnitPayload ? "unit" : payload instanceof BuildPayload ? "block" : "payload")
+                        .put("content", payload.content() == null ? "" : payload.content().name)
+                        .put("size", payload.size())
+                        .put("x", payload.x())
+                        .put("y", payload.y()));
+            }
+        }
+        return result;
+    }
+
+    private void clearControlledBuildingTargets() {
+        if (controlledBuilding instanceof Turret.TurretBuild turret) {
+            turret.target = null;
+            turret.targetPos.setZero();
+            turret.logicShooting = false;
+            turret.logicControlTime = -1f;
+            turret.isShooting = false;
+        }
+    }
+
+    private Jval controlJson() {
+        if (!controllingBuilding || controlledBuilding == null) {
+            return Jval.newObject().put("mode", "unit");
+        }
+        Jval result = Jval.newObject()
+                .put("mode", "building")
+                .put("buildingId", controlledBuilding.id)
+                .put("block", controlledBuilding.block.name)
+                .put("x", controlledBuilding.tileX())
+                .put("y", controlledBuilding.tileY());
+        if (controlledBuilding instanceof ControlBlock controlBlock) {
+            Unit pseudo = controlBlock.unit();
+            if (pseudo != null) {
+                result.put("unitId", pseudo.id)
+                        .put("unitType", pseudo.type == null ? "" : pseudo.type.name)
+                        .put("aimX", pseudo.aimX())
+                        .put("aimY", pseudo.aimY());
+            }
+        }
+        return result;
+    }
+
     private void cleanupStrayAssistantBodies() {
         if (assistant == null || playerTransitioning()) return;
         Seq<Unit> stray = new Seq<>();
@@ -1156,10 +1217,52 @@ public class ProbeMod extends Mod {
             } else if ("micro-processor".equals(block.name)) {
                 fields.add(Jval.newObject().put("key", "code").put("type", "string"));
             }
+
+            Jval plans = Jval.newArray();
+            String note = "";
+            if (block instanceof UnitFactory factory) {
+                for (int i = 0; i < factory.plans.size; i++) {
+                    UnitFactory.UnitPlan plan = factory.plans.get(i);
+                    if (plan == null || plan.unit == null) continue;
+                    plans.add(Jval.newObject()
+                            .put("index", i)
+                            .put("unit", plan.unit.name)
+                            .put("requirements", stacksJson(plan.requirements))
+                            .put("time", plan.time)
+                            .put("available", plan.unit.unlockedNowHost() && !plan.unit.isBanned()));
+                }
+                fields.add(Jval.newObject()
+                        .put("key", "value")
+                        .put("type", "integer")
+                        .put("description", "current UnitFactory plan index")
+                        .put("values", plans));
+            } else if (block instanceof Reconstructor reconstructor) {
+                for (UnitType[] pair : reconstructor.upgrades) {
+                    if (pair == null || pair.length < 2 || pair[0] == null || pair[1] == null) continue;
+                    plans.add(Jval.newObject()
+                            .put("base", pair[0].name)
+                            .put("upgrade", pair[1].name)
+                            .put("available", pair[1].unlockedNowHost() && !pair[1].isBanned()));
+                }
+                note = "Reconstructor accepts a UnitPayload and upgrades it through the fixed upgrades table; it is not a selectable production plan.";
+            } else if (block instanceof UnitAssembler assembler) {
+                for (UnitAssembler.AssemblerUnitPlan plan : assembler.plans) {
+                    if (plan == null || plan.unit == null) continue;
+                    plans.add(Jval.newObject()
+                            .put("unit", plan.unit.name)
+                            .put("requirements", stacksJson(plan.itemReq))
+                            .put("payloadRequirements", payloadStacksJson(plan.requirements))
+                            .put("liquids", liquidStacksJson(plan.liquidReq))
+                            .put("time", plan.time));
+                }
+                note = "UnitAssembler is an Erekir multi-block plan; this endpoint lists plans only, not a queue.";
+            }
             reply(command, Jval.newObject()
                     .put("block", block.name)
-                    .put("configurable", fields.asArray().size > 0)
-                    .put("fields", fields));
+                    .put("configurable", block instanceof UnitFactory || fields.asArray().size > 0)
+                    .put("fields", fields)
+                    .put("plans", plans)
+                    .put("note", note));
             return;
         }
 
@@ -1222,9 +1325,17 @@ public class ProbeMod extends Mod {
             for (var unitCommand : type.commands) {
                 commands.add(unitCommand.name);
             }
+            Jval abilities = Jval.newArray();
+            if (type.abilities != null) {
+                for (var ability : type.abilities) {
+                    abilities.add(ability == null ? "unknown" : ability.getClass().getSimpleName());
+                }
+            }
             Jval data = Jval.newObject()
                     .put("unitId", assistant.id)
                     .put("type", type.name)
+                    .put("abilities", abilities)
+                    .put("controlMode", controllingBuilding ? "building" : "unit")
                     .put("health", assistant.health)
                     .put("maxHealth", assistant.maxHealth)
                     .put("speed", type.speed)
@@ -1569,6 +1680,88 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("boost".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            if (!assistant.type.canBoost) {
+                replyError(command, "cannot_boost", "Assistant body type cannot boost");
+                return;
+            }
+            boolean enabled = request.getBool("enabled", true);
+            if (controller != null) controller.boosting = enabled;
+            assistant.updateBoosting(enabled);
+            reply(command, Jval.newObject()
+                    .put("enabled", enabled)
+                    .put("canBoost", assistant.type.canBoost));
+            return;
+        }
+
+        if ("pickup_payload".equals(op)) {
+            if (!(assistant instanceof Payloadc payloadc)) {
+                replyError(command, "not_payload_capable", "Assistant body has no payload controller");
+                return;
+            }
+            Jval target = request.get("target");
+            if (target == null) target = request;
+            Unit targetUnit = findUnit(target);
+            Building targetBuilding = targetUnit == null ? findBuilding(target) : null;
+            if (targetUnit == null && targetBuilding == null) {
+                replyError(command, "target_not_found", "Payload target not found");
+                return;
+            }
+            if (targetUnit == assistant) {
+                replyError(command, "bad_target", "Cannot pick up the assistant's own body");
+                return;
+            }
+            int before = payloadc.payloads().size;
+            boolean accepted;
+            String kind;
+            if (targetUnit != null) {
+                accepted = payloadc.canPickup(targetUnit);
+                kind = "unit";
+                if (accepted) payloadc.pickup(targetUnit);
+            } else {
+                accepted = payloadc.canPickup(targetBuilding);
+                kind = "building";
+                if (accepted) payloadc.pickup(targetBuilding);
+            }
+            if (!accepted) {
+                replyError(command, "cannot_pickup", "Payload cannot be picked up by this body");
+                return;
+            }
+            if (payloadc.payloads().size <= before) {
+                replyError(command, "pickup_failed", "Payload was accepted but not added");
+                return;
+            }
+            reply(command, Jval.newObject()
+                    .put("kind", kind)
+                    .put("payloads", payloadJson(assistant))
+                    .put("payloadUsed", payloadc.payloadUsed()));
+            return;
+        }
+
+        if ("drop_payload".equals(op)) {
+            if (!(assistant instanceof Payloadc payloadc)) {
+                replyError(command, "not_payload_capable", "Assistant body has no payload controller");
+                return;
+            }
+            if (!payloadc.hasPayload()) {
+                replyError(command, "no_payload", "Assistant is not carrying a payload");
+                return;
+            }
+            int before = payloadc.payloads().size;
+            if (!payloadc.dropLastPayload() || payloadc.payloads().size >= before) {
+                replyError(command, "drop_failed", "Payload could not be dropped at the current position");
+                return;
+            }
+            reply(command, Jval.newObject()
+                    .put("payloads", payloadJson(assistant))
+                    .put("payloadUsed", payloadc.payloadUsed()));
+            return;
+        }
+
         if ("set_stance".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -1627,6 +1820,7 @@ public class ProbeMod extends Mod {
                 assistant.mineTile = null;
                 assistant.isShooting = false;
             }
+            clearControlledBuildingTargets();
             reply(command, Jval.newObject().put("stopped", true).put("cancelled", cancelled));
             return;
         }
@@ -1869,6 +2063,79 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("control_building".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            if (controllingBuilding) {
+                replyError(command, "already_controlling_building", "Assistant is already controlling a building");
+                return;
+            }
+            Building building = findBuilding(request);
+            if (building == null) {
+                replyError(command, "building_not_found", "No target building");
+                return;
+            }
+            if (building.team != assistant.team) {
+                replyError(command, "wrong_team", "Target building is not on the assistant's team");
+                return;
+            }
+            if (!(building instanceof ControlBlock controlBlock)) {
+                replyError(command, "not_controllable", "Target block does not implement ControlBlock");
+                return;
+            }
+            if (!controlBlock.canControl()) {
+                replyError(command, "not_controllable", "Target block is not player-controllable");
+                return;
+            }
+            Unit pseudo = controlBlock.unit();
+            if (pseudo == null) {
+                replyError(command, "not_controllable", "ControlBlock did not create a pseudo-unit");
+                return;
+            }
+            controlledBuilding = building;
+            controllingBuilding = true;
+            savedBuildingController = pseudo.controller();
+            reply(command, Jval.newObject()
+                    .put("mode", "building")
+                    .put("buildingId", building.id)
+                    .put("block", building.block.name)
+                    .put("x", building.tileX())
+                    .put("y", building.tileY())
+                    .put("unitId", pseudo.id)
+                    .put("unitType", pseudo.type == null ? "" : pseudo.type.name));
+            return;
+        }
+
+        if ("release_building".equals(op)) {
+            if (!controllingBuilding || controlledBuilding == null) {
+                replyError(command, "not_controlling_building", "Assistant is not controlling a building");
+                return;
+            }
+            Building building = controlledBuilding;
+            if (building instanceof Turret.TurretBuild turret) {
+                turret.target = null;
+                turret.targetPos.setZero();
+                turret.logicShooting = false;
+                turret.logicControlTime = -1f;
+                turret.isShooting = false;
+            }
+            if (building instanceof ControlBlock controlBlock) {
+                Unit pseudo = controlBlock.unit();
+                if (pseudo != null && savedBuildingController != null) {
+                    pseudo.controller(savedBuildingController);
+                }
+            }
+            controlledBuilding = null;
+            controllingBuilding = false;
+            savedBuildingController = null;
+            reply(command, Jval.newObject()
+                    .put("releasedBuildingId", building.id)
+                    .put("block", building.block.name));
+            return;
+        }
+
         if ("release".equals(op)) {
             if (!possessing || assistant == null) {
                 replyError(command, "not_possessing", "Assistant is not possessing a body");
@@ -1945,6 +2212,51 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("list_controllable_blocks".equals(op)) {
+            Jval blocks = Jval.newArray();
+            for (Block block : Vars.content.blocks()) {
+                if (block instanceof Turret turret) {
+                    blocks.add(Jval.newObject()
+                            .put("name", turret.name)
+                            .put("playerControllable", turret.playerControllable));
+                }
+            }
+            reply(command, Jval.newObject().put("blocks", blocks));
+            return;
+        }
+
+        if ("spawn_ally_building".equals(op)) {
+            if (assistant == null) {
+                replyError(command, "no_assistant", "Assistant is not spawned");
+                return;
+            }
+            Block block = Vars.content.block(request.getString("block", "duo"));
+            if (block == null) {
+                replyError(command, "not_found", "Unknown block");
+                return;
+            }
+            int x = request.getInt("x", Integer.MIN_VALUE);
+            int y = request.getInt("y", Integer.MIN_VALUE);
+            if (!Vars.world.tiles.in(x, y)) {
+                replyError(command, "out_of_bounds", "Tile is outside the map");
+                return;
+            }
+            Tile tile = Vars.world.tile(x, y);
+            if (tile.build != null || !tile.block().isAir()) {
+                replyError(command, "occupied", "Tile is not empty");
+                return;
+            }
+            tile.setBlock(block, assistant.team, 0);
+            Building building = tile.build;
+            reply(command, Jval.newObject()
+                    .put("buildingId", building == null ? -1 : building.id)
+                    .put("block", block.name)
+                    .put("x", x)
+                    .put("y", y)
+                    .put("health", building == null ? 0 : building.health));
+            return;
+        }
+
         if ("spawn_enemy_building".equals(op)) {
             // Probe/debug helper for attack tests; not part of the MCP surface.
             Block block = Vars.content.block(request.getString("block", "container"));
@@ -2013,6 +2325,37 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("get_tech_tree".equals(op)) {
+            Team team = assistant == null ? Vars.state.rules.defaultTeam : assistant.team;
+            String name = request.getString("content", "");
+            int limit = Math.max(1, Math.min(256, request.getInt("limit", 128)));
+            Jval nodes = Jval.newArray();
+            java.util.Set<TechTree.TechNode> seen = new java.util.HashSet<>();
+            if (!name.trim().isEmpty()) {
+                UnlockableContent content = findResearchable(name);
+                if (content == null) {
+                    replyError(command, "not_found", "Unknown content " + name);
+                    return;
+                }
+                TechTree.TechNode node = content.techNode;
+                if (node == null) {
+                    replyError(command, "not_in_tech_tree", "Content is not in the tech tree: " + name);
+                    return;
+                }
+                collectTechNode(node, team, nodes, seen, limit);
+            } else {
+                for (TechTree.TechNode root : TechTree.roots) {
+                    collectTechNode(root, team, nodes, seen, limit);
+                    if (nodes.asArray().size >= limit) break;
+                }
+            }
+            reply(command, Jval.newObject()
+                    .put("nodes", nodes)
+                    .put("count", nodes.asArray().size)
+                    .put("truncated", nodes.asArray().size >= limit));
+            return;
+        }
+
         if ("research".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -2028,6 +2371,25 @@ public class ProbeMod extends Mod {
                 replyError(command, "already_unlocked", "Content is already unlocked: " + content.name);
                 return;
             }
+            TechTree.TechNode node = content.techNode;
+            if (node != null && node.parent != null && node.parent.content != null
+                    && !node.parent.content.unlockedNowHost()) {
+                replyError(command, "parent_locked",
+                        "Parent node is not researched: " + node.parent.content.name);
+                return;
+            }
+            if (node != null && node.objectives != null) {
+                for (var objective : node.objectives) {
+                    try {
+                        if (objective != null && !objective.complete()) {
+                            replyError(command, "objectives_incomplete",
+                                    "Tech tree objective is not complete: " + objective.display());
+                            return;
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
             ItemStack[] cost = researchCost(content);
             if (cost == null || cost.length == 0) {
                 replyError(command, "no_research_cost", "Content has no research cost: " + content.name);
@@ -2039,21 +2401,12 @@ public class ProbeMod extends Mod {
             }
             for (ItemStack stack : cost) assistant.team.items().remove(stack.item, stack.amount);
             content.unlock();
-            int parents = 0;
-            TechTree.TechNode node = content.techNode;
-            while (node != null && node.parent != null) {
-                node = node.parent;
-                if (node.content != null && !node.content.unlockedNowHost()) {
-                    node.content.unlock();
-                    parents++;
-                }
-            }
             Events.fire(new EventType.ResearchEvent(content));
             reply(command, Jval.newObject()
                     .put("content", content.name)
                     .put("researched", content.unlockedNowHost())
                     .put("spent", stacksJson(cost))
-                    .put("parentsUnlocked", parents));
+                    .put("parentsUnlocked", 0));
             return;
         }
 
@@ -2180,6 +2533,7 @@ public class ProbeMod extends Mod {
                     controller.attackPosition = null;
                     controller.followTarget = null;
                 }
+                clearControlledBuildingTargets();
             }
             reply(command, Jval.newObject().put("cancelled", cancelled).put("opId", opId));
             return;
@@ -2227,6 +2581,10 @@ public class ProbeMod extends Mod {
         }
 
         if ("attack".equals(op)) {
+            if (controllingBuilding) {
+                controlBuildingAttack(command, request);
+                return;
+            }
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
                 return;
@@ -2547,12 +2905,116 @@ public class ProbeMod extends Mod {
         return unit;
     }
 
+    private Jval techObjectiveJson(TechTree.TechNode node) {
+        Jval objectives = Jval.newArray();
+        if (node != null && node.objectives != null) {
+            for (var objective : node.objectives) {
+                if (objective == null) continue;
+                boolean complete = false;
+                try {
+                    complete = objective.complete();
+                } catch (Throwable ignored) {
+                }
+                String objectiveText = objective.display();
+                if (objectiveText == null || objectiveText.startsWith("???")) {
+                    objectiveText = objective.getClass().getSimpleName();
+                }
+                objectives.add(Jval.newObject()
+                        .put("text", objectiveText)
+                        .put("completed", complete));
+            }
+        }
+        return objectives;
+    }
+
+    private String techBlockedReason(TechTree.TechNode node, Team team) {
+        if (node == null || node.content == null) return "missing";
+        if (node.content.unlockedNowHost()) return "unlocked";
+        if (node.parent != null && node.parent.content != null
+                && !node.parent.content.unlockedNowHost()) {
+            return "parent_locked:" + node.parent.content.name;
+        }
+        if (node.requirements != null && node.requirements.length > 0
+                && team != null && !team.items().has(node.requirements)) {
+            return "insufficient_resources";
+        }
+        if (node.objectives != null && node.objectives.size > 0) {
+            for (var objective : node.objectives) {
+                try {
+                    if (objective != null && !objective.complete()) return "objectives_incomplete";
+                } catch (Throwable ignored) {
+                    return "objectives_unknown";
+                }
+            }
+        }
+        if (node.requiresUnlock && !Vars.state.isCampaign()) return "requires_unlock";
+        return "available";
+    }
+
+    private Jval techNodeJson(TechTree.TechNode node, Team team) {
+        Jval children = Jval.newArray();
+        if (node != null && node.children != null) {
+            for (TechTree.TechNode child : node.children) {
+                if (child != null && child.content != null) children.add(child.content.name);
+            }
+        }
+        boolean researched = node != null && node.content != null
+                && Vars.state.rules.researched != null
+                && Vars.state.rules.researched.contains(node.content);
+        return Jval.newObject()
+                .put("content", node == null || node.content == null ? "" : node.content.name)
+                .put("name", node == null ? "" : node.localizedName())
+                .put("parent", node == null || node.parent == null || node.parent.content == null
+                        ? "" : node.parent.content.name)
+                .put("children", children)
+                .put("requirements", node == null ? Jval.newArray() : stacksJson(node.requirements))
+                .put("objectives", techObjectiveJson(node))
+                .put("requiresUnlock", node != null && node.requiresUnlock)
+                .put("researched", researched)
+                .put("unlocked", node != null && node.content != null && node.content.unlockedNowHost())
+                .put("blockedReason", techBlockedReason(node, team));
+    }
+
+    private void collectTechNode(TechTree.TechNode node, Team team, Jval nodes, java.util.Set<TechTree.TechNode> seen, int limit) {
+        if (node == null || nodes.asArray().size >= limit || !seen.add(node)) return;
+        nodes.add(techNodeJson(node, team));
+        if (node.children != null) {
+            for (TechTree.TechNode child : node.children) collectTechNode(child, team, nodes, seen, limit);
+        }
+    }
+
     private ItemStack[] researchCost(UnlockableContent content) {
         TechTree.TechNode node = content.techNode;
         if (node != null && node.requirements != null && node.requirements.length > 0) {
             return node.requirements;
         }
         return content.researchRequirements();
+    }
+
+    private Jval payloadStacksJson(arc.struct.Seq<PayloadStack> stacks) {
+        Jval result = Jval.newArray();
+        if (stacks != null) {
+            for (PayloadStack stack : stacks) {
+                if (stack == null) continue;
+                result.add(Jval.newObject()
+                        .put("content", stack.item == null ? "" : stack.item.name)
+                        .put("amount", stack.amount));
+            }
+        }
+        return result;
+    }
+
+    private Jval liquidStacksJson(LiquidStack[] stacks) {
+        Jval result = Jval.newArray();
+        if (stacks != null) {
+            for (LiquidStack stack : stacks) {
+                if (stack == null) continue;
+                result.add(Jval.newObject()
+                        .put("liquid", stack.liquid == null ? "" : stack.liquid.name)
+                        .put("amount", stack.amount));
+            }
+        }
+        return result;
     }
 
     private Jval stacksJson(ItemStack[] stacks) {
@@ -2595,10 +3057,91 @@ public class ProbeMod extends Mod {
             case "query_area":
             case "get_action_result":
             case "get_action_log":
+            case "get_config_schema":
+            case "get_tech_tree":
                 return true;
             default:
                 return false;
         }
+    }
+
+    private void controlBuildingAttack(Command command, Jval request) {
+        if (!(controlledBuilding instanceof Turret.TurretBuild turret)) {
+            replyError(command, "not_controllable", "Controlled building is not a TurretBuild");
+            return;
+        }
+        Jval target = request.get("target");
+        if (target == null) {
+            replyError(command, "bad_request", "Missing target");
+            return;
+        }
+        Unit targetUnit = target.get("unitId") == null ? null : findUnit(target);
+        Building targetBuilding = targetUnit == null && target.get("buildingId") != null ? findBuilding(target) : null;
+        if (targetUnit == null && targetBuilding == null && target.get("x") != null && target.get("y") != null) {
+            float tx = target.get("x").asFloat();
+            float ty = target.get("y").asFloat();
+            if (!Vars.world.tiles.in(World.toTile(tx), World.toTile(ty))) {
+                replyError(command, "out_of_bounds", "Target is outside the map");
+                return;
+            }
+            turret.target = null;
+            turret.targetPos.set(tx, ty);
+            turret.logicControlTime = 120f;
+            turret.logicShooting = true;
+            turret.isShooting = true;
+            Op result = newOp("attack");
+            result.status = "done";
+            result.data = Jval.newObject()
+                    .put("kind", "position")
+                    .put("buildingId", controlledBuilding.id)
+                    .put("x", tx)
+                    .put("y", ty);
+            reply(command, result.toJson());
+            return;
+        }
+        if (targetUnit != null) {
+            if (targetUnit.team == controlledBuilding.team) {
+                replyError(command, "wrong_team", "Refusing to attack a unit on the controlled building's team");
+                return;
+            }
+            turret.target = targetUnit;
+            turret.targetPos.set(targetUnit.x, targetUnit.y);
+            turret.logicControlTime = 120f;
+            turret.logicShooting = true;
+            turret.isShooting = true;
+            Op result = newOp("attack");
+            result.status = "done";
+            result.data = Jval.newObject()
+                    .put("kind", "unit")
+                    .put("buildingId", controlledBuilding.id)
+                    .put("unitId", targetUnit.id)
+                    .put("x", targetUnit.x)
+                    .put("y", targetUnit.y);
+            reply(command, result.toJson());
+            return;
+        }
+        if (targetBuilding != null) {
+            if (targetBuilding.team == controlledBuilding.team) {
+                replyError(command, "wrong_team", "Refusing to attack a building on the controlled building's team");
+                return;
+            }
+            turret.target = targetBuilding;
+            turret.targetPos.set(targetBuilding.x, targetBuilding.y);
+            turret.logicControlTime = 120f;
+            turret.logicShooting = true;
+            turret.isShooting = true;
+            Op result = newOp("attack");
+            result.status = "done";
+            result.data = Jval.newObject()
+                    .put("kind", "building")
+                    .put("buildingId", controlledBuilding.id)
+                    .put("targetBuildingId", targetBuilding.id)
+                    .put("x", targetBuilding.x)
+                    .put("y", targetBuilding.y);
+            reply(command, result.toJson());
+            return;
+        }
+        replyError(command, "bad_request", "Target must contain unitId, buildingId, or x/y");
     }
 
     private Unit findUnit(Jval target) {
@@ -2955,9 +3498,13 @@ public class ProbeMod extends Mod {
                     .put("possessing", possessing)
                     .put("homeBodyId", homeBody == null ? -1 : homeBody.id)
                     .put("item", assistant.item() == null ? "" : assistant.item().name)
-                    .put("itemAmount", assistant.stack == null ? 0 : assistant.stack.amount);
+                    .put("itemAmount", assistant.stack == null ? 0 : assistant.stack.amount)
+                    .put("boosting", controller != null && controller.boosting)
+                    .put("payloads", payloadJson(assistant))
+                    .put("payloadUsed", assistant instanceof Payloadc payloadc ? payloadc.payloadUsed() : 0f);
         }
         data.put("assistant", assistantJson);
+        data.put("control", controlJson());
 
         Jval assistantBodies = Jval.newArray();
         for (Unit candidate : Groups.unit) {
@@ -3911,6 +4458,13 @@ public class ProbeMod extends Mod {
             case "pause":
             case "resume":
             case "command_units":
+            case "control_building":
+            case "release_building":
+            case "get_config_schema":
+            case "get_tech_tree":
+            case "boost":
+            case "pickup_payload":
+            case "drop_payload":
                 return true;
             default:
                 return false;
@@ -4259,6 +4813,17 @@ public class ProbeMod extends Mod {
         tools.add(tool("list_unit_types",
                 "List unit type names and ids available in this game.",
                 inputSchema(Jval.newObject(), Jval.newArray())));
+        tools.add(tool("get_config_schema",
+                "Read the configurable fields and legal values for a block type. UnitFactory returns selectable plan indexes.",
+                inputSchema(Jval.newObject()
+                        .put("block", property("string")),
+                        Jval.newArray().add("block"))));
+        tools.add(tool("get_tech_tree",
+                "Read a bounded branch of the vanilla TechTree with parent/children, costs, objectives, researched and blockedReason.",
+                inputSchema(Jval.newObject()
+                        .put("content", property("string").put("description", "block/unit name; omit for roots"))
+                        .put("limit", property("integer").put("maximum", 256)),
+                        Jval.newArray())));
         tools.add(tool("move_to",
                 "Move the assistant body to world coordinates in pixels (8 px per tile); returns an opId.",
                 inputSchema(Jval.newObject()
@@ -4376,6 +4941,35 @@ public class ProbeMod extends Mod {
                         Jval.newArray().add("command").add("unitIds"))));
         tools.add(tool("release",
                 "Release a possessed body; it returns to its AI controller and a new home body spawns at a core.",
+                inputSchema(Jval.newObject(), Jval.newArray())));
+        tools.add(tool("control_building",
+                "Control a same-team player-controllable ControlBlock building (for example a player-controllable turret). This is building control, not unit possession.",
+                inputSchema(Jval.newObject()
+                        .put("buildingId", property("integer"))
+                        .put("x", property("integer"))
+                        .put("y", property("integer")),
+                        Jval.newArray())));
+        tools.add(tool("release_building",
+                "Release a controlled building and clear its AI target; this does not despawn the building.",
+                inputSchema(Jval.newObject(), Jval.newArray())));
+        tools.add(tool("boost",
+                "Enable or disable boosting on a body whose UnitType canBoost; requires the body to support boost.",
+                inputSchema(Jval.newObject()
+                        .put("enabled", property("boolean")),
+                        Jval.newArray())));
+        tools.add(tool("pickup_payload",
+                "Pick up a same-team payload building or unit with a payload-capable body.",
+                inputSchema(Jval.newObject()
+                        .put("target", Jval.newObject()
+                                .put("type", "object")
+                                .put("properties", Jval.newObject()
+                                        .put("unitId", property("integer"))
+                                        .put("buildingId", property("integer"))
+                                        .put("x", property("number"))
+                                        .put("y", property("number")))),
+                        Jval.newArray().add("target"))));
+        tools.add(tool("drop_payload",
+                "Drop the carried payload at the assistant's current position; payload conveyors accept it through their normal building rules.",
                 inputSchema(Jval.newObject(), Jval.newArray())));
         tools.add(tool("possess",
                 "Possess a same-team player-controllable AI unit. The assistant home body is removed and the borrowed body becomes the assistant body; release restores its controller.",
@@ -4999,6 +5593,7 @@ public class ProbeMod extends Mod {
         volatile Vec2 target;
         volatile Unit followTarget;
         volatile float followDistance = 48f;
+        volatile boolean boosting;
         volatile Teamc attackEntity;
         volatile Vec2 attackPosition;
         private Vec2 pathTarget;
@@ -5019,6 +5614,7 @@ public class ProbeMod extends Mod {
         @Override
         public void updateUnit() {
             if (unit == null) return;
+            if (unit.type.canBoost) unit.updateBoosting(boosting);
 
             if (followTarget != null) {
                 if (followTarget.dead || followTarget.health <= 0) {

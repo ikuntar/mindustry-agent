@@ -127,12 +127,14 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。固定场景脚本现在默认以 `PROBE_REQUIRE_AUTH=1` 运行，seed、raw probe、MCP adapter 全部通过 token 握手。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
 - 状态一致性审计（2026-11-22）：`build`/`deconstruct`/`repair`/`mine` 的 op 只有在游戏状态真正变化后才结束；`build_dropped`、`deconstruct_dropped`、`target_gone`、`assistant_gone` 都会失败而不是假 done。`configure` 在调用后回读 `building.config()`，未应用则 `configure_rejected`。`stop` 会清空移动/攻击/跟随/采矿/建造目标并把 running op 标为 cancelled；`cancel` 对 mine/build/deconstruct/repair 做同样清理。助手死亡或附身换体后，旧 op 以 `assistant_gone` 结束。`mine` 以开始时携带量为基线，不会因为身上已有物品而立即 done。`command_units` 的目标 unit/building 不存在时返回 `target_not_found`。
 - HTTP 健壮性（2026-11-22）：畸形 request line、空请求、超大 header、chunked body 均返回 400 并关闭 socket；连接数上限 64；accept 瞬时异常不再停服；`eventSeq`/`mapRevision` 改为 volatile，`/events/wait` 的 gameOver/won 读游戏线程缓存；`dataBaseUrl` 不再回显客户端 `Host`。
-- 会话入口收口（2026-11-22）：`/context` 只接受 `detail/radius/since/includeEnemies/maxUnits/maxBytes`；`/mcp` 的 `tools/call` 同样走 27 个工具白名单，`build_plan` 走 session 展开路径。`/context?op=...` 和 `/mcp {name:"set_paused"}` 均实测被拒。
+- 会话入口收口（2026-11-22）：`/context` 只接受 `detail/radius/since/includeEnemies/maxUnits/maxBytes`；`/mcp` 的 `tools/call` 同样走 34 个工具白名单，`build_plan` 走 session 展开路径。`/context?op=...` 和 `/mcp {name:"set_paused"}` 均实测被拒。
 - 会话/数据面审计（2026-11-22）：get_area 改为行优先并返回 coverage.next；context 返回 resourceCapacity/resourcesFull 与 core items；map drop_id 改为 item.id+1 并附 items/dropIds；/content、/capabilities、/cancel、/stop 已接入；get_action_result.waitMs 已轮询；build_plan required 为空；cancel/stop 进入工具表；pruneOps 不再淘汰 running；304 带 ETag/Cache-Control 且 HEAD 无 body；/events/wait 独立 8 连接配额，超限 429；session /actions 支持 idempotencyKey（LRU 256，按 session token 隔离）。
 - 命令超时（2026-11-22）：队列 Command 带 `started/cancelled`；HTTP 超时未开始时 503 `not_executed` 且不会执行，已开始则 504 `execution_unknown`。实测游戏线程 stall 6.5s 时返回 503、`moved=0`。
 - 失败会返回错误或保持 running，不是假成功。
 
 - 会话能力对齐（2026-11-23）：session `/tools` 27 个，新增 `possess`/`respawn`/`pause`/`resume`/`command_units`；`session-api-smoke` 断言 27 个工具、session `pause`/`resume`、暂停写门控。`possess` 经 session 实测 dagger 借用、`assistant.type=dagger`、`release` 回 home；`respawn` 按 `core-foundation`/`core-nucleus` 分别得到 `ai-probe-ai-beta`/`ai-probe-ai-gamma`。`Rules.pauseDisabled=true` 时 `pause` 返回 `pause_disabled`；MCP `/mcp` tools/list 27 个。
+
+- 玩家能力补齐（2026-11-23）：`get_config_schema {block:"ground-factory"}` 返回 3 个可选方案（0 dagger、1 crawler、2 nova）；`configure {buildingId,value:1}` 回读 `config=1`。`get_tech_tree {content:"duo"}` 返回 parent/children/requirements/objectives/researched/blockedReason。`control_building` 控制 Fortress 同队 `duo`，`context.control.mode=building`、unitType=`block`；`attack` 对敌方 container 返回 done；`release_building` 不删除建筑。payload-capable mega 附身后 `pickup_payload` 同队 dagger、`drop_payload` 清空 payload。session `/tools` 34 个，session smoke 和 `/mcp` smoke 均通过；boost 对无 canBoost 的 body 返回 `cannot_boost`。
 
 限制：
 

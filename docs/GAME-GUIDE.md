@@ -179,13 +179,25 @@ Serpulo 常见物品：
 
 - 单位分地面/飞行、攻击/支援/建造/采矿等类型；飞行单位可以越过地形，地面
   单位会被墙和液体阻挡。
-- 单位由单位工厂生产，工厂需要材料、电力和单位容量；部分单位需要重造工厂
-  或升级工厂。
-- 玩家可以直接控制单位；AI 助手只控制自己的助手身体，不能假定自己能控制
-  玩家或其他 AI 单位。
+- 单位由基础工厂（`ground-factory`/`air-factory`/`naval-factory`）按**当前方案**生产：
+  玩家选择方案，工厂按资源/时间生产，没有生产队列。用
+  `get_config_schema {block:"ground-factory"}` 读取方案索引，再用 `configure {value:index}` 选择。
+- `Reconstructor` 不是第二个可选生产方案：它接受基础单位作为 payload，按固定的
+  `[基础单位, 升级单位]` 表升级；没有队列，也不能任意选择升级目标。
+- `UnitAssembler`（Erekir）是多方块 payload/item/liquid 组装厂，和基础工厂/Reconstructor
+  不同，不能按同一个接口假定。
+- 玩家可以直接控制自己的单位；AI 助手可以控制自己的助手身体、用 `command_units`
+  指挥同队 CommandAI 单位、用 `possess` 附身同队 AI 单位。AI 不应抢玩家当前 body。
+- 建筑控制使用 `control_building`/`release_building`，只适用于 `ControlBlock` 且
+  `canControl()` 为 true 的建筑（例如部分炮塔）；它不是单位附身，不改变 home body。
 - 指挥单位时先确认：单位是否同队、是否是 CommandAI、是否允许该命令。
 - `set_stance` 可改变姿态（例如 holdPosition、holdFire、patrol 等）；姿态不是
-  永久目标，仍要读单位状态确认。
+  永久目标，仍要读单位状态确认。`command_units` 的覆盖是队友式 last-writer-wins，
+  不做硬锁；后发命令会覆盖先前目标。
+- 拥有 payload 能力的单位用 `pickup_payload` 拾取同队 payload 建筑/单位，用
+  `drop_payload` 在当前位置投放；payload conveyor 按建筑自身规则接收。
+- `boost` 只在 `UnitType.canBoost=true` 时可用；被动 abilities 由单位类型自动运行，
+  没有统一的“主动技能”按钮。
 - 附身/释放是特殊能力：附身后原身体消失，释放后从核心生成新的 home body。
   AI 不应附身玩家身体，也不应把附身当作复制单位。
 
@@ -197,8 +209,9 @@ Serpulo 常见物品：
   早期目标是稳定采集、建立传送带/工厂、建基础炮塔并守住核心。
 - 科技树通过研究解锁方块；未解锁的方块在战役中不能建造。AI 遇到
   `block_locked` 时可以用 `research {content:"duo"}` 消耗核心资源研究，或换用已解锁方块；
-  不要反复重试同一个方块。研究前先看 `GET /content?type=blocks` 的 `researched` 和
-  `researchCost`；资源不足或研究入口不可用时停下来让玩家处理。
+  不要反复重试同一个方块。研究前先看 `get_tech_tree {content:"duo"}` 或
+  `GET /content?type=blocks` 的 `researched`/`researchCost`；父节点未解锁、目标未完成
+  或资源不足时停下来处理。研究是逐节点操作，没有队列/自动规划器。
 - `get_context.rules` 提供当前只读规则摘要：`modeName`、`waveTimer`、`waveSending`、
   `winWave`、建造速度/成本/拆除返还/建筑血量倍率，以及 `sector`（id/name/preset/captureWave）。
   这些是 agent 能读到的全部规则；不要臆造未暴露的规则字段。

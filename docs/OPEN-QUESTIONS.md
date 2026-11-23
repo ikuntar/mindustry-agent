@@ -88,12 +88,12 @@
 - 已记录：`docs/PLAYER-PARITY.md`
 - 已确认：显式 `respawn(coreId)`；建筑控制要和单位附身分开；工厂是选择方案而不是队列；液体没有直接身体搬运；地面没有通用掉落物；不做蓝图/跨区域。
 - 已拍板：允许助手控制 possess 借体；last-writer-wins 不抢占玩家 body；主动 pause/resume 开放但受 `Rules.pauseDisabled` 约束。
-- 待拍板/实现：建筑控制范围、payload 入口、科技树图、多客户端单实例。
+- 已实现：建筑控制、工厂方案/schema、payload/boost、科技树图；剩余：模组控制方块范围、多客户端单实例策略。
 
 ## Q15. 建筑控制
 
-- v160.8 已确认 `ControlBlock` + `BlockUnitc`（TurretBuild 实现，具体方块按 `playerControllable` 枚举）。
-- 待定：是否只开放炮塔，是否允许模组控制方块，控制期间的动作集合。
+- 已实现 `control_building`/`release_building`，只接受 `ControlBlock.canControl()` 且同队的建筑；Fortress `duo` 实测。
+- 当前动作集合：控制状态 + `attack` 目标；`release_building` 清除目标，不 despawn。模组控制方块继续按运行时能力。
 
 ## Q16. 单位控制冲突
 
@@ -103,10 +103,10 @@
 
 ## Q17. 工厂方案配置
 
-- 已确认：基础 `UnitFactory` 的 `config()` 是 `Integer currentPlan`；不是队列。
+- 已确认并实现：基础 `UnitFactory` 的 `config()` 是 `Integer currentPlan`；`get_config_schema` 返回方案索引，`configure` 回读。
 - `Reconstructor` 是固定 `[基础单位, 升级单位]` 表，接受 `UnitPayload`；不是选任意单位。
-- `UnitAssembler` 是 Erekir 多方块组装，需求是 payload/item/liquid，需单独适配。
-- 待实现：`get_config_schema`/方案列表；`configure` 接受 plan index；重生类型仍只由核心决定。
+- `UnitAssembler` 是 Erekir 多方块组装，需求是 payload/item/liquid，当前只读列出，不当作基础工厂。
+- 重生类型仍只由核心决定。
 
 
 ## Q18. 暂停/恢复

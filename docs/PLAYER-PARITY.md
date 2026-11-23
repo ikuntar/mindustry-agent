@@ -1,6 +1,6 @@
 # 玩家能力对齐（Player Parity）需求记录
 
-状态：部分实现（2026-11-23）：`respawn`/`possess`/`pause`/`resume`/`command_units` 已接入 session；建筑控制、工厂方案、payload、科技树图仍待实现。
+状态：本轮实现（2026-11-23）：`respawn`/`possess`/`pause`/`resume`/`command_units`/`control_building`/`release_building`/`boost`/`pickup_payload`/`drop_payload`/`get_config_schema`/`get_tech_tree` 已接入 session；仅保留明确不做的元层/跨区域项。
 关联：`docs/ASSISTANT-DESIGN.md`、`docs/OPEN-QUESTIONS.md`、`TASKS.md`
 
 本文记录“规则内玩家能做、AI 还缺什么”，以及已经核对过的 Mindustry v160.8
@@ -8,19 +8,21 @@
 
 ## 1. 入口与现状
 
-正常 AI 入口是 mod 内 session API（以及 `/mcp` 的同一套工具），当前 27 个：
+正常 AI 入口是 mod 内 session API（以及 `/mcp` 的同一套工具），当前 34 个：
 
 ```text
 get_context, get_area, get_tile, query_area, get_unit, list_unit_types,
 move_to, attack, mine, build_plan, withdraw, deposit, configure, research,
 deconstruct, repair, set_stance, release, follow,
-get_action_result, cancel, stop, possess, respawn, pause, resume, command_units
+get_action_result, cancel, stop, possess, respawn, pause, resume, command_units,
+get_config_schema, get_tech_tree, control_building, release_building, boost, pickup_payload, drop_payload
 ```
 
 另有 `/content`、`/capabilities`、`/guide`、`/events/wait`、`/data` 等读接口。
 
-旧 Node MCP 27 工具和 raw probe 调试面包含一些 session 未开放的动作
-（`command_units` 等旧调试面）。这些旧入口不等于产品 AI 的正式权限；其中 `possess`/`respawn`/`pause`/`resume`/`command_units` 已进入 session。
+旧 Node MCP 27 工具和 raw probe 调试面保留测试入口；本文列出的 34 个工具才是
+产品 session 契约。旧调试入口不等于正式权限，`possess`/`respawn`/`pause`/
+`resume`/`command_units` 等已进入 session。
 
 ## 2. 已确认的修正
 
@@ -51,14 +53,14 @@ get_action_result, cancel, stop, possess, respawn, pause, resume, command_units
 玩家控制。建筑控制得到的是 **BlockUnitc**（伪单位），不是普通 Alpha/Dagger
 Unit，血量、武器、移动、建造、payload 语义都可能不同。
 
-因此：
+因此已实现独立路径：
 
-- 不能把“附身建筑”塞进现有的 `possess(unitId)` 单位路径
-- 需要独立的 building-control 适配层
-- 不能默认所有建筑可控制；运行时按 `ControlBlock.canControl()` 和具体方块字段判断
-- 需要明确控制期间 `get_context.assistant` 的字段如何表示伪单位
-- `release` 要能退出建筑控制并恢复原建筑状态
-- 建筑控制的“身体”是否需要独立上下文、op、动作白名单，待定
+- `control_building` 校验 `ControlBlock`、`canControl()`、同队，记录
+  `controlMode=building` 与 building/pseudo-unit identity
+- `release_building` 清理目标并恢复控制状态，不 despawn 建筑
+- `get_context.control` 报告 `mode/buildingId/block/unitId/unitType`
+- 控制期间 `attack` 走 TurretBuild 目标路径；不是普通 Unit 的 move/build 动作
+- 具体可控制方块按运行时 `playerControllable` 枚举，不默认所有建筑
 
 ### 2.3 重生
 
@@ -259,21 +261,21 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
 | 控制自己的单位 | 可以 | 可以 | 保持 |
 | 控制同队其他单位 | 可以 | `command_units`；不直接改 controller | 需要时再做 `control_unit` |
 | 附身/退出附身 | 可以 | session 已开放 | 保持 |
-| 控制部分建筑 | 可以 | 不可 | `ControlBlock` 适配，独立动作 |
+| 控制部分建筑 | 可以 | 已接入 | `control_building`/`release_building` |
 | 选择重生核心 | 可以 | 已开放 | 补 `supportsEnv`/异常核心 |
 | 选择重生单位类型 | 不可以 | 不适用 | 不做 |
 | 指挥同队单位 | 可以 | 有 stance + `command_units` | 保持 last-writer-wins |
-| 选择工厂生产方案 | 可以 | 不完整 | 读方案 + configure |
-| 单位特殊能力 | 取决于单位 | 未统一 | 按 UnitType/abilities 执行 |
-| boost | 可以 | 未提供 | `boost` 或控制器字段 |
-| payload 拾取/投放 | 可以 | 未提供 | payload 动作 |
-| 单位进入 payload conveyor | 可以 | 间接 move | 明确 `enter_payload`/move 语义 |
+| 选择工厂生产方案 | 可以 | 已接入 | `get_config_schema` + `configure` |
+| 单位特殊能力 | 取决于单位 | 已暴露 abilities | 按 UnitType/abilities 自动执行 |
+| boost | 可以 | 已接入 | `boost`（canBoost 门控） |
+| payload 拾取/投放 | 可以 | 已接入 | `pickup_payload`/`drop_payload` |
+| 单位进入 payload conveyor | 可以 | `move_to` + drop | 不额外造 `enter_payload`，按建筑/移动规则 |
 | 物品取放 | 可以 | 可以 | 保持 |
 | 液体直接取放 | 不可以 | 不适用 | 不做；只做建筑/网络 |
 | 地面物品拾取 | 不适用 | 不适用 | 移除 |
-| 配置建筑 | 可以 | 部分 | 补 schema/方案/逻辑代码 |
+| 配置建筑 | 可以 | `get_config_schema` | 保持 schema + configure |
 | 蓝图 | 可以（UI） | 工作目录替代 | 不做 UI |
-| 研究 | 可以 | 单节点 | 补科技树图/规则 |
+| 研究 | 可以 | 单节点 + 图 | `research` + `get_tech_tree` |
 | 暂停/恢复 | 可以 | 可以 | 已开放，规则门控 |
 | 存档/读档 | 可以（UI） | 不可 | 不纳入世界动作 |
 | 跨区域发射/loadout | 可以 | 不可 | 暂不做 |
@@ -287,14 +289,14 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
 2. **建筑控制的上下文**：`assistant.type` 如何表示 `BlockUnitc`；是否需要
    `controlMode=building`、`buildingId`、`canExit`。
 3. **玩家抢占**：已拍板 last-writer-wins；不抢玩家当前 body，只覆盖 AI 单位/命令。
-4. **工厂方案值**：已确认基础工厂 `config()` 是 `Integer currentPlan`；待补方案列表
-   和 `configure` 的 plan index 校验。`Reconstructor` 的 config 是 `UnitCommand`。
-5. **payload 入口**：单位“进入 payload conveyor”的引擎触发条件；是否需要
-   `enter_payload`，还是只要移动上去即可。
-6. **特殊能力**：哪些 abilities 是自动的，哪些需要玩家输入；AI 是否需要
-   `use_ability`。
-7. **研究图**：`TechNode.objectives`/`requiresUnlock`/`Rules.researched` 在
-   战役和自定义地图中的语义；研究是否需要 sector 级限制。
+4. **工厂方案值**：`get_config_schema` 返回方案索引，`configure` 接受整数并回读
+   `currentPlan`；`Reconstructor` 的 config 是 `UnitCommand`，不作为生产方案。
+5. **payload 入口**：已提供 `pickup_payload`/`drop_payload`；payload conveyor 按
+   建筑规则接收，当前不额外造 `enter_payload`，移动/投放语义保持不变。
+6. **特殊能力**：`get_capabilities` 已列出 `abilities`；被动 abilities 自动运行，
+   `boost` 有显式动作。没有为无输入入口的技能伪造 `use_ability`。
+7. **研究图**：`get_tech_tree` 已返回 parent/children、成本、objectives、
+   researched、blockedReason；`research` 检查父节点和目标；不提供队列/规划器。
 8. **暂停/游戏速度**：已拍板开放 `pause`/`resume`，受 `Rules.pauseDisabled`
    约束；游戏速度没有原版通用控制，暂不开放。
 9. **核心类型**：已建 alpha/beta/gamma 三份并实测 beta/gamma；仍需异常核心 fallback
@@ -309,14 +311,14 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
 ## 5. 实现顺序建议
 
 1. [done] 显式 `respawn(coreId)` + 按核心类型创建对应 assistants
-2. [next] 建筑控制适配（先 TurretBuild）
+2. [done] 建筑控制适配（先 TurretBuild）
 3. [done] `possess`/`release` 进入正常 session 工具面
-4. [next] 工厂方案读取/配置（`command_units` 已接入）
-5. `get_config_schema` + 完整配置读取
-6. 特殊 abilities / boost / payload
-7. 科技树图 + 单节点研究规则
-8. 暂停/游戏控制拍板（单独做）
-9. 文档与验收场景
+4. [done] 工厂方案读取/配置（`command_units` 已接入）
+5. [done] `get_config_schema` + 完整配置读取
+6. [done] 特殊 abilities / boost / payload
+7. [done] 科技树图 + 单节点研究规则
+8. [done] 暂停/游戏控制拍板（单独做）
+9. [done] 文档与验收场景
 
 ## 6. 明确不做
 

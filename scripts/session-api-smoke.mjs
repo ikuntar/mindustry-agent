@@ -71,8 +71,8 @@ if (index.status !== 200 || !Array.isArray(index.body.control) || !Array.isArray
 
 const guideBuild = await call("/guide?topic=build", { headers: auth });
 const guideText = String(guideBuild.body);
-console.log("guide build", guideBuild.status, guideText.includes("get_config_schema") || guideText.includes("canvas."));
-if (guideBuild.status !== 200 || guideText.includes("get_config_schema") || guideText.includes("canvas.")) process.exit(1);
+console.log("guide build", guideBuild.status, guideText.includes("get_config_schema"), guideText.includes("canvas."));
+if (guideBuild.status !== 200 || !guideText.includes("get_config_schema") || guideText.includes("canvas.")) process.exit(1);
 
 const tools = await call("/tools", { headers: auth });
 const expectedTools = [
@@ -80,6 +80,7 @@ const expectedTools = [
   "move_to", "attack", "mine", "build_plan", "withdraw", "deposit", "configure",
   "deconstruct", "repair", "set_stance", "release", "follow", "research",
   "get_action_result", "cancel", "stop", "possess", "respawn", "pause", "resume", "command_units",
+  "get_config_schema", "get_tech_tree", "control_building", "release_building", "boost", "pickup_payload", "drop_payload",
 ];
 const toolNames = new Set((tools.body.tools ?? []).map((tool) => tool.name));
 const missingTools = expectedTools.filter((name) => !toolNames.has(name));
@@ -102,6 +103,20 @@ const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime",
 const missingContextFields = contextFields.filter((key) => !(key in (context.body ?? {})));
 console.log("context fields", missingContextFields.join(",") || "none");
 if (context.status !== 200 || missingContextFields.length > 0) process.exit(1);
+
+const schema = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_config_schema", block: "ground-factory" }),
+});
+const tech = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_tech_tree", content: "duo", limit: 12 }),
+});
+console.log("schema/tech", schema.status, schema.body.configurable, schema.body.plans?.length, tech.status, tech.body.count);
+if (schema.status !== 200 || schema.body.configurable !== true || !schema.body.plans?.length) process.exit(1);
+if (tech.status !== 200 || !tech.body.nodes?.length) process.exit(1);
 
 const cappedArea = await call("/actions", {
   method: "POST",
@@ -226,7 +241,7 @@ console.log("data token rotation", oldData.status, freshData.status);
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
-if (tools.status !== 200 || tools.body.tools?.length !== 27) process.exit(1);
+if (tools.status !== 200 || tools.body.tools?.length !== 34) process.exit(1);
 if (forbidden.status !== 403 || plan.status !== 400 || !String(plan.body.message ?? "").includes("no placements")) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
 if (conditionalMap.status !== 304) process.exit(1);
