@@ -61,12 +61,26 @@ mindustry-ai/
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON 已挂载；`If-None-Match` 返回 304；`session-api-smoke` 把地图写入 `/tmp/mindustry-session-map.bin` 并验证 Range 206；实际 `curl -o` 已验证；`POST /session/data-token` 可轮换 data token
 - [x] 可选 MCP `/mcp`：initialize/tools/list/tools/call/ping + guide resources + 3 个 prompts，`mcp-http-smoke` 通过；官方 MCP SDK connect/list/call/resources/prompts 通过；REST 仍是主路径
 - [x] 可移植 HTTP server：`ai.probe.http` ServerSocket 实现，桌面 `/session`、`/data`、`/mcp` 回归通过
-- [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
-- [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）
+- [x] Android 决策：默认 PC host + 手机 client；已生成 JVM+dex 通用 mod jar
+- [x] 通用 mod jar：`probe-mod/build-universal.sh` 生成同时含 `classes/` 与 `classes.dex` 的 jar；桌面回归通过
+- [ ] 真机 Android 安装/phone-hosted 验收：需要 Android 设备或模拟器确认 mod 加载、session token、LAN 访问
 - [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
 - [x] Ground Zero campaign-like：omp 连续观察 35 次到 `wave=10`，`winWave=10`、`won=false`；证明可玩到终点波次，正式战役结算仍需客户端 campaign 或 mod 支持
 - [x] omp 上手速度：冷启动+首次真实 context 约 13.0s；热启动约 8.7s；连续 35 次 context 约 254s（约 7.3s/次）
 - [ ] 在真实 Claude Code/Codex/OpenCode host UI 中做人工双 client 验收
+
+## mod 构建（PC + Android）
+
+```bash
+# 桌面 jar
+probe-mod/build.sh
+
+# 同时含 JVM classes 与 Android classes.dex 的通用 jar
+probe-mod/build-universal.sh
+```
+
+通用 jar 的 PC 路径已回归；Android 真机加载仍需安装到手机的
+`Android/data/io.anuke.mindustry/files/mods` 后验收。
 
 ## MCP 快速开始
 

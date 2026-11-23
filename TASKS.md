@@ -164,8 +164,9 @@
 - [x] HTTP 会话入口加固：`/context` query 白名单、`/mcp` tools/call 白名单、`build_plan` MCP 路径；畸形请求 400、socket 关闭、accept 异常继续、连接上限/header 上限、chunked 拒绝
 - [x] 命令超时取消：未取到命令 503 `not_executed` 且不执行；已开始 504 `execution_unknown`；`eventSeq`/`mapRevision` volatile，Host 不回显
 - [x] 自定义 `ai.probe.http` ServerSocket HTTP server：移除 `com.sun.net.httpserver`；桌面 `/session`、`/data`、`/mcp` 回归通过
-- [x] Android 决策：默认 PC host + 手机 client；phone-hosted 暂缓
-- [ ] phone-hosted Android：`android: true` + d8 + 外部 discovery + 固定 token（仅在需要手机拥有世界时做）
+- [x] Android 决策：默认 PC host + 手机 client；已生成 JVM+dex 通用 mod jar
+- [x] 通用 mod jar：`probe-mod/build-universal.sh` 生成同时含 `classes/` 与 `classes.dex` 的 jar；桌面回归通过
+- [ ] 真机 Android 安装/phone-hosted 验收：需要 Android 设备或模拟器确认 mod 加载、session token、LAN 访问
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
 - [x] `/data` data token 轮换：`POST /session/data-token`，旧 token 立即 401
 - [ ] `/data` Parquet 事件

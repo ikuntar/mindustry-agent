@@ -1,6 +1,7 @@
 package ai.probe;
 
 import arc.Events;
+import arc.files.Fi;
 import arc.Core;
 import arc.math.geom.Point2;
 import arc.math.geom.Position;
@@ -61,6 +62,8 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -77,11 +80,6 @@ import java.util.function.Consumer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.lang.management.ManagementFactory;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -5306,8 +5304,19 @@ public class ProbeMod extends Mod {
     }
 
     private static long currentPid() {
+        if (Vars.android) {
+            try {
+                Class<?> process = Class.forName("android.os.Process");
+                Object value = process.getMethod("myPid").invoke(null);
+                return value instanceof Number number ? number.longValue() : 0;
+            } catch (Throwable ignored) {
+                return 0;
+            }
+        }
         try {
-            String name = ManagementFactory.getRuntimeMXBean().getName();
+            Class<?> factory = Class.forName("java.lang.management.ManagementFactory");
+            Object bean = factory.getMethod("getRuntimeMXBean").invoke(null);
+            String name = String.valueOf(bean.getClass().getMethod("getName").invoke(bean));
             int at = name.indexOf('@');
             return Long.parseLong(at > 0 ? name.substring(0, at) : name);
         } catch (Throwable ignored) {
@@ -5317,9 +5326,6 @@ public class ProbeMod extends Mod {
 
     private void writeDiscovery() {
         try {
-            Path directory = Paths.get(System.getProperty("java.io.tmpdir"), "mindustry-ai-probe");
-            Files.createDirectories(directory);
-            Path file = directory.resolve("bridge-info.json");
             String json = Jval.newObject()
                     .put("port", PORT)
                     .put("token", token)
@@ -5336,11 +5342,31 @@ public class ProbeMod extends Mod {
                     .put("sessionBootstrapToken", EXPOSE_SESSION ? sessionBootstrapToken : "")
                     .put("pid", currentPid())
                     .toString(Jval.Jformat.plain);
-            Files.write(file, json.getBytes(StandardCharsets.UTF_8));
+            if (Vars.android) {
+                // Android cannot use /tmp. Keep discovery in the app data directory;
+                // the session prompt still exposes the bootstrap token.
+                Fi base = Vars.dataDirectory != null ? Vars.dataDirectory : Core.files.local("mindustry-ai-probe");
+                Fi directory = base.child("mindustry-ai-probe");
+                directory.mkdirs();
+                Fi file = directory.child("bridge-info.json");
+                file.writeString(json, false, "UTF-8");
+                Log.info("[ai-probe] discovery written: " + file.absolutePath());
+                return;
+            }
+            File directory = new File(System.getProperty("java.io.tmpdir"), "mindustry-ai-probe");
+            if (!directory.exists() && !directory.mkdirs()) {
+                throw new IOException("cannot create discovery directory: " + directory);
+            }
+            File file = new File(directory, "bridge-info.json");
+            try (FileOutputStream output = new FileOutputStream(file)) {
+                output.write(json.getBytes(StandardCharsets.UTF_8));
+            }
             try {
-                Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
-            } catch (UnsupportedOperationException ignored) {
-                // Windows/non-POSIX fallback: the file is still local-only.
+                file.setReadable(false, false);
+                file.setWritable(false, false);
+                file.setReadable(true, true);
+                file.setWritable(true, true);
+            } catch (Throwable ignored) {
             }
             Log.info("[ai-probe] discovery written: " + file);
         } catch (IOException error) {
