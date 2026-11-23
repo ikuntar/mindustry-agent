@@ -5,7 +5,7 @@
 `/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
 `POST /mcp` 的最小 MCP Streamable HTTP 子集；HTTP server 已改成 `ai.probe.http`
 的 ServerSocket 实现，移除 `com.sun.net.httpserver`。已加入 JVM+dex 通用 jar 构建；
-真机 Android 加载仍需验收。
+Android 模拟器已通过游戏内导入加载，真机仍需验收。
 
 目标：普通用户只安装一个 Mindustry mod，按需启动一局 AI 会话；不安装 Node、
 不常驻 MCP、不安装 skill，也不需要把 MCP 永久配置进 coding harness。
@@ -505,7 +505,10 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。
 
 - `mod.json` 的 `"java": true`；Android 分支读取根目录 `classes.dex`
 - d8/dex 构建脚本：已加入 `probe-mod/build-universal.sh`
-- Android discovery 已改用 `Vars.dataDirectory`，不依赖 `/tmp`；真机仍需验收
+- Android discovery 已改用 `Vars.dataDirectory`，不依赖 `/tmp`
+- 已在 F-Droid `8-fdroid-160.7` 模拟器上通过游戏内导入加载；真机仍需验收
+- Android 11+ 手动复制 `Android/data/.../mods` 会因 scoped storage/文件 owner
+  不可见（模拟器复现 `No mods found!`）；必须走 `Mods -> Import Mod -> Import File`
 - 固定 token 或可从 UI 读取的 token
 - `adb reverse`/SSH tunnel + 鉴权
 - 真机包名验收（不能拿桌面 jar 当证据）

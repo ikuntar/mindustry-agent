@@ -63,7 +63,7 @@ mindustry-ai/
 - [x] 可移植 HTTP server：`ai.probe.http` ServerSocket 实现，桌面 `/session`、`/data`、`/mcp` 回归通过
 - [x] Android 决策：默认 PC host + 手机 client；已生成 JVM+dex 通用 mod jar
 - [x] 通用 mod jar：`probe-mod/build-universal.sh` 生成同时含 `classes/` 与 `classes.dex` 的 jar；桌面回归通过
-- [ ] 真机 Android 安装/phone-hosted 验收：需要 Android 设备或模拟器确认 mod 加载、session token、LAN 访问
+- [x] Android 模拟器加载验收：F-Droid `8-fdroid-160.7` 上通用 zip 经游戏内导入加载 `ai-probe`，session API 监听 `47600`；真机仍需验收、phone-hosted 未做
 - [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
 - [x] Ground Zero campaign-like：omp 连续观察 35 次到 `wave=10`，`winWave=10`、`won=false`；证明可玩到终点波次，正式战役结算仍需客户端 campaign 或 mod 支持
 - [x] omp 上手速度：冷启动+首次真实 context 约 13.0s；热启动约 8.7s；连续 35 次 context 约 254s（约 7.3s/次）
@@ -79,8 +79,22 @@ probe-mod/build.sh
 probe-mod/build-universal.sh
 ```
 
-通用 jar 的 PC 路径已回归；Android 真机加载仍需安装到手机的
-`Android/data/io.anuke.mindustry/files/mods` 后验收。
+通用 jar 的 PC 路径已回归；Android 加载已在 F-Droid `8-fdroid-160.7`
+模拟器上通过。
+
+### Android 安装
+
+必须在游戏里导入，不能把文件直接拖进 `/Android/data/...`：
+
+1. 把通用包放在手机 `Download`（直接下载 `.zip` 优先，部分文件选择器对
+   `.jar` 的 MIME 识别不稳定）。
+2. Mindustry → `Mods` → `+ Import Mod` → `Import File` → 选择该 zip。
+3. 看到 `Restart Required` 后完全退出并重启游戏，在 Mods 列表确认 `AI Probe`。
+
+Android 11+ 的 scoped storage 会让文件管理器“复制成功”但游戏看不到
+`Android/data/io.anuke.mindustry/files/mods` 里的文件；模拟器已复现
+`No mods found!`，把文件改成应用 UID 后同一 jar 才能加载。因此手机端不要用
+手动复制 `Android/data` 的方式，走游戏内导入即可。
 
 ## MCP 快速开始
 
