@@ -240,7 +240,7 @@ respawn(core = null):
 
 ### 写工具
 
-> 下表是完整目标/旧 Node MCP 的工具面；当前 mod session API 只有 22 个，`command_units`、`possess`、`respawn` 仍在旧调试面。缺口和实现顺序见 `docs/PLAYER-PARITY.md`。
+> 下表是完整目标/旧 Node MCP 的工具面；当前 mod session API 有 27 个；`command_units`/`possess`/`respawn`/`pause`/`resume` 已进入正常工具面。缺口和实现顺序见 `docs/PLAYER-PARITY.md`。
 
 
 | 工具 | 作用 |

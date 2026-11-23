@@ -194,15 +194,17 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
 
 暂停规则必须写进 session prompt/guide：
 
-- 玩家可以随时暂停；暂停时模拟 tick 不推进
-- AI 不应在 `paused=true` 时发新动作
-- AI 不应把 `running` 动作当作仍在推进
-- AI 不能自动取消暂停；暂停是玩家控制
+- 玩家可以暂停/恢复；暂停时模拟 tick 不推进
+- AI 也可以显式 `pause`/`resume`，但受 `Rules.pauseDisabled` 约束
+- 除 `resume` 外，`paused=true` 时写动作返回 `game_paused`
+- `pause`/`resume` 都必须绕过暂停写门控；否则无法恢复
+- 暂停期间不自动重生，running op 不会补帧
 
 服务端已把这条规则做成硬门控：`paused=true` 时 `/actions` 的写 op 返回
-`game_paused`，只读 op 继续可用；`ensureAssistant()` 在暂停期间也不会自动重生。
+`game_paused`，只读 op 和 `resume` 继续可用；`ensureAssistant()` 在暂停期间
+也不会自动重生。
 
-会话 `/actions` 只允许 `/tools` 暴露的 21 个名字；内部调试 op 仍只走本地 probe
+会话 `/actions` 只允许 `/tools` 暴露的 27 个名字；内部调试 op 仍只走本地 probe
 socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
 返回 `{opId,status,data:{results}}`；`status=queued` 只表示已入队，单块 build 的
 op 要等目标 tile 真正出现方块才 `done`，计划被引擎丢弃则 `failed/build_dropped`，
@@ -324,7 +326,7 @@ POST /mcp   MCP Streamable HTTP
 - `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-ai`、
   `Mcp-Session-Id`
 - `notifications/initialized`：202，无 body
-- `tools/list`：22 个核心工具
+- `tools/list`：27 个核心工具
 - `tools/call`：复用现有游戏动作队列，返回 MCP text content
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -342,7 +344,7 @@ POST /mcp   MCP Streamable HTTP
 - 许多 host 不支持热重载，首次配置后要重启。
 - 本项目的推荐流程是 session prompt，不依赖 MCP 配置。
 - MCP 和 REST 共享同一份工具 schema 与游戏动作队列，避免行为漂移。
-- 当前暴露 22 个核心工具（原 12 个 + 读 tile/area/unit/类型 + research/deconstruct/repair/set_stance/release/follow），其余内部调试 op 不搬。
+- 当前暴露 27 个核心工具（22 个基础 + `possess`/`respawn`/`pause`/`resume`/`command_units`），其余内部调试 op 不搬。
 
 ## 9. 弹窗设计
 
@@ -424,13 +426,13 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
 - `/actions/{opId}`：动作状态轮询
 - `/guide`：完整游戏知识指南；`?topic=build|economy` 追加主题
-- `/tools`：22 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/follow/get_action_result/cancel/stop）
+- `/tools`：27 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/possess/respawn/pause/resume/command_units/follow/get_action_result/cancel/stop）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
 
 待完成：
 
-- 22 个核心工具的显式 schema/错误码表
+- 27 个核心工具的显式 schema/错误码表
 - `/data/map` + Range、`/data/events` NDJSON 迁移进 mod
 - session token 失效/刷新按钮
 - 弹窗/UX
@@ -463,7 +465,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 部分完成：
 
 - `POST /mcp` 的 `initialize`、`notifications/initialized`、`tools/list`、`tools/call`、`ping`
-- 22 个核心工具与 REST 共用 `toolsJson()` schema
+- 27 个核心工具与 REST 共用 `toolsJson()` schema
 - `Mcp-Session-Id`
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -530,7 +532,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。因此 Androi
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /`：控制面/数据面端点索引
 - `GET /guide`：完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 mod jar）
-- `GET /tools`：22 个核心工具 JSON Schema
+- `GET /tools`：27 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
 - `game_pause` / `game_resume` / `wave_start` / `wave_end` 事件 + `context.paused`
 - `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）
@@ -557,7 +559,7 @@ node scripts/mcp-http-smoke.mjs
 ```text
 session 200 true
 reused bootstrap 401
-tools 200 22
+tools 200 26
 context 200 Fortress 928 584
 action 200 op-1
 result 200 done
@@ -577,7 +579,7 @@ MCP 冒烟：
 session 200
 initialize 200 mindustry-ai 2024-11-05
 initialized notification 202
-tools/list 200 22
+tools/list 200 26
 tools/call get_context 200 Fortress 928 584
 tools/call move_to 200 op-1 running
 tools/call get_action_result done
@@ -587,7 +589,7 @@ unknown method 200 -32601
 官方 SDK：
 
 ```text
-sdk tools 22
+sdk tools 26
 sdk resources 1
 sdk guide true
 sdk prompts 3

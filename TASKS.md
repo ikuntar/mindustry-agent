@@ -137,13 +137,13 @@
 - [x] session API 冒烟脚本 `scripts/session-api-smoke.mjs`
 - [x] `/events/wait` 长轮询：立即返回已有事件、超时返回 `timedOut=true`，事件到达唤醒
 - [x] `game_pause` / `game_resume` 事件；`context.paused` 常驻
-- [x] session prompt/guide 明确暂停规则：不得在 paused 时发动作、不得自动取消暂停
+- [x] session prompt/guide 暂停规则：除 `resume` 外 paused 时写动作失败；`pause`/`resume` 受 `Rules.pauseDisabled` 约束
 - [x] 弹窗 session prompt 代码（`WorldLoadEvent` + `BaseDialog` + 剪贴板；编译通过，客户端 UI 未实测）
 - [x] 桌面客户端 v160.8 加载 mod 并启动 `/session`、`/data`、`/mcp`（WSLg 下 GL 窗口截图不可用；Xvfb 可截主菜单但 XTest 点击未进入地图）
 - [x] 弹窗 UI 视觉实测：Xvfb 自动加载 Fortress，截图显示 endpoint/token/6 步说明和 Copy/Close 按钮
 - [ ] `Copy session prompt` 剪贴板内容断言
 - [ ] 桌面客户端/真机人工点击验收
-- [x] 22 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
+- [x] 27 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
 - [x] issue #25：guide 引用的 `get_tile/query_area/deconstruct/repair/set_stance/release/follow` 已纳入 session `/tools`；`wavetime/waveTimer` 已加入 context
 - [x] issue #26：活跃 op 达到 `MAX_OPS=256` 时返回 `op_capacity`（HTTP 503），不再无上限增长
 - [x] issue #27：`GET /` 端点索引；build topic 修正；SESSION-API 补 drop_id 编码
@@ -156,7 +156,7 @@
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt
 - [x] session/context 带 `version`，用于识别旧 jar
 - [x] 暂停硬门控：`/actions` 写 op 返回 `game_paused`，只读 op 放行；暂停期间不自动重生
-- [x] session `/actions` 按 22 个 `/tools` 名字白名单；内部 debug op 只能走本地 probe token，`get_capabilities` 实测 403
+- [x] session `/actions` 按 27 个 `/tools` 名字白名单；内部 debug op 只能走本地 probe token，`get_capabilities` 实测 403
 - [x] session `build_plan` 展开为 `build`/`deconstruct`，不再返回 Unknown op
 - [x] world reload 保留 sessionToken；bootstrap 仅在已使用后轮换
 - [x] build/build_plan 不再把“已入队”当“已落地”：campaign 未解锁返回 `block_locked`，build op 运行到目标 tile 出现；计划被引擎丢弃 `build_dropped`；Ground Zero fixture 显式 unlock
@@ -169,7 +169,7 @@
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
 - [x] `/data` data token 轮换：`POST /session/data-token`，旧 token 立即 401
 - [ ] `/data` Parquet 事件
-- [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；22 个核心工具
+- [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；27 个核心工具
 - [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources/prompts 通过
 - [x] MCP `resources/list` / `resources/read`：`mindustry://guide`
 - [x] `/guide` 改为完整游戏知识指南
@@ -188,16 +188,17 @@
 - [x] 数据面可读性：`get_area` 行优先 + `coverage.next`；context 带 `resourceCapacity/resourcesFull` 和 core items；map `drop_id=item.id+1` 并附 `items/dropIds`
 - [x] 资源/事件/HTTP：`pruneOps` 不再淘汰 running；304 带 ETag/Cache-Control，304 reason 和 HEAD 无 body；`/events/wait` 独立 8 连接配额，超限 429
 
-## 玩家能力对齐（待实现）
+## 玩家能力对齐（进行中）
 
-- [ ] 显式 `respawn(coreId)` 进入 session 工具面；按核心类型（alpha/beta/gamma）生成对应的非 playerControllable 助手类型
+- [x] 显式 `respawn(coreId)` 进入 session 工具面；按核心类型（alpha/beta/gamma）生成对应的非 playerControllable 助手类型（实测 beta 克隆）
 - [ ] 建筑控制：`ControlBlock`/`BlockUnitc` 独立动作，先覆盖 `playerControllable` 的 TurretBuild
-- [ ] 单位附身 `possess` 与 `release` 进入正常 session 工具面
-- [ ] `command_units`：命令、目标、队列、stance；与玩家操作 last-writer-wins
+- [x] 单位附身 `possess` 与 `release` 进入正常 session 工具面；借体继续由助手动作控制
+- [x] `command_units`：命令、目标、队列、stance 进入 session；按队友式 last-writer-wins，不做硬锁
 - [ ] 工厂方案读取/配置（不是队列）；补可选方案与 `get_config_schema`
 - [ ] 特殊单位 abilities / boost / payload 拾取投放 / payload conveyor 进入语义
 - [ ] 科技树图与规则：parent/children、成本、objectives、researched；单节点研究
-- [ ] 单局游戏控制范围拍板：暂停/速度/存档读档分别处理
+- [x] 主动 `pause`/`resume` 进入 session 工具面，受 `Rules.pauseDisabled` 约束；`resume` 是暂停时唯一放行的写动作
+- [ ] 游戏速度/存档读档：不做世界动作；如后续需要单独设计
 - [ ] 液体只走建筑/网络，不新增 withdraw_liquid/deposit_liquid
 - [ ] 移除地面掉落物 pickup/drop 概念；蓝图 UI/跨区域发射保持不做
 
@@ -205,4 +206,4 @@
 
 见 `docs/OPEN-QUESTIONS.md`。未落 TASKS 的设计项视为未收尾。
 
-- [x] 自定义 `ai-probe-ai-alpha` 类型：复制 alpha 能力，`playerControllable=false`，避免玩家死亡时原版自动选中助手导致 ValidateException
+- [x] 自定义 `ai-probe-ai-alpha`/`ai-beta`/`ai-gamma` 类型：按核心等级复制能力，`playerControllable=false`，避免玩家死亡时原版自动选中助手导致 ValidateException

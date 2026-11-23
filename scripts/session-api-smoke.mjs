@@ -79,7 +79,7 @@ const expectedTools = [
   "get_context", "get_area", "get_tile", "query_area", "get_unit", "list_unit_types",
   "move_to", "attack", "mine", "build_plan", "withdraw", "deposit", "configure",
   "deconstruct", "repair", "set_stance", "release", "follow", "research",
-  "get_action_result", "cancel", "stop",
+  "get_action_result", "cancel", "stop", "possess", "respawn", "pause", "resume", "command_units",
 ];
 const toolNames = new Set((tools.body.tools ?? []).map((tool) => tool.name));
 const missingTools = expectedTools.filter((name) => !toolNames.has(name));
@@ -160,6 +160,19 @@ const blocked = await call("/actions", {
 });
 const unpaused = await rawProbe({ op: "set_paused", paused: false });
 console.log("pause gate", paused.ok, pauseEvent.body.events?.length, pausedContext.body.paused, blocked.status, blocked.body.code, unpaused.ok);
+const sessionPause = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "pause" }),
+});
+const sessionPausedContext = await call("/context?detail=summary", { headers: auth });
+const sessionResume = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "resume" }),
+});
+const sessionResumedContext = await call("/context?detail=summary", { headers: auth });
+console.log("session pause", sessionPause.status, sessionPause.body.paused, sessionPausedContext.body.paused, sessionResume.status, sessionResume.body.paused, sessionResumedContext.body.paused);
 
 const since = Number(context.body.eventsSince ?? 0);
 const waitPromise = call(`/events/wait?since=${since}&timeoutMs=3000&types=test`, { headers: auth });
@@ -213,7 +226,7 @@ console.log("data token rotation", oldData.status, freshData.status);
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
-if (tools.status !== 200 || tools.body.tools?.length !== 22) process.exit(1);
+if (tools.status !== 200 || tools.body.tools?.length !== 27) process.exit(1);
 if (forbidden.status !== 403 || plan.status !== 400 || !String(plan.body.message ?? "").includes("no placements")) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
 if (conditionalMap.status !== 304) process.exit(1);
@@ -225,3 +238,4 @@ if (waited.status !== 200 || !waited.body.events?.length || waited.body.timedOut
 if (waitTimeout.status !== 200 || !waitTimeout.body.timedOut) process.exit(1);
 if (timeoutResult.body.status !== "failed" || timeoutResult.body.data?.code !== "timeout" || timeoutResult.body.paused !== false) process.exit(1);
 if (!paused.ok || !pauseEvent.body.events?.length || pausedContext.body.paused !== true || blocked.status !== 400 || blocked.body.code !== "game_paused" || !unpaused.ok) process.exit(1);
+if (sessionPause.status !== 200 || sessionPause.body.paused !== true || sessionPausedContext.body.paused !== true || sessionResume.status !== 200 || sessionResume.body.paused !== false || sessionResumedContext.body.paused !== false) process.exit(1);

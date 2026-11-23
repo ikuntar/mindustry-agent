@@ -1,6 +1,6 @@
 # 玩家能力对齐（Player Parity）需求记录
 
-状态：需求记录，未实现；2026-11-23
+状态：部分实现（2026-11-23）：`respawn`/`possess`/`pause`/`resume`/`command_units` 已接入 session；建筑控制、工厂方案、payload、科技树图仍待实现。
 关联：`docs/ASSISTANT-DESIGN.md`、`docs/OPEN-QUESTIONS.md`、`TASKS.md`
 
 本文记录“规则内玩家能做、AI 还缺什么”，以及已经核对过的 Mindustry v160.8
@@ -8,19 +8,19 @@
 
 ## 1. 入口与现状
 
-正常 AI 入口是 mod 内 session API（以及 `/mcp` 的同一套工具），当前 22 个：
+正常 AI 入口是 mod 内 session API（以及 `/mcp` 的同一套工具），当前 27 个：
 
 ```text
 get_context, get_area, get_tile, query_area, get_unit, list_unit_types,
 move_to, attack, mine, build_plan, withdraw, deposit, configure, research,
 deconstruct, repair, set_stance, release, follow,
-get_action_result, cancel, stop
+get_action_result, cancel, stop, possess, respawn, pause, resume, command_units
 ```
 
 另有 `/content`、`/capabilities`、`/guide`、`/events/wait`、`/data` 等读接口。
 
 旧 Node MCP 27 工具和 raw probe 调试面包含一些 session 未开放的动作
-（`possess`、`respawn`、`command_units` 等）。它们不等于产品 AI 的正式权限。
+（`command_units` 等旧调试面）。这些旧入口不等于产品 AI 的正式权限；其中 `possess`/`respawn`/`pause`/`resume`/`command_units` 已进入 session。
 
 ## 2. 已确认的修正
 
@@ -73,34 +73,64 @@ core-nucleus -> gamma
 玩家能选择的是**从哪个合法核心重生**。AI 需要补的是显式 `coreId`，不是
 `unitType` 选择。
 
-当前实现的额外问题：
+当前实现：
 
-- 助手现在使用自定义 `ai-probe-ai-alpha`，它只从 alpha 复制了一份；
-- 如果在 beta/gamma 核心重生，身体仍可能是 alpha 能力，和核心等级不一致；
-- 应改为按核心类型生成对应的非 playerControllable 克隆类型（`ai-alpha`/
-  `ai-beta`/`ai-gamma`），或从 `CoreBlock.unitType` 动态派生；
-- `respawn` 需要校验核心存在、同队、`allowSpawn`、`supportsEnv`，并选择核心
-  位置，而不是缓存旧坐标。
+- 已改为按核心类型注册 `ai-alpha`/`ai-beta`/`ai-gamma` 三个非
+  playerControllable 克隆类型；`spawnAssistantAt` 按 `CoreBlock.unitType`
+  选择对应克隆。
+- Fortress 实测 `core-foundation` 重生得到 `ai-probe-ai-beta`、health 170。
+- gamma 也已实测 `core-nucleus -> ai-probe-ai-gamma`、health 220。
+- 仍需补：`supportsEnv` 校验、异常核心类型 fallback、存档中自定义类型 id 的兼容性。
+- `respawn` 选择目标核心，不缓存旧坐标。
 
 ### 2.4 工厂不是排队生产
 
-原版单位工厂不是“队列生产”。玩家在工厂 UI 中选择当前生产方案：
+已按 v160.8 字节码核对，结论比“其他工厂都升级”更细：
 
-- `UnitFactoryBuild.currentPlan` 指向一个 `UnitPlan`
-- 工厂按资源和时间生产当前单位
-- 没有生产队列，也没有多单位排队
-- `Reconstructor` 是选择升级路线，不是生产队列
-- 玩家不能通过重生选择单位类型，重生类型跟核心走
+#### 基础工厂 `UnitFactory`
 
-所以 AI 需要的是：
+- `UnitFactory.plans` 是 `Seq<UnitPlan>`
+- `UnitFactoryBuild.currentPlan` 是当前方案索引（默认 `-1`）
+- `config()` 返回 `Integer` 方案索引
+- 玩家 UI 只选择当前方案，工厂按 `UnitPlan.requirements/time` 生产
+- **没有生产队列，没有多单位排队**
+- `getPlanConfigs()` 返回可选解锁内容
+- 方案受 `unlockedNow()` / `isBanned()` 过滤
+
+AI 需要的是：
 
 ```text
-选择工厂当前生产方案 / 读取当前方案 / 读取可选方案
+读取可选方案 -> 选择 currentPlan -> 读取 currentPlan/进度
 ```
 
-不是 `queue_unit`。现有 `configure` 可能可以设置工厂方案，但需要按
-`UnitFactoryBuild.config()` 的实际值语义实现，并补 `get_config_schema`/工厂
-可选方案读取；不能假设有队列。
+不是 `queue_unit`。`configure` 的工厂值应是方案索引；同时应暴露可选方案，
+否则 AI 只能猜。
+
+#### 升级工厂 `Reconstructor`
+
+- `Reconstructor.upgrades` 是 `Seq<UnitType[]>` 的 `[基础类型, 升级类型]` 对
+- `UnitBlockBuild` 接受 `UnitPayload`
+- `acceptUnitPayload()` 只接受存在升级路径、且升级未解锁/未禁用的基础单位
+- 升级目标由 `upgrades` 固定，不是玩家随便选一个单位类型
+- `config()` 在这里是 `UnitCommand`，不是生产方案
+- **没有队列**，流程是“基础单位进入 -> 计时 -> 固定升级单位出来”
+
+#### `UnitAssembler`（Erekir 多方块组装厂）
+
+v160.8 还存在 `UnitAssembler`：
+
+- `AssemblerUnitPlan` 用 payload/item/liquid 需求
+- 有多方块模块和 `currentTier`
+- 不是简单的“基础单位进、升级单位出”
+- 也不是排队生产；需要按 assembler 的模块/需求单独适配
+
+所以不要把“其他工厂”一律写成 Reconstructor。Serpulo 的基础工厂 + 升级工厂
+可以按上面的模型；Erekir assembler 要单独列项。
+
+#### 重生单位
+
+玩家不能通过重生选择单位类型。重生单位类型由核心等级决定；工厂方案和重生
+单位类型是两件事，不能共用一个 `unitType` 参数。
 
 ### 2.5 特殊单位能力
 
@@ -180,6 +210,8 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
 
 ### 2.10 单局游戏控制
 
+**已拍板：开放主动暂停/恢复，但必须遵循规则。**
+
 玩家在单局内可以直接控制的内容包括：
 
 - 暂停/恢复（单机）
@@ -190,28 +222,47 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
 
 需要先拍板哪些算“规则内游戏控制”，哪些属于客户端/元层：
 
-- 暂停/恢复：影响模拟，AI 是否允许主动 pause 必须单独定义
-- 游戏速度：原版正常界面没有通用变速；不要假设
-- 保存/读取：单机 UI 能力，不是世界动作；不应直接暴露给 AI 作为游戏内动作
+- 暂停/恢复：开放给 AI；按 `Rules.pauseDisabled` 和当前游戏状态校验，且
+  `resume` 本身必须能在 `paused=true` 时通过动作门控
+- 游戏速度：原版正常界面没有通用变速；不假设存在
+- 保存/读取：单机 UI 能力，不是世界动作；不开放给 AI
 - 规则编辑：仅编辑器/允许编辑规则的模式；不能默认开放
 - 退出：不开放
 
-建议：只开放**明确影响单局世界、且规则允许的玩家操作**；暂停先作为
-需要拍板的独立项，不要和普通写动作混在一起。
+实现要点：
+
+- `Vars.state.isPaused()` 读状态
+- `Vars.state.set(GameState.State.paused/playing)` 改变状态
+- `Rules.pauseDisabled` 是规则门闩；为 true 时不得 pause/resume
+- `pause`/`resume` 都必须绕过“paused 时禁止写动作”的通用门控
+- 暂停期间不能自动重生、不能让正在运行的 op 继续假装进展
+- 恢复后正在等待的 op 继续按实际 tick 推进，不补帧
+
+## 2.11 本轮已拍板
+
+- **允许助手控制 `possess` 控制的单位**：附身后 `assistant` 指向借体，后续
+  `move_to`/`attack`/`mine`/`build_plan` 等直接作用于借体；`release` 退出。
+- **冲突处理按建议**：队友式 last-writer-wins，不做硬锁；不抢占玩家当前
+  body，AI 之间/对 AI 指令允许后操作覆盖前操作。
+- **暂停/恢复开放**：按 `Rules.pauseDisabled` 和游戏状态执行，遵循规则，
+  不把暂停当成绕过模拟的手段。
+- **工厂按实际机制**：基础 `UnitFactory` 选择方案而非排队；`Reconstructor`
+  是基础单位进入后按固定升级表升级；`UnitAssembler` 单独建模。
+- **不做重生单位类型选择**：只允许选择核心；类型跟核心等级。
 
 ## 3. 目标能力矩阵
 
-下面的“目标”是本文建议，不是已实现。
+下表“AI 当前”按当前 HEAD；目标列是剩余工作，不是全部已实现。
 
 | 能力 | 玩家 | AI 当前 | 目标 |
 |---|---|---|---|
 | 控制自己的单位 | 可以 | 可以 | 保持 |
-| 控制同队其他单位 | 可以 | 不可 | `control_unit`/`possess` |
-| 附身/退出附身 | 可以 | raw only | session 开放 `possess`/`release` |
+| 控制同队其他单位 | 可以 | `command_units`；不直接改 controller | 需要时再做 `control_unit` |
+| 附身/退出附身 | 可以 | session 已开放 | 保持 |
 | 控制部分建筑 | 可以 | 不可 | `ControlBlock` 适配，独立动作 |
-| 选择重生核心 | 可以 | 不可 | `respawn {coreId}` |
+| 选择重生核心 | 可以 | 已开放 | 补 `supportsEnv`/异常核心 |
 | 选择重生单位类型 | 不可以 | 不适用 | 不做 |
-| 指挥同队单位 | 可以 | 只有 stance | `command_units`/命令与队列 |
+| 指挥同队单位 | 可以 | 有 stance + `command_units` | 保持 last-writer-wins |
 | 选择工厂生产方案 | 可以 | 不完整 | 读方案 + configure |
 | 单位特殊能力 | 取决于单位 | 未统一 | 按 UnitType/abilities 执行 |
 | boost | 可以 | 未提供 | `boost` 或控制器字段 |
@@ -223,7 +274,7 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
 | 配置建筑 | 可以 | 部分 | 补 schema/方案/逻辑代码 |
 | 蓝图 | 可以（UI） | 工作目录替代 | 不做 UI |
 | 研究 | 可以 | 单节点 | 补科技树图/规则 |
-| 暂停/恢复 | 可以 | 不可 | 待拍板 |
+| 暂停/恢复 | 可以 | 可以 | 已开放，规则门控 |
 | 存档/读档 | 可以（UI） | 不可 | 不纳入世界动作 |
 | 跨区域发射/loadout | 可以 | 不可 | 暂不做 |
 
@@ -235,22 +286,19 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
    包括模组控制方块？建筑控制期间的动作集合是什么？
 2. **建筑控制的上下文**：`assistant.type` 如何表示 `BlockUnitc`；是否需要
    `controlMode=building`、`buildingId`、`canExit`。
-3. **玩家抢占**：AI 控制建筑/单位时，玩家点选/控制是否直接覆盖？反向 AI
-   `possess` 是否允许抢玩家正在控制的单位？建议：不能抢玩家当前 body；
-   队友 AI 单位按 last-writer-wins。
-4. **工厂方案值**：`UnitFactoryBuild.config()` 返回什么；`configure` 应接受
-   `UnitType`、plan 名称还是 plan index；如何读取可选方案。
+3. **玩家抢占**：已拍板 last-writer-wins；不抢玩家当前 body，只覆盖 AI 单位/命令。
+4. **工厂方案值**：已确认基础工厂 `config()` 是 `Integer currentPlan`；待补方案列表
+   和 `configure` 的 plan index 校验。`Reconstructor` 的 config 是 `UnitCommand`。
 5. **payload 入口**：单位“进入 payload conveyor”的引擎触发条件；是否需要
    `enter_payload`，还是只要移动上去即可。
 6. **特殊能力**：哪些 abilities 是自动的，哪些需要玩家输入；AI 是否需要
    `use_ability`。
 7. **研究图**：`TechNode.objectives`/`requiresUnlock`/`Rules.researched` 在
    战役和自定义地图中的语义；研究是否需要 sector 级限制。
-8. **暂停/游戏速度**：AI 是否允许主动暂停；是否只允许玩家暂停；是否开放
-   游戏速度。建议先只读 `paused`，不开放 AI pause，除非明确“规则内玩家控制
-   全部开放”。
-9. **核心类型**：自定义非 playerControllable 类型是否需要为 alpha/beta/gamma
-   各建一份；如何避免存档中的类型 ID 失配。
+8. **暂停/游戏速度**：已拍板开放 `pause`/`resume`，受 `Rules.pauseDisabled`
+   约束；游戏速度没有原版通用控制，暂不开放。
+9. **核心类型**：已建 alpha/beta/gamma 三份并实测 beta/gamma；仍需异常核心 fallback
+   和存档类型 id 兼容。
 10. **蓝图**：保持不做 UI，还是允许 AI 读取工作目录中的 schematic 文件？
     当前建议保持不做。
 11. **冲突处理**：last-writer-wins 的粒度是单位 controller、命令、stance、
@@ -260,10 +308,10 @@ abilities、碰撞、环境限制都要按目标单位本身执行。
 
 ## 5. 实现顺序建议
 
-1. 显式 `respawn(coreId)` + 按核心类型创建对应 assistants
-2. 建筑控制适配（先 TurretBuild）
-3. `possess`/`release` 进入正常 session 工具面
-4. `command_units` + 选择工厂方案
+1. [done] 显式 `respawn(coreId)` + 按核心类型创建对应 assistants
+2. [next] 建筑控制适配（先 TurretBuild）
+3. [done] `possess`/`release` 进入正常 session 工具面
+4. [next] 工厂方案读取/配置（`command_units` 已接入）
 5. `get_config_schema` + 完整配置读取
 6. 特殊 abilities / boost / payload
 7. 科技树图 + 单节点研究规则

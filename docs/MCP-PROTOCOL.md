@@ -301,7 +301,7 @@ deconstruct 等到目标消失，mine 等到携带量增加，configure 等到 c
 | 指挥单位 | — | 是 | 同队 + CommandAI + allowCommand |
 | 附身/控制 | — | 是 | 同队 + isAI + playerControllable + possessionAllowed |
 | 从核心重生 | — | 是 | 同队 + allowSpawn + supportsEnv + 核心类型 |
-| 暂停/变速/研究/发射/存档/管理员 | — | 否 | 不暴露 |
+| 暂停/变速/研究/发射/存档/管理员 | — | 否 | Node MCP 不暴露；mod session 的 `pause`/`resume` 是独立入口，见 SESSION-API |
 
 所有动作以 `assistant.unit/team` 为 actor；禁止使用 `Vars.player` 作为 actor 来获取玩家身份。
 

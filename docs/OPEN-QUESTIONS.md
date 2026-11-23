@@ -87,7 +87,8 @@
 
 - 已记录：`docs/PLAYER-PARITY.md`
 - 已确认：显式 `respawn(coreId)`；建筑控制要和单位附身分开；工厂是选择方案而不是队列；液体没有直接身体搬运；地面没有通用掉落物；不做蓝图/跨区域。
-- 待拍板：建筑控制范围、玩家抢占语义、工厂配置值、payload 入口、研究图、暂停/游戏速度、多客户端单实例。
+- 已拍板：允许助手控制 possess 借体；last-writer-wins 不抢占玩家 body；主动 pause/resume 开放但受 `Rules.pauseDisabled` 约束。
+- 待拍板/实现：建筑控制范围、payload 入口、科技树图、多客户端单实例。
 
 ## Q15. 建筑控制
 
@@ -96,10 +97,21 @@
 
 ## Q16. 单位控制冲突
 
-- 用户意向：队友式 last-writer-wins，不做硬锁。
-- 待定：是否允许 AI 抢占玩家当前 body；建议禁止，只覆盖 AI 控制的单位和命令。
+- 已拍板：队友式 last-writer-wins，不做硬锁；允许助手控制 `possess` 后的借体。
+- 边界：不抢占玩家当前 body；AI 之间/对 AI 指令允许后操作覆盖前操作。
+- 已实现 `command_units` session 工具；动作日志/覆盖粒度仍是后续加固项。
 
 ## Q17. 工厂方案配置
 
-- 原版不是排队生产，而是 `UnitFactoryBuild.currentPlan` 选择当前方案。
-- 待定：`configure` 接受 plan index、UnitType 还是方案名；需要只读方案列表。
+- 已确认：基础 `UnitFactory` 的 `config()` 是 `Integer currentPlan`；不是队列。
+- `Reconstructor` 是固定 `[基础单位, 升级单位]` 表，接受 `UnitPayload`；不是选任意单位。
+- `UnitAssembler` 是 Erekir 多方块组装，需求是 payload/item/liquid，需单独适配。
+- 待实现：`get_config_schema`/方案列表；`configure` 接受 plan index；重生类型仍只由核心决定。
+
+
+## Q18. 暂停/恢复
+
+- 已拍板：开放主动 `pause`/`resume`。
+- 规则：`Rules.pauseDisabled` 为 true 时拒绝；只有游戏进行中可用；`resume`
+  必须能在 paused 状态通过动作门控；AI 不得借暂停跳过 tick/资源/冷却。
+- 语义：last-writer-wins；不做“自动恢复”的隐含行为。
