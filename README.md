@@ -88,7 +88,8 @@ probe-mod/build-universal.sh
 
 1. 把通用包放在手机 `Download`（直接下载 `.zip` 优先，部分文件选择器对
    `.jar` 的 MIME 识别不稳定）。
-2. Mindustry → `Mods` → `+ Import Mod` → `Import File` → 选择该 zip。
+2. Mindustry → `Mods` → `+ Import Mod` → `Import File` → 文件选择器里点左上角
+   三条横线 → `Downloads` → 选择该 zip（默认可能停在 `Recent`，文件不会出现）。
 3. 看到 `Restart Required` 后完全退出并重启游戏，在 Mods 列表确认 `AI Probe`。
 
 Android 11+ 的 scoped storage 会让文件管理器“复制成功”但游戏看不到
