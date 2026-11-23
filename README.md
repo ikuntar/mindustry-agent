@@ -63,7 +63,7 @@ mindustry-ai/
 - [x] 可移植 HTTP server：`ai.probe.http` ServerSocket 实现，桌面 `/session`、`/data`、`/mcp` 回归通过
 - [x] Android 决策：默认 PC host + 手机 client；已生成 JVM+dex 通用 mod jar
 - [x] 通用 mod jar：`probe-mod/build-universal.sh` 生成同时含 `classes/` 与 `classes.dex` 的 jar；桌面回归通过
-- [x] Android 模拟器加载验收：F-Droid `8-fdroid-160.7` 上通用 zip 经游戏内导入加载 `ai-probe`，session API 监听 `47600`；真机仍需验收、phone-hosted 未做
+- [x] Android 模拟器加载验收：F-Droid `8-fdroid-160.7` 与 official `8-official-160.8` 均通过游戏内导入加载 `ai-probe`，session API 监听 `47600`；真机仍需验收、phone-hosted 未做
 - [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
 - [x] Ground Zero campaign-like：omp 连续观察 35 次到 `wave=10`，`winWave=10`、`won=false`；证明可玩到终点波次，正式战役结算仍需客户端 campaign 或 mod 支持
 - [x] omp 上手速度：冷启动+首次真实 context 约 13.0s；热启动约 8.7s；连续 35 次 context 约 254s（约 7.3s/次）

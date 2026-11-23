@@ -506,7 +506,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。
 - `mod.json` 的 `"java": true`；Android 分支读取根目录 `classes.dex`
 - d8/dex 构建脚本：已加入 `probe-mod/build-universal.sh`
 - Android discovery 已改用 `Vars.dataDirectory`，不依赖 `/tmp`
-- 已在 F-Droid `8-fdroid-160.7` 模拟器上通过游戏内导入加载；真机仍需验收
+- 已在 F-Droid `8-fdroid-160.7` 和 official `8-official-160.8` 模拟器上通过游戏内导入加载；真机仍需验收
 - Android 11+ 手动复制 `Android/data/.../mods` 会因 scoped storage/文件 owner
   不可见（模拟器复现 `No mods found!`）；必须走 `Mods -> Import Mod -> Import File`
 - 固定 token 或可从 UI 读取的 token
