@@ -87,7 +87,8 @@ probe-mod/build-universal.sh
 必须在游戏里导入，不能把文件直接拖进 `/Android/data/...`：
 
 1. 把通用包放在手机 `Download`（直接下载 `.zip` 优先，部分文件选择器对
-   `.jar` 的 MIME 识别不稳定）。
+   `.jar` 的 MIME 识别不稳定）。下载后确认文件大小是 `172,203` 字节；`0` 字节
+   表示下载失败或被分享链接限额截断，游戏会显示 `未找到模组`。
 2. Mindustry → `Mods` → `+ Import Mod` → `Import File` → 文件选择器里点左上角
    三条横线 → `Downloads` → 选择该 zip（默认可能停在 `Recent`，文件不会出现）。
 3. 看到 `Restart Required` 后完全退出并重启游戏，在 Mods 列表确认 `AI Probe`。

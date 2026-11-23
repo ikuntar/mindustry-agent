@@ -509,6 +509,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。
 - 已在 F-Droid `8-fdroid-160.7` 和 official `8-official-160.8` 模拟器上通过游戏内导入加载；真机仍需验收
 - Android 11+ 手动复制 `Android/data/.../mods` 会因 scoped storage/文件 owner
   不可见（模拟器复现 `No mods found!`）；必须走 `Mods -> Import Mod -> Import File`
+- 导入前确认 zip 是 `172,203` 字节；0 字节/分享链接限额截断会显示 `No mods found!`
 - 固定 token 或可从 UI 读取的 token
 - `adb reverse`/SSH tunnel + 鉴权
 - 真机包名验收（不能拿桌面 jar 当证据）
