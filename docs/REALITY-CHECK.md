@@ -142,7 +142,14 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - headless 服务端没有本地 `Player`，所以 `get_context.player.dead=true`；桌面客户端会不同。
 
 
-## 结论
+- issue #32（2026-11-23）：`/context` 和 `/health` 增加 `captured`，`rules.sector` 增加 `wasCaptured`；campaign 占领不再需要靠 `won` 推断。API 触发的 pause/resume 直接写 `game_pause`/`game_resume` 事件（带 `source=api`），不再被 `detectPauseChange` 去重吞掉。
+- issue #33（2026-11-23）：`deconstruct` 增加 `allowPartial`/`skipMissing`；缺失/不可拆目标跳过并写入 `data.skipped`，执行超时的 `data.targets` 给出逐目标 `done/pending`。
+- issue #35（2026-11-23）：`build_plan` 失败不再返回空 `opId`，`data.results[]` 每项带 `x/y/block`；文档明确它是逐块 best-effort、不是原子事务。
+- issue #36（2026-11-23）：`get_tile` 增加 floor/overlay/liquid/solid、机器运行态字段，传 `block/rotation` 可预检 `canPlace/placeReason`；`get_area` 增加地形字段；build 路径补 buildRange 检查并回报 `replaced/previousBlock`。
+- issue #37（2026-11-23）：`get_tile.config` 改为结构化 JSON（Item/Content/Point2[]/byte[]/数组），不再输出 `@hash`；`/context.power` 暴露电力网络 produced/needed/balance/stored/capacity/satisfaction。
+- issue #38（2026-11-23）：session prompt 第 0 步可先用 bootstrap 只读读取 `/guide`/`/tools`；`/guide` 末尾不再指向会话内 404 的 docs，改为说明仓库文档。
+- 回归（2026-11-23）：`session-api-smoke` 通过 34 工具、bootstrap guide/tools、captured/power 字段、get_tile 预检、build_plan 失败形状、暂停门控、数据面 Range/304/轮换；`probe-mod/build.sh` 成功。
+
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。
 - Probe mod + `ProbeGameAdapter` 已把 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop`/`possess`/`release`/`respawn`/`mine`/`attack` 接到真实游戏；物流、sorter 配置、指挥、stance、附身/释放、死亡重生、sand 挖矿、攻击容器已实测。

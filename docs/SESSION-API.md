@@ -218,9 +218,12 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
 
 会话 `/actions` 只允许 `/tools` 暴露的 34 个名字；内部调试 op 仍只走本地 probe
 socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
-返回 `{opId,status,data:{results}}`；`status=queued` 只表示已入队，单块 build 的
-op 要等目标 tile 真正出现方块才 `done`，计划被引擎丢弃则 `failed/build_dropped`，
-campaign 未解锁返回 `block_locked`。
+返回 `{status,data:{results,allowPartial}}`；失败时可能没有 `opId`（不返回空字符串）。
+它按顺序逐块执行，不是原子事务；`allowPartial=false` 只表示遇到首个失败就停止，
+失败前的成功块已经生效。每个 `data.results[]` 项带 `x/y/block`，失败项的错误也在
+该项里。`status=queued` 只表示已入队，单块 build 的 op 要等目标 tile 真正出现方块
+才 `done`，计划被引擎丢弃则 `failed/build_dropped`，campaign 未解锁返回
+`block_locked`。
 
 动作：
 
@@ -344,7 +347,9 @@ POST /mcp   MCP Streamable HTTP
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
 - `ping`
 - 错误使用 JSON-RPC 错误码；未知方法 `-32601`
-- 鉴权：`Authorization: Bearer <sessionToken>`；session token 由 `POST /session` 获取
+- 鉴权：`Authorization: Bearer <sessionToken>`；`POST /session` 用一次性 bootstrap。
+  `/guide`、`/tools` 也接受未使用的 bootstrap 只读访问，便于 agent 先读协议再建会话；
+  其他端点仍只接受 sessionToken。session token 由 `POST /session` 获取
 - 已用官方 `@modelcontextprotocol/sdk` 的 `StreamableHTTPClientTransport` 验证：
   connect、tools/list、tools/call、resources/list、resources/read、prompts/list、prompts/get 均通过
 - 尚未实现：GET SSE、完整兼容性矩阵

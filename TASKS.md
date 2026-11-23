@@ -151,6 +151,12 @@
 - [x] issue #29：research 动作 + content 研究成本/状态 + rules.researched
 - [x] issue #30：objectives 全量/type/progress/parents/flags + objectiveFlags
 - [x] issue #31：/health、events paused 直读、query_area 上限/截断
+- [x] issue #32：campaign 占领语义 `captured`/`sector.wasCaptured`；API pause/resume 事件
+- [x] issue #33：deconstruct `allowPartial`/`skipMissing` 与逐目标结果
+- [x] issue #35：build_plan 失败 `opId`/坐标/逐块 best-effort 语义
+- [x] issue #36：get_tile/get_area 地形与 canPlace；buildRange/覆盖回报
+- [x] issue #37：config 结构化；context.power；机器运行态字段
+- [x] issue #38：bootstrap 只读 guide/tools；prompt/guide 顺序与 docs 404
 - [x] session prompt 先给出 `GET /tools`，再给动作示例
 - [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt

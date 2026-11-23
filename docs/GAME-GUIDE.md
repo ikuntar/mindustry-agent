@@ -148,14 +148,21 @@ Serpulo 常见物品：
 ## 8. 建筑方向、配置和拆除
 
 - `build_plan` 支持一次提交多个 placement；`rotation` 对传送带、管道、炮塔、
-  工厂等有方向意义的方块很重要。
+  工厂等有方向意义的方块很重要。它是逐块执行，不是原子事务；失败前已成功的块
+  会保留，`allowPartial` 只控制遇到失败是否继续。
+- 提交前用 `get_tile {x,y,block,rotation}` 检查 `floor`/`liquid`/`solid` 和
+  `canPlace`/`placeReason`；会话 build 会检查 buildRange，超出范围返回
+  `out_of_range`。同队传送带等可被游戏允许覆盖时，响应会带 `replaced` 和
+  `previousBlock`，不要静默覆盖现有产线。
+- `get_context.power` 按电力网络返回 `produced`/`needed`/`balance`/`stored`/`capacity`/
+  `satisfaction`；机器 tile 另外有 `efficiency`/`progress`/`warmup`/`enabled`。
 - `configure` 用于分拣器物品、卸载器方向、开关布尔值、消息文本、逻辑处理器
   代码等；配置是否真的生效应以 `get_tile.config` 或返回的 `configure` 结果为准。
 - `deconstruct` 拆除建筑；拆除会返还部分材料，但不要依赖返还比例做精确预算。
+  批量拆除可加 `allowPartial:true` 跳过已消失/不可拆目标，`data.skipped` 会列出
+  被跳过的目标和原因；超时结果的 `data.targets` 给出逐目标状态。
 - 建筑有血量；受损建筑可用 `repair` 修复，但修复受 buildRange 和资源/电力规则
   限制。
-- 建造前要检查：目标 tile 是否空、地形是否可建、是否在 buildRange、是否已解锁、
-  队伍是否有足够材料。生产环境还会检查单位重叠。
 
 ## 9. 防御和波次
 
@@ -164,6 +171,9 @@ Serpulo 常见物品：
 - 敌人从地图边缘/波次生成点进攻，目标是核心和建筑。
 - 波次之间有准备时间；`get_context` 的 `wave`、`wavetime`、`waveTimer`、`enemies`
   和 `/events/wait` 的 `game_pause`/`game_resume`/`wave_start`/`wave_end` 事件可用于观察。
+  事件日志最多保留 512 条；`unit_damage`/`build_damage` 另有 192 条上限，关键事件
+  不会被伤害洪泛完全挤掉。仍然应该用 `types=` 过滤，并在 `dropped`/`hasMore` 时
+  接受可能丢失的中间事件。
 - `waveTimer=false` 表示不会自动开始下一波；它可能是教学/指导任务阶段。
   `get_context.mission`、`objectives`、`tutorial` 和 `rules` 会给出当前任务信息；
   objective 的 `type`/`progress`/`parents` 用来判断还缺什么，`rules.objectiveFlags`
@@ -173,7 +183,10 @@ Serpulo 常见物品：
 - 防守优先级通常是：核心路径 > 电力 > 弹药供应 > 生产扩张。
 - 4 波、9 波等“capture wave”是战役区域的目标；具体胜利条件读
   `get_context.rules`（含 `winWave`、`sector.captureWave`、波次和倍率）以及
-  `get_context.objectives`。
+  `get_context.objectives`。战役占领成功时，`rules.waves` 会变成 false、
+  `objectives` 清空，`get_context.captured`/`rules.sector.wasCaptured` 为 true；
+  campaign 的 `won` 字段不会因此置 true，不要把 `won=false` 误判成软锁。
+  完成占领后不要再重复攻击/扩张，先停手并报告结果。
 
 ## 10. 单位和单位生产
 
@@ -266,6 +279,6 @@ Serpulo 常见物品：
 
 ---
 
-本指南是游戏知识层；工具字段、错误码和会话生命周期见 `GET /tools`、`GET /guide`
-之外的 `docs/SESSION-API.md` 和 `docs/MCP-PROTOCOL.md`。精确数值永远以实时
-`/content`、`/capabilities`、`/context` 为准。
+本指南是游戏知识层；工具字段、错误码和会话生命周期见 `GET /tools` 和
+`GET /guide`。更完整的 `docs/SESSION-API.md`、`docs/MCP-PROTOCOL.md` 是仓库文档，
+不在会话 API 中提供；精确数值永远以实时 `/content`、`/capabilities`、`/context` 为准。

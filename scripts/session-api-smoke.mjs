@@ -46,9 +46,14 @@ async function rawProbe(payload) {
 }
 
 const bootstrap = info.sessionBootstrapToken;
+const bootstrapHeaders = { ...headers, authorization: "Bearer " + bootstrap };
+const bootstrapGuide = await call("/guide", { headers: bootstrapHeaders });
+const bootstrapTools = await call("/tools", { headers: bootstrapHeaders });
+console.log("bootstrap read", bootstrapGuide.status, bootstrapTools.status, String(bootstrapGuide.body).length);
+if (bootstrapGuide.status !== 200 || bootstrapTools.status !== 200) process.exit(1);
 const first = await call("/session", {
   method: "POST",
-  headers: { ...headers, authorization: `Bearer ${bootstrap}` },
+  headers: bootstrapHeaders,
 });
 console.log("session", first.status, Boolean(first.body?.sessionToken));
 if (first.status !== 200) process.exit(1);
@@ -63,7 +68,7 @@ const auth = { ...headers, authorization: `Bearer ${first.body.sessionToken}` };
 const dataAuth = { ...headers, authorization: `Bearer ${first.body.dataToken}` };
 const health = await call("/health", { headers: auth });
 console.log("health", health.status, health.body.tick, health.body.queueDepth, health.body.lastUpdateAgo);
-if (health.status !== 200 || typeof health.body.tick !== "number") process.exit(1);
+if (health.status !== 200 || typeof health.body.tick !== "number" || !("captured" in health.body)) process.exit(1);
 
 const index = await call("/", { headers: auth });
 console.log("index", index.status, index.body.control?.length, index.body.data?.length);
@@ -99,10 +104,27 @@ const plan = await call("/actions", {
 console.log("session action gate", forbidden.status, plan.status, plan.body.message ?? plan.body.code);
 const context = await call("/context?detail=summary", { headers: auth });
 console.log("context", context.status, context.body.map, context.body.assistant?.x, context.body.assistant?.y);
-const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime", "waveTimer"];
+const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime", "waveTimer", "captured", "power"];
 const missingContextFields = contextFields.filter((key) => !(key in (context.body ?? {})));
 console.log("context fields", missingContextFields.join(",") || "none");
 if (context.status !== 200 || missingContextFields.length > 0) process.exit(1);
+
+const badPlan = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "build_plan", placements: [{ block: "conveyor", x: -1, y: -1 }] }),
+});
+const badResult = badPlan.body?.data?.results?.[0];
+console.log("build_plan failure shape", badPlan.status, badPlan.body?.status, "opId" in (badPlan.body ?? {}), badResult?.x, badResult?.y, badResult?.block);
+if (badPlan.status !== 200 || badPlan.body?.status !== "failed" || "opId" in (badPlan.body ?? {}) || badResult?.x !== -1 || badResult?.y !== -1 || badResult?.block !== "conveyor") process.exit(1);
+
+const tile = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_tile", x: Math.floor(Number(context.body.assistant?.x ?? 0) / 8), y: Math.floor(Number(context.body.assistant?.y ?? 0) / 8), block: "conveyor", rotation: 0 }),
+});
+console.log("tile terrain/preflight", tile.status, Boolean(tile.body.floor), "canPlace" in (tile.body ?? {}));
+if (tile.status !== 200 || !("floor" in (tile.body ?? {})) || !("canPlace" in (tile.body ?? {}))) process.exit(1);
 
 const schema = await call("/actions", {
   method: "POST",
