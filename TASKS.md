@@ -188,6 +188,19 @@
 - [x] 数据面可读性：`get_area` 行优先 + `coverage.next`；context 带 `resourceCapacity/resourcesFull` 和 core items；map `drop_id=item.id+1` 并附 `items/dropIds`
 - [x] 资源/事件/HTTP：`pruneOps` 不再淘汰 running；304 带 ETag/Cache-Control，304 reason 和 HEAD 无 body；`/events/wait` 独立 8 连接配额，超限 429
 
+## 玩家能力对齐（待实现）
+
+- [ ] 显式 `respawn(coreId)` 进入 session 工具面；按核心类型（alpha/beta/gamma）生成对应的非 playerControllable 助手类型
+- [ ] 建筑控制：`ControlBlock`/`BlockUnitc` 独立动作，先覆盖 `playerControllable` 的 TurretBuild
+- [ ] 单位附身 `possess` 与 `release` 进入正常 session 工具面
+- [ ] `command_units`：命令、目标、队列、stance；与玩家操作 last-writer-wins
+- [ ] 工厂方案读取/配置（不是队列）；补可选方案与 `get_config_schema`
+- [ ] 特殊单位 abilities / boost / payload 拾取投放 / payload conveyor 进入语义
+- [ ] 科技树图与规则：parent/children、成本、objectives、researched；单节点研究
+- [ ] 单局游戏控制范围拍板：暂停/速度/存档读档分别处理
+- [ ] 液体只走建筑/网络，不新增 withdraw_liquid/deposit_liquid
+- [ ] 移除地面掉落物 pickup/drop 概念；蓝图 UI/跨区域发射保持不做
+
 ## 未决项
 
 见 `docs/OPEN-QUESTIONS.md`。未落 TASKS 的设计项视为未收尾。

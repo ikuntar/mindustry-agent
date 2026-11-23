@@ -25,9 +25,9 @@
 
 ## Q4. “控制”是否包含建筑/核心控制？
 
-- 选项：只控制单位 / 也控制 `buildingControlSelect` 的建筑和核心。
-- 默认：只控制单位；建筑控制与“助手是单位”语义冲突，暂不做。
-- 影响：动作接口、权限矩阵、产品语义。
+- 已确认：要做，但不能复用单位 `possess`；`ControlBlock`/`BlockUnitc` 独立适配。
+- 范围：当前确认 `TurretBuild` 等带 `playerControllable` 的控制方块；是否覆盖模组方块待定。
+- 影响：动作接口、上下文、release、权限矩阵。详见 `docs/PLAYER-PARITY.md`。
 
 ## Q5. 附身距离？
 
@@ -81,3 +81,25 @@
 
 - 已定：从核心生成，使用 `CoreBlock.unitType`；不同核心可能不同。
 - 待确认：是否允许“固定为玩家初始单位类型”的特殊模式。
+
+
+## Q14. 玩家能力对齐的范围
+
+- 已记录：`docs/PLAYER-PARITY.md`
+- 已确认：显式 `respawn(coreId)`；建筑控制要和单位附身分开；工厂是选择方案而不是队列；液体没有直接身体搬运；地面没有通用掉落物；不做蓝图/跨区域。
+- 待拍板：建筑控制范围、玩家抢占语义、工厂配置值、payload 入口、研究图、暂停/游戏速度、多客户端单实例。
+
+## Q15. 建筑控制
+
+- v160.8 已确认 `ControlBlock` + `BlockUnitc`（TurretBuild 实现，具体方块按 `playerControllable` 枚举）。
+- 待定：是否只开放炮塔，是否允许模组控制方块，控制期间的动作集合。
+
+## Q16. 单位控制冲突
+
+- 用户意向：队友式 last-writer-wins，不做硬锁。
+- 待定：是否允许 AI 抢占玩家当前 body；建议禁止，只覆盖 AI 控制的单位和命令。
+
+## Q17. 工厂方案配置
+
+- 原版不是排队生产，而是 `UnitFactoryBuild.currentPlan` 选择当前方案。
+- 待定：`configure` 接受 plan index、UnitType 还是方案名；需要只读方案列表。

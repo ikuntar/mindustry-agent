@@ -11,6 +11,7 @@ mindustry-ai/
 ├── docs/
 │   ├── bek-mindustryx-ai-bridge.md   ← BEK-Group/MindustryX 的 AI 通道拆解（参考实现）
 │   ├── ASSISTANT-DESIGN.md           ← 助手总体设计：身体/附身/权限/团队/验收
+│   ├── PLAYER-PARITY.md              ← 玩家能力对齐：已确认修正、缺口、待拍板项
 │   ├── MCP-PROTOCOL.md               ← MCP 工具、动作生命周期、事件、权限矩阵
 │   ├── GAME-GUIDE.md                 ← 完整游戏知识指南（/guide 的实际内容）
 │   ├── SESSION-API.md                ← 单 mod + 一次性 session prompt + HTTP API 设计
