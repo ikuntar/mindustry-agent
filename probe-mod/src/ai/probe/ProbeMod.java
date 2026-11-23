@@ -1305,6 +1305,15 @@ public class ProbeMod extends Mod {
 
             Jval plans = Jval.newArray();
             String note = "";
+            boolean configReadable = "power-node".equals(block.name) || fields.asArray().size > 0;
+            if (configReadable) {
+                fields.add(Jval.newObject()
+                        .put("key", "links")
+                        .put("type", "array")
+                        .put("readOnly", true)
+                        .put("description", "Power node connections as [{x,y}] in tile coordinates"));
+                note = "Power node links are read-only in get_tile.config; use configure only for mutable configs.";
+            }
             if (block instanceof UnitFactory factory) {
                 for (int i = 0; i < factory.plans.size; i++) {
                     UnitFactory.UnitPlan plan = factory.plans.get(i);
@@ -1345,6 +1354,7 @@ public class ProbeMod extends Mod {
             reply(command, Jval.newObject()
                     .put("block", block.name)
                     .put("configurable", block instanceof UnitFactory || fields.asArray().size > 0)
+                    .put("configReadable", configReadable || block instanceof UnitFactory)
                     .put("fields", fields)
                     .put("plans", plans)
                     .put("note", note));
