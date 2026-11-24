@@ -36,9 +36,20 @@ import mindustry.type.Liquid;
 import mindustry.type.LiquidStack;
 import mindustry.type.PayloadStack;
 import mindustry.type.UnitType;
+import mindustry.type.Weapon;
+import mindustry.entities.bullet.BulletType;
 import mindustry.ui.dialogs.BaseDialog;
 import mindustry.world.Block;
 import mindustry.world.Build;
+import mindustry.world.consumers.ConsumePower;
+import mindustry.world.blocks.power.PowerGenerator;
+import mindustry.world.blocks.production.BeamDrill;
+import mindustry.world.blocks.production.BurstDrill;
+import mindustry.world.blocks.production.Drill;
+import mindustry.world.blocks.production.GenericCrafter;
+import mindustry.world.blocks.production.Pump;
+import mindustry.world.blocks.production.Separator;
+import mindustry.world.blocks.production.WallCrafter;
 import mindustry.core.World;
 import mindustry.world.Tile;
 import mindustry.world.blocks.ControlBlock;
@@ -1241,7 +1252,8 @@ public class ProbeMod extends Mod {
                             .put("requirements", requirements)
                             .put("researched", block.unlockedNowHost())
                             .put("researchCost", blockResearch)
-                            .put("meta", contentMeta(block)));
+                            .put("meta", contentMeta(block))
+                            .put("parameters", blockParameters(block)));
                 }
                 data.put("blocks", blocks);
             }
@@ -1257,7 +1269,8 @@ public class ProbeMod extends Mod {
                             .put("playerControllable", unit.playerControllable)
                             .put("researched", unit.unlockedNowHost())
                             .put("researchCost", researchJson(unit))
-                            .put("meta", contentMeta(unit)));
+                            .put("meta", contentMeta(unit))
+                            .put("parameters", unitParameters(unit)));
                 }
                 data.put("units", units);
             }
@@ -3100,6 +3113,106 @@ public class ProbeMod extends Mod {
                 .put("hidden", content.isHidden())
                 .put("hideDatabase", content.hideDatabase)
                 .put("credit", content.credit == null ? "" : content.credit);
+    }
+
+    private Jval blockParameters(Block block) {
+        Jval result = Jval.newObject();
+        if (block.consPower != null) {
+            ConsumePower power = block.consPower;
+            result.put("power", Jval.newObject()
+                    .put("usagePerTick", power.usage)
+                    .put("usePerSecond", power.usage * 60f)
+                    .put("capacity", power.capacity)
+                    .put("buffered", power.buffered));
+        }
+        if (block instanceof PowerGenerator generator) {
+            result.put("powerProductionPerSecond", generator.powerProduction * 60f);
+        }
+        if (block instanceof GenericCrafter crafter) {
+            result.put("craftTimeTicks", crafter.craftTime)
+                    .put("craftsPerSecond", crafter.craftTime > 0f ? 60f / crafter.craftTime : 0f);
+            if (crafter.outputItems != null) {
+                result.put("outputs", stacksJson(crafter.outputItems));
+            } else if (crafter.outputItem != null) {
+                result.put("outputs", stacksJson(new ItemStack[]{crafter.outputItem}));
+            }
+        }
+        if (block instanceof Separator separator) {
+            result.put("craftTimeTicks", separator.craftTime)
+                    .put("craftsPerSecond", separator.craftTime > 0f ? 60f / separator.craftTime : 0f)
+                    .put("outputs", stacksJson(separator.results));
+        }
+        if (block instanceof Drill drill) {
+            result.put("drillTimeTicks", drill.drillTime)
+                    .put("hardnessDrillMultiplier", drill.hardnessDrillMultiplier);
+        }
+        if (block instanceof BeamDrill beam) {
+            result.put("drillTimeTicks", beam.drillTime)
+                    .put("beamRangeTiles", beam.range);
+        }
+        if (block instanceof WallCrafter wall) {
+            result.put("drillTimeTicks", wall.drillTime);
+        }
+        if (block instanceof Pump pump) {
+            result.put("pumpAmountPerTick", pump.pumpAmount)
+                    .put("liquidPerSecond", pump.pumpAmount * 60f * pump.size * pump.size);
+        }
+        return result;
+    }
+
+    private Jval unitParameters(UnitType type) {
+        Jval weapons = Jval.newArray();
+        for (Weapon weapon : type.weapons) {
+            if (weapon == null) continue;
+            Jval entry = Jval.newObject()
+                    .put("name", weapon.name == null ? "" : weapon.name)
+                    .put("reloadTicks", weapon.reload)
+                    .put("display", weapon.display)
+                    .put("controllable", weapon.controllable)
+                    .put("rotate", weapon.rotate)
+                    .put("inaccuracy", weapon.inaccuracy)
+                    .put("shootCone", weapon.shootCone);
+            try {
+                entry.put("range", weapon.range());
+            } catch (Throwable ignored) {
+                entry.put("range", 0f);
+            }
+            try {
+                entry.put("shotsPerSecond", weapon.shotsPerSec());
+            } catch (Throwable ignored) {
+                entry.put("shotsPerSecond", 0f);
+            }
+            try {
+                entry.put("dpsEstimate", weapon.dps());
+            } catch (Throwable ignored) {
+                entry.put("dpsEstimate", 0f);
+            }
+            BulletType bullet = weapon.bullet;
+            if (bullet != null) {
+                entry.put("bullet", Jval.newObject()
+                        .put("type", bullet.getClass().getSimpleName())
+                        .put("damage", bullet.damage)
+                        .put("splashDamage", bullet.splashDamage)
+                        .put("splashDamageRadius", bullet.splashDamageRadius)
+                        .put("speed", bullet.speed)
+                        .put("lifetimeTicks", bullet.lifetime)
+                        .put("range", bullet.range)
+                        .put("hitSize", bullet.hitSize)
+                        .put("pierce", bullet.pierce)
+                        .put("pierceCap", bullet.pierceCap));
+            }
+            weapons.add(entry);
+        }
+        return Jval.newObject()
+                .put("weapons", weapons)
+                .put("speed", type.speed)
+                .put("buildSpeed", type.buildSpeed)
+                .put("mineSpeed", type.mineSpeed)
+                .put("mineTier", type.mineTier)
+                .put("mineRange", type.mineRange)
+                .put("itemCapacity", type.itemCapacity)
+                .put("payloadCapacity", type.payloadCapacity)
+                .put("canBoost", type.canBoost);
     }
 
     private Jval researchJson(UnlockableContent content) {

@@ -312,6 +312,12 @@ Serpulo 常见物品：
 unlockedNowHost/banned/hidden/hideDatabase`。`banned` 对应核心数据库的红叉；
 `unlockedNowHost` 是当前对局实际可用性；`detailsLocked` 表示详情因未解锁隐藏。
 
+`/content` 的 block 还有 `parameters`：`power{usagePerTick,usePerSecond,capacity}`、
+`powerProductionPerSecond`、`craftTimeTicks/craftsPerSecond`、`drillTimeTicks`、
+`pumpAmountPerTick/liquidPerSecond` 等；unit 的 `parameters.weapons[]` 是 `Weapon` 挂点，
+含 `reloadTicks/shotsPerSecond/dpsEstimate/range` 和 `bullet{type,damage,splashDamage,...}`。
+详细字段见 `docs/API-DATA-CONTRACT.md` 4.2。
+
 ### 16.2 Tile 和迷雾
 
 ```text

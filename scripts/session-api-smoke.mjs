@@ -96,6 +96,21 @@ const content = await call("/content?type=blocks&query=conveyor&limit=1", { head
 const contentMeta = content.body.blocks?.[0]?.meta;
 console.log("content meta", content.status, content.body.blocks?.[0]?.name, contentMeta?.description ? "description" : "no-description", contentMeta?.databaseCategory);
 if (content.status !== 200 || !contentMeta || contentMeta.databaseCategory !== "block") process.exit(1);
+const crafted = await call("/content?type=blocks&query=graphite-press&limit=1", { headers: auth });
+const generator = await call("/content?type=blocks&query=combustion-generator&limit=1", { headers: auth });
+const consumer = await call("/content?type=blocks&query=silicon-smelter&limit=1", { headers: auth });
+const unitContent = await call("/content?type=units&query=dagger&limit=1", { headers: auth });
+console.log(
+  "content params",
+  crafted.body.blocks?.[0]?.parameters?.craftTimeTicks,
+  generator.body.blocks?.[0]?.parameters?.powerProductionPerSecond,
+  consumer.body.blocks?.[0]?.parameters?.power?.usePerSecond,
+  unitContent.body.units?.[0]?.parameters?.weapons?.length,
+);
+if (!crafted.body.blocks?.[0]?.parameters?.craftTimeTicks
+    || !generator.body.blocks?.[0]?.parameters?.powerProductionPerSecond
+    || !consumer.body.blocks?.[0]?.parameters?.power?.usePerSecond
+    || !unitContent.body.units?.[0]?.parameters?.weapons?.length) process.exit(1);
 const forbidden = await call("/actions", {
   method: "POST",
   headers: auth,

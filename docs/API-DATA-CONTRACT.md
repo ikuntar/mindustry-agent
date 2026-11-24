@@ -242,6 +242,56 @@ meta: {
 `blocks[]` 额外有 `size,health,requirements,researched,researchCost`；
 `units[]` 额外有 `health,flying,playerControllable,researched,researchCost`。
 
+### 4.2 `parameters`（核心数据库参数的常用子集）
+
+每个 block/unit 还有 `parameters`，只把最常用的数值做成稳定字段；缺省字段表示该
+方块/单位类型没有这项能力，不是 `0` 的同义词。
+
+方块：
+
+```text
+parameters: {
+  power?: { usagePerTick, usePerSecond, capacity, buffered },
+  powerProductionPerSecond?,
+  craftTimeTicks?, craftsPerSecond?, outputs?,
+  drillTimeTicks?, hardnessDrillMultiplier?,
+  beamRangeTiles?,
+  pumpAmountPerTick?, liquidPerSecond?
+}
+```
+
+- `power.usePerSecond` 是 `consPower.usage * 60`；`usagePerTick` 是每 tick 消耗。
+- `powerProductionPerSecond` 是 `PowerGenerator.powerProduction * 60`。
+- `craftTimeTicks` 是游戏 tick；`craftsPerSecond = 60 / craftTimeTicks`。
+- `outputs` 是 `[{item,amount}]`；`drillTimeTicks` 不等于实际秒数，实际钻孔速度还受
+  `hardnessDrillMultiplier`、矿物硬度、覆盖格数、液体/加速影响。
+- `pumpAmountPerTick` / `liquidPerSecond` 只对泵类方块出现。
+
+单位：
+
+```text
+parameters: {
+  speed, buildSpeed, mineSpeed, mineTier, mineRange,
+  itemCapacity, payloadCapacity, canBoost,
+  weapons: [{
+    name, reloadTicks, display, controllable, rotate, inaccuracy, shootCone,
+    range, shotsPerSecond, dpsEstimate,
+    bullet: { type, damage, splashDamage, splashDamageRadius,
+              speed, lifetimeTicks, range, hitSize, pierce, pierceCap }
+  }]
+}
+```
+
+**“单位武器”是什么**：Mindustry 的 `UnitType.weapons` 是一个 `Weapon` 列表，一个单位
+可以有 0..N 个武器挂点。每个 `Weapon` 代表一套武器，不是一个抽象伤害值：
+`bullet` 决定弹种/直接伤害/溅射/速度/射程，`reloadTicks` 决定射速，`shotsPerSecond`
+和 `dpsEstimate` 是游戏公式的估算值；`mirror`/`alternate` 还可能导致镜像双武器。
+`dpsEstimate` 不含目标护甲、命中率、buff、地形和单位速度，只能用于横向比较。
+
+这些都是 `v0.1.1` 的常用参数；核心数据库 UI 还会显示更多 `StatValue`（例如状态效果、
+液体消耗、建造范围等），那些尚未全部 JSON 化。精确运行态优先用 `get_tile`、
+`get_capabilities`、`/context.power`。
+
 ## 5. `query_area`
 
 ```text
