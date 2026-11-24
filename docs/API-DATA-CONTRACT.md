@@ -170,7 +170,7 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 
 ```text
 { x, y, discovered, hidden,
-  floor, overlay, liquid, drop, block, team, solid,
+  floor, overlay, liquid, drop, dropHardness, block, team, solid,
   canPlace?, placeReason?,
   health?, maxHealth?, rotation?, efficiency?, progress?, warmup?, enabled?,
   items?, ammoTotal?, config?
@@ -183,7 +183,8 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 - `block`：内容名，空气为 `air`，隐藏为 `hidden`；
 - `team`：数字 id，`-1` 表示未知/隐藏；
 - `rotation`：`0=east, 1=south, 2=west, 3=north`；
-- `drop`：该 tile 的矿物名，`""` 表示无矿；
+- `drop`：该 tile 的矿物名，`""` 表示无矿；`dropHardness` 是该矿硬度（无矿为 -1），
+  和钻机 `drillTier` 比较可判断能否开采；
 - `solid`：块是否阻挡地面单位；
 - `efficiency`：0..1；`progress/warmup` 是 0..1；`enabled` 是逻辑/开关状态；
 - `items`：`[{item,amount}]`，不是对象；
@@ -260,6 +261,9 @@ parameters: {
   buildTimeTicks, itemCapacity,
   inputs?: [{item?,liquid?,amount,amountPerSecond?,optional,booster}], // item amount=配方用量, liquid amount=每 tick 用量
   outputs?: [{item,amount}],
+  liquidOutputs?: [{liquid,amount,perSecond}],
+  drillTier?: number, drillTimeTicks?: number, hardnessDrillMultiplier?: number,
+  mineableSource?: string, pumpAmountPerTick?: number, liquidPerSecond?: number, liquidSource?: string,
   power?: { usagePerTick, usePerSecond, capacity, buffered },
   powerProductionPerSecond?,
   craftTimeTicks?, craftsPerSecond?,

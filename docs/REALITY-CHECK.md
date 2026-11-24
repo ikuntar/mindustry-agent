@@ -150,6 +150,14 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - issue #38（2026-11-23）：session prompt 第 0 步可先用 bootstrap 只读读取 `/guide`/`/tools`；`/guide` 末尾不再指向会话内 404 的 docs，改为说明仓库文档。
 - 回归（2026-11-23）：`session-api-smoke` 通过 34 工具、bootstrap guide/tools、captured/power 字段、get_tile 预检、build_plan 失败形状、暂停门控、数据面 Range/304/轮换；`probe-mod/build.sh` 成功。
 
+## 科技树 API 信息充分性（2026-11-24）
+
+- 测试方式：新建无上下文 subagent，只给 `/tmp/tech-tier-prompt*.txt` 的 endpoint/bootstrap，不给仓库/网页/预训练知识；只允许 API 查询，要求输出物品层级、阶段路线、缺失字段。
+- 首轮（旧 API）：`sufficient=false`，14 次调用、279s。实际阻塞：447 个 block 只有 `outputs`（21 个），没有 `inputs`；22 个 item 只有 `{name,id,meta}`，没有 recipe/tier/research；物品不是 TechTree 节点（按 item 查询 404）；根查询 `count=128, truncated=true` 且没有 depth/cursor；fixture 下 `/content` 的 `researched` 与 TechTree 的 `researched` 语义不一致。
+- 已补：block `parameters.inputs`（item/liquid，81 个 block 有）、`liquidOutputs`、`drillTier/drillTimeTicks/hardnessDrillMultiplier/mineableSource`、pump `liquidSource`、`get_tech_tree.depth`、`get_tile/get_area.dropHardness`；配套 `API-DATA-CONTRACT`、`GAME-GUIDE`、`SESSION-API`。
+- 第二轮（补 inputs/depth 后）：仍 `sufficient=false`，但结论从“完全无法”变为“制成品层级可推导，完整路线不可”：原矿（copper/lead/coal/sand/titanium/thorium）没有方块 outputs，钻机产出依赖 `get_tile.drop`；液体链没有完整 producer/consumer 映射；`researched` fixture 状态干扰；TechTree 根分支需逐节点查询。
+- 结论：当前 API 能支撑“制成品相对高低端 + 技术树深度 + 建造/研究成本”的推导；不能只靠当前静态 `/content` 推导完整从原矿到高阶物品的战役路线。下一步应让 planner 明确先做地图 `get_tile/get_area` 取样，或补 drill/pump 的 tile→drop/liquid 约定和 liquid producer 索引，再做完整复测。
+
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。
 - Probe mod + `ProbeGameAdapter` 已把 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop`/`possess`/`release`/`respawn`/`mine`/`attack` 接到真实游戏；物流、sorter 配置、指挥、stance、附身/释放、死亡重生、sand 挖矿、攻击容器已实测。

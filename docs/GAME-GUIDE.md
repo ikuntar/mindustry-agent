@@ -237,6 +237,8 @@ Serpulo 常见物品：
   不要反复重试同一个方块。研究前先看 `get_tech_tree {content:"duo"}` 或
   `GET /content?type=blocks` 的 `researched`/`researchCost`；父节点未解锁、目标未完成
   或资源不足时停下来处理。研究是逐节点操作，没有队列/自动规划器。
+  `get_tech_tree` 只接受方块/单位；物品没有 tech node，物品层级用
+  `/content` 的 `parameters.inputs/outputs` 和产出方块的研究深度推导。
 - `get_context.rules` 提供当前只读规则摘要：`modeName`、`waveTimer`、`waveSending`、
   `winWave`、建造速度/成本/拆除返还/建筑血量倍率，以及 `sector`（id/name/preset/captureWave）。
   这些是 agent 能读到的全部规则；不要臆造未暴露的规则字段。
@@ -327,7 +329,8 @@ unlockedNowHost/banned/hidden/hideDatabase`。`banned` 对应核心数据库的�
 
 `/content` 的 block 还有 `parameters`：`buildTimeTicks/itemCapacity`、
 `inputs[{item|liquid,amount,optional}]`、`outputs[{item,amount}]`、
-`power{usagePerTick,usePerSecond,capacity}`、`powerProductionPerSecond`、
+`liquidOutputs[{liquid,amount,perSecond}]`、`drillTier/drillTimeTicks`、
+`pumpAmountPerTick/liquidPerSecond`、`power{usagePerTick,usePerSecond,capacity}`、`powerProductionPerSecond`、
 `craftTimeTicks/craftsPerSecond`、`drillTimeTicks`、`laserRangeTiles`
 （电力节点）、`pumpAmountPerTick/liquidPerSecond` 等；unit 的 `parameters.weapons[]`
 是 `Weapon` 挂点，含 `reloadTicks/shotsPerSecond/dpsEstimate/range` 和

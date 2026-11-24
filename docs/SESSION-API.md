@@ -218,7 +218,9 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
 - `get_config_schema {block}`：返回可配置字段和合法值；`UnitFactory` 的 `value`
   是 `plans[].index`，不是生产队列。
 - `get_tech_tree {content?,limit?}`：只读 parent/children、depth（根为 0）、成本、objectives、
-  researched、blockedReason；研究仍是逐节点 `research`，无队列。
+  researched、blockedReason；研究仍是逐节点 `research`，无队列。`content` 只接受有
+  TechNode 的方块/单位；物品没有独立 tech node，物品层级要用 `parameters.inputs/outputs`
+  和产出方块的 tech depth 推导，不要查询 item 名字。
 
 会话 `/actions` 只允许 `/tools` 暴露的 34 个名字；内部调试 op 仍只走本地 probe
 socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，

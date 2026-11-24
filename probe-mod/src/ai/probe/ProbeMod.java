@@ -1405,7 +1405,8 @@ public class ProbeMod extends Mod {
             data.put("floor", tile.floor().name)
                     .put("overlay", tile.overlay().name)
                     .put("liquid", tile.floor().liquidDrop == null ? "" : tile.floor().liquidDrop.name)
-                    .put("drop", tile.drop() == null ? "" : tile.drop().name);
+                    .put("drop", tile.drop() == null ? "" : tile.drop().name)
+                    .put("dropHardness", tile.drop() == null ? -1 : tile.drop().hardness);
             if (!visible) {
                 data.put("block", "hidden").put("team", -1).put("solid", false);
                 reply(command, data);
@@ -1659,7 +1660,8 @@ public class ProbeMod extends Mod {
                     entry.put("floor", tile.floor().name)
                             .put("overlay", tile.overlay().name)
                             .put("liquid", tile.floor().liquidDrop == null ? "" : tile.floor().liquidDrop.name)
-                            .put("drop", drop == null ? "" : drop.name);
+                            .put("drop", drop == null ? "" : drop.name)
+                            .put("dropHardness", drop == null ? -1 : drop.hardness);
                     if (!visible) {
                         entry.put("block", "hidden").put("team", -1).put("solid", false);
                         tiles.add(entry);
@@ -3164,6 +3166,32 @@ public class ProbeMod extends Mod {
             }
         }
         if (inputs.asArray().size > 0) result.put("inputs", inputs);
+        if (block instanceof GenericCrafter crafter) {
+            Jval liquidOutputs = Jval.newArray();
+            LiquidStack[] liquids = crafter.outputLiquids;
+            if (liquids == null && crafter.outputLiquid != null) liquids = new LiquidStack[]{crafter.outputLiquid};
+            if (liquids != null) {
+                for (LiquidStack stack : liquids) {
+                    if (stack == null || stack.liquid == null) continue;
+                    liquidOutputs.add(Jval.newObject()
+                            .put("liquid", stack.liquid.name)
+                            .put("amount", stack.amount)
+                            .put("perSecond", crafter.craftTime > 0f ? stack.amount * 60f / crafter.craftTime : 0f));
+                }
+            }
+            if (liquidOutputs.asArray().size > 0) result.put("liquidOutputs", liquidOutputs);
+        }
+        if (block instanceof Drill drill) {
+            result.put("drillTier", drill.tier)
+                    .put("drillTimeTicks", drill.drillTime)
+                    .put("hardnessDrillMultiplier", drill.hardnessDrillMultiplier)
+                    .put("mineableSource", "tile.drop where hardness <= drillTier; query get_tile/get_area");
+        }
+        if (block instanceof Pump pump) {
+            result.put("pumpAmountPerTick", pump.pumpAmount)
+                    .put("liquidPerSecond", pump.pumpAmount * 60f)
+                    .put("liquidSource", "tile.floor.liquidDrop; query get_tile/get_area");
+        }
         if (block.consPower != null) {
             ConsumePower power = block.consPower;
             result.put("power", Jval.newObject()
