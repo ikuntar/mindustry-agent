@@ -62,24 +62,23 @@ ProbeMod.java:3530  getDeclaredField + setAccessible
 `ManagementFactory` 取 PID（`ProbeMod.java:5547`），写入 discovery。它是进程标识，不涉及游戏状态；
 如果只看“游戏数据”，不构成采集通道。
 
-### F4 规则风险：服务端全图可见性
+### F4 已加迷雾限制：服务端全图读取
 
-以下读取是公开 API，但会绕过玩家视野/战争迷雾：
+这些接口使用公开 mod API；在 `rules.fog=false` 时仍可读全图（这是游戏规则允许的状态），
+在 `rules.fog=true` 时已按助手队伍限制：
 
-- `get_tile` 可读任意 tile 的 block/team/items/config（`ProbeMod.java:1364` 起）。
-- `get_area` 可读任意区域所有 tile/team（`ProbeMod.java:1570` 起）。
-- `query_area` 的 `includeEnemies=true` 可读任意坐标附近的敌军（`ProbeMod.java:1474` 起）。
-- `get_unit`/`findUnit` 在 `Groups.unit` 中按 id 查找所有单位，没有队伍限制。
-- `get_map_manifest`/`/data/map/**` 生成全地图 `block_id/team/drop_id/solid` 快照
-  （`ProbeMod.java:3847`、`5710` 左右）；没有雾/队伍过滤。
-- 事件监听器记录全队伍的 `unit_create/unit_destroy/unit_damage/build_damage/block_*`
-  （`ProbeMod.java:234-291`），`/events/wait` 和 `get_context.eventSummary` 直接暴露。
-- `get_context` 的 `threats` 在 `includeEnemies=true`、`radius=0` 时可返回全图敌军；
-  `powerSummary` 原本也汇总所有队伍，现已改为只汇总 `assistant.team`。
+- `get_tile`/`get_area`：未发现 tile 返回 `discovered:false, hidden:true`；已发现但当前不可见
+  只返回地形/矿，block 标记为 `hidden`、team=-1，不返回库存/config。
+- `query_area`、`get_context.threats`、`get_unit`、`findUnit`/`findBuilding` 过滤当前不可见实体。
+- `get_map_manifest`/`/data/map/**` 在迷雾下只写已发现地形；未发现/不可见格 block/team/solid 为 0，
+  manifest 带 `fog`/`visibility`。
+- 事件监听器按 `unitVisible`/`buildingVisible`/`tileVisible` 在入队时过滤。
+- `context.power` 只汇总 `assistant.team`。
 
-**判定**：这不是“反射作弊”，但也不是玩家等价视野。若目标是“AI 和玩家一起玩”，
-需要决定是 (a) 完全玩家等价，按队伍/可见性过滤，或 (b) 明确允许全图感知并在能力/
-prompt 中标注。当前未擅自改语义，留作产品决策。
+实测（Fortress + 控制台开启 `fog/staticFog`）：远处 `get_tile` 返回 hidden；`get_area` 全隐藏；
+`query_area` 0 单位；`spawn_enemy` 后 `get_unit` 返回 `unit_not_found`；`threats` 0。
+**判定**：迷雾内已是玩家等价读取；无迷雾模式仍保留全图感知（这是模式规则，不是绕过）。
+
 
 ### F5 保留：本地 raw debug 面
 

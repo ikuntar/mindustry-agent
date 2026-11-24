@@ -239,7 +239,7 @@ public class ProbeMod extends Mod {
             }));
         }
         Events.on(EventType.UnitDestroyEvent.class, event -> {
-            if (event.unit != null) {
+            if (event.unit != null && unitVisible(event.unit)) {
                 addEvent("unit_destroy", Jval.newObject()
                         .put("unitId", event.unit.id)
                         .put("type", event.unit.type.name)
@@ -249,7 +249,7 @@ public class ProbeMod extends Mod {
             }
         });
         Events.on(EventType.BlockDestroyEvent.class, event -> {
-            if (event.tile != null) {
+            if (event.tile != null && tileVisible(event.tile.x, event.tile.y)) {
                 addEvent("block_destroy", Jval.newObject()
                         .put("x", event.tile.x)
                         .put("y", event.tile.y)
@@ -258,7 +258,7 @@ public class ProbeMod extends Mod {
             }
         });
         Events.on(EventType.BlockBuildEndEvent.class, event -> {
-            if (event.tile != null) {
+            if (event.tile != null && tileVisible(event.tile.x, event.tile.y)) {
                 addEvent("block_build_end", Jval.newObject()
                         .put("x", event.tile.x)
                         .put("y", event.tile.y)
@@ -268,7 +268,7 @@ public class ProbeMod extends Mod {
             }
         });
         Events.on(EventType.UnitCreateEvent.class, event -> {
-            if (event.unit != null) {
+            if (event.unit != null && unitVisible(event.unit)) {
                 addEvent("unit_create", Jval.newObject()
                         .put("unitId", event.unit.id)
                         .put("type", event.unit.type.name)
@@ -278,7 +278,7 @@ public class ProbeMod extends Mod {
             }
         });
         Events.on(EventType.BuildDamageEvent.class, event -> {
-            if (event.build != null) {
+            if (event.build != null && buildingVisible(event.build)) {
                 addEvent("build_damage", Jval.newObject()
                         .put("buildingId", event.build.id)
                         .put("x", event.build.tile.x)
@@ -287,7 +287,7 @@ public class ProbeMod extends Mod {
             }
         });
         Events.on(EventType.UnitDamageEvent.class, event -> {
-            if (event.unit != null) {
+            if (event.unit != null && unitVisible(event.unit)) {
                 addEvent("unit_damage", Jval.newObject()
                         .put("unitId", event.unit.id)
                         .put("health", event.unit.health)
@@ -1306,8 +1306,9 @@ public class ProbeMod extends Mod {
 
             Jval plans = Jval.newArray();
             String note = "";
-            boolean configReadable = "power-node".equals(block.name) || fields.asArray().size > 0;
-            if (configReadable) {
+            boolean powerNode = "power-node".equals(block.name);
+            boolean configReadable = powerNode || fields.asArray().size > 0;
+            if (powerNode) {
                 fields.add(Jval.newObject()
                         .put("key", "links")
                         .put("type", "array")
@@ -1370,16 +1371,30 @@ public class ProbeMod extends Mod {
                 return;
             }
             var tile = Vars.world.tile(x, y);
+            boolean discovered = tileDiscovered(x, y);
+            boolean visible = tileVisible(x, y);
             Jval data = Jval.newObject()
                     .put("x", x)
                     .put("y", y)
-                    .put("block", tile.block().name)
-                    .put("team", tile.team().id)
-                    .put("floor", tile.floor().name)
+                    .put("discovered", discovered)
+                    .put("hidden", !visible);
+            if (!discovered) {
+                data.put("block", "hidden").put("team", -1);
+                reply(command, data);
+                return;
+            }
+            data.put("floor", tile.floor().name)
                     .put("overlay", tile.overlay().name)
                     .put("liquid", tile.floor().liquidDrop == null ? "" : tile.floor().liquidDrop.name)
-                    .put("solid", tile.block().solid)
                     .put("drop", tile.drop() == null ? "" : tile.drop().name);
+            if (!visible) {
+                data.put("block", "hidden").put("team", -1).put("solid", false);
+                reply(command, data);
+                return;
+            }
+            data.put("block", tile.block().name)
+                    .put("team", tile.team().id)
+                    .put("solid", tile.block().solid);
             String queriedBlock = request.getString("block", "");
             if (!queriedBlock.isEmpty()) {
                 Block placement = Vars.content.block(queriedBlock);
@@ -1490,6 +1505,7 @@ public class ProbeMod extends Mod {
             if (includeUnits) {
                 for (Unit unit : mindustry.gen.Groups.unit) {
                     if (!includeEnemies && unit.team != team) continue;
+                    if (!unitVisible(unit)) continue;
                     if (Math.hypot(unit.x - x, unit.y - y) > radius) continue;
                     if (units.asArray().size >= maxUnits) {
                         unitsTruncated = true;
@@ -1519,6 +1535,7 @@ public class ProbeMod extends Mod {
                         Tile tile = Vars.world.tile(tileX + dx, tileY + dy);
                         Building building = tile == null ? null : tile.build;
                         if (building == null || building.team != team) continue;
+                        if (!buildingVisible(building)) continue;
                         if (tile.x != building.tile.x || tile.y != building.tile.y) continue;
                         if (Math.hypot(building.x - x, building.y - y) > radius) continue;
                         if (buildings.asArray().size >= maxBuildings) {
@@ -1591,17 +1608,39 @@ public class ProbeMod extends Mod {
                         nextY = tileY + dy;
                         break outer;
                     }
-                    Item drop = tile.drop();
+                    boolean discovered = tileDiscovered(tile.x, tile.y);
+                    boolean visible = tileVisible(tile.x, tile.y);
                     Jval entry = Jval.newObject()
                             .put("x", tile.x)
                             .put("y", tile.y)
-                            .put("block", tile.block().name)
-                            .put("team", tile.team().id)
-                            .put("floor", tile.floor().name)
+                            .put("discovered", discovered)
+                            .put("hidden", !visible);
+                    if (!discovered) {
+                        entry.put("block", "hidden").put("team", -1);
+                        tiles.add(entry);
+                        minX = Math.min(minX, tile.x);
+                        minY = Math.min(minY, tile.y);
+                        maxX = Math.max(maxX, tile.x);
+                        maxY = Math.max(maxY, tile.y);
+                        continue;
+                    }
+                    Item drop = tile.drop();
+                    entry.put("floor", tile.floor().name)
                             .put("overlay", tile.overlay().name)
                             .put("liquid", tile.floor().liquidDrop == null ? "" : tile.floor().liquidDrop.name)
+                            .put("drop", drop == null ? "" : drop.name);
+                    if (!visible) {
+                        entry.put("block", "hidden").put("team", -1).put("solid", false);
+                        tiles.add(entry);
+                        minX = Math.min(minX, tile.x);
+                        minY = Math.min(minY, tile.y);
+                        maxX = Math.max(maxX, tile.x);
+                        maxY = Math.max(maxY, tile.y);
+                        continue;
+                    }
+                    entry.put("block", tile.block().name)
+                            .put("team", tile.team().id)
                             .put("solid", tile.block().solid);
-                    if (drop != null) entry.put("drop", drop.name);
                     if (tile.build != null) {
                         if (tile.build.items != null) {
                             Jval items = Jval.newArray();
@@ -1728,7 +1767,7 @@ public class ProbeMod extends Mod {
                     .put("block", building.block.name)
                     .put("x", building.tileX())
                     .put("y", building.tileY())
-                    .put("config", String.valueOf(applied)));
+                    .put("config", jsonConfig(applied)));
             return;
         }
 
@@ -2868,8 +2907,8 @@ public class ProbeMod extends Mod {
 
         if ("get_unit".equals(op)) {
             Unit unit = findUnit(request);
-            if (unit == null) {
-                replyError(command, "unit_not_found", "Unit not found");
+            if (unit == null || !unitVisible(unit)) {
+                replyError(command, "unit_not_found", "Unit not found or hidden by fog");
                 return;
             }
             reply(command, Jval.newObject()
@@ -3186,6 +3225,43 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private Team viewerTeam() {
+        if (assistant != null) return assistant.team;
+        return Vars.state.rules == null ? null : Vars.state.rules.defaultTeam;
+    }
+
+    private boolean fogActive() {
+        return Vars.state.rules != null && Vars.state.rules.fog;
+    }
+
+    private boolean tileDiscovered(int x, int y) {
+        if (!fogActive()) return true;
+        Team team = viewerTeam();
+        if (team == null || Vars.fogControl == null) return false;
+        return Vars.fogControl.isDiscovered(team, x, y);
+    }
+
+    private boolean tileVisible(int x, int y) {
+        if (!fogActive()) return true;
+        Team team = viewerTeam();
+        if (team == null || Vars.fogControl == null) return false;
+        return Vars.fogControl.isVisibleTile(team, x, y);
+    }
+
+    private boolean unitVisible(Unit unit) {
+        if (!fogActive() || unit == null) return true;
+        Team team = viewerTeam();
+        if (team == null) return false;
+        return unit.team == team || !unit.inFogTo(team);
+    }
+
+    private boolean buildingVisible(Building building) {
+        if (!fogActive() || building == null) return true;
+        Team team = viewerTeam();
+        if (team == null) return false;
+        return building.team == team || !building.inFogTo(team);
+    }
+
     private boolean isReadOnlyOp(String op) {
         switch (op) {
             case "hello":
@@ -3295,7 +3371,7 @@ public class ProbeMod extends Mod {
         if (unitId == null) return null;
         int id = unitId.asInt();
         for (Unit unit : Groups.unit) {
-            if (unit.id == id) return unit;
+            if (unit.id == id) return unitVisible(unit) ? unit : null;
         }
         return null;
     }
@@ -3324,13 +3400,13 @@ public class ProbeMod extends Mod {
         if (buildingId != null) {
             int id = buildingId.asInt();
             for (Building building : Groups.build) {
-                if (building.id == id) return building;
+                if (building.id == id) return buildingVisible(building) ? building : null;
             }
             for (int ty = 0; ty < Vars.world.height(); ty++) {
                 for (int tx = 0; tx < Vars.world.width(); tx++) {
                     Tile tile = Vars.world.tile(tx, ty);
                     if (tile != null && tile.build != null && tile.build.id == id) {
-                        return tile.build;
+                        return buildingVisible(tile.build) ? tile.build : null;
                     }
                 }
             }
@@ -3339,7 +3415,7 @@ public class ProbeMod extends Mod {
         Jval y = target.get("y");
         if (x != null && y != null) {
             Tile tile = Vars.world.tile(x.asInt(), y.asInt());
-            return tile == null ? null : tile.build;
+            return tile == null || !buildingVisible(tile.build) ? null : tile.build;
         }
         return null;
     }
@@ -3595,6 +3671,8 @@ public class ProbeMod extends Mod {
         Rules rules = Vars.state.rules;
         Jval json = Jval.newObject()
                 .put("modeName", rules.modeName == null ? "" : rules.modeName)
+                .put("fog", rules.fog)
+                .put("staticFog", rules.staticFog)
                 .put("mission", rulesMission())
                 .put("waveTimer", rules.waveTimer)
                 .put("waveSending", rules.waveSending)
@@ -3779,6 +3857,7 @@ public class ProbeMod extends Mod {
             int count = 0;
             for (Unit unit : Groups.unit) {
                 if (unit.team == team || unit.dead) continue;
+                if (!unitVisible(unit)) continue;
                 if (radius > 0 && Math.hypot(unit.x - assistant.x, unit.y - assistant.y) > radius * 8f) continue;
                 threats.add(Jval.newObject()
                         .put("id", unit.id)
@@ -3855,12 +3934,14 @@ public class ProbeMod extends Mod {
                 Tile tile = Vars.world.tile(x, y);
                 int index = y * width + x;
                 if (tile == null) continue;
+                boolean discovered = tileDiscovered(x, y);
+                boolean visible = tileVisible(x, y);
+                if (!discovered) continue;
+                Item drop = tile.drop();
+                if (drop != null) drops[index] = (short) (drop.id + 1);
+                if (!visible) continue;
                 blocks[index] = (short) tile.block().id;
                 teams[index] = (short) tile.team().id;
-                Item drop = tile.drop();
-                // 0 is reserved for "no drop"; item ids can be 0 (copper), so
-                // store id + 1. Clients must use manifest.dropIds when decoding.
-                drops[index] = (short) (drop == null ? 0 : drop.id + 1);
                 solids[index] = (short) (tile.block().solid ? 1 : 0);
             }
         }
@@ -5769,6 +5850,8 @@ public class ProbeMod extends Mod {
                     .put("revision", revision)
                     .put("kind", "map")
                     .put("format", "raw-v1")
+                    .put("fog", Vars.state.rules != null && Vars.state.rules.fog)
+                    .put("visibility", "assistant-team")
                     .put("schema", Jval.newObject()
                             .put("width", width)
                             .put("height", height)

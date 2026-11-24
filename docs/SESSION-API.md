@@ -161,7 +161,11 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 
 `GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。
 
-`/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。`context.power` 只汇总助手当前队伍的电力网络（每条带 `team`）；`TimerObjective` 的 `current=-1`、`progressAvailable=false`，用 `display` 读取游戏给出的倒计时文本。
+`/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`、`fog`、`staticFog`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。`context.power` 只汇总助手当前队伍的电力网络（每条带 `team`）；`TimerObjective` 的 `current=-1`、`progressAvailable=false`，用 `display` 读取游戏给出的倒计时文本。
+
+字段级数据契约（实体结构、枚举、config 形状、错误码）见 `docs/API-DATA-CONTRACT.md`；`/guide` 第 16 节是面向 harness 的速查版。`detail` 参数当前只做兼容，实际响应仍是有界结构，大小由 `maxBytes`/`maxUnits` 控制。
+
+迷雾开启（`rules.fog=true`）时：`get_tile`/`get_area` 对未发现 tile 返回 `discovered=false,hidden=true`；已发现但不可见 tile 只返回地形/矿，block 为 `hidden`、team 为 -1，不返回建筑库存/config；`query_area`、`get_context.threats`、`get_unit` 过滤不可见实体；地图快照只写已发现地形，manifest 带 `fog/visibility`；事件按助手队伍可见性入队。`get_context.rules.fog/staticFog` 可判断当前模式。
 
 ```text
 POST /session

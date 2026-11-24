@@ -277,8 +277,110 @@ Serpulo 常见物品：
 - 忽略暂停：暂停期间 tick 不走，running op 不等于失败。
 - 把旧地图坐标复用到新地图/新区域。
 
+## 16. API 返回结构速查
+
+完整字段表在仓库 `docs/API-DATA-CONTRACT.md`；这里是 harness 最容易踩的字段约定。
+所有响应都是 JSON 字段对象，按字段名读取，不要依赖数组顺序或未列出的字段。
+
+### 16.1 坐标和实体
+
+- tile 坐标：`get_tile`、`build_plan`、`deconstruct`、`configure`、`mine`
+- 世界像素：`get_area`、`query_area`、`move_to`、`attack`；1 tile 默认 8 px
+- `team` 是数字 id：`0 derelict`、`1 sharded`、`2 crux`、`3 malis`、`4 green`、
+  `5 blue`、`6 neoplastic`，其他是 `team#N`；不要假设敌人永远是 2
+- `rotation`：`0 east`、`1 south`、`2 west`、`3 north`
+
+单位摘要：
+
+```text
+{ id, type, team, x, y, health, maxHealth, dead, item?, itemAmount?, isAI? }
+```
+
+建筑摘要：
+
+```text
+{ id, block, team, x, y, tileX, tileY, health, maxHealth, rotation,
+  itemList?: [{item,amount}], ammoTotal? }
+```
+
+`get_context.assistant` 另有 `isHome/possessing/boosting/payloads/payloadUsed`；
+`control.mode` 是 `unit` 或 `building`，建筑控制时才有 `buildingId/block/unitId`。
+`cores[]` 是 `{id,block,x,y,health,maxHealth,itemCapacity,unitType,items{}}`。
+
+### 16.2 Tile 和迷雾
+
+```text
+{ x, y, discovered, hidden, floor, overlay, liquid, drop,
+  block, team, solid,
+  canPlace?, placeReason?,
+  health?, maxHealth?, rotation?, efficiency?, progress?, warmup?, enabled?,
+  items?, ammoTotal?, config? }
+```
+
+`discovered=false` 表示地形都未发现；`hidden=true` 表示当前不可见。隐藏 tile 不应读取
+block/team/items/config。`block:"air"` 是空地，`block:"hidden"` 是迷雾占位，不是方块名。
+`drop` 是矿物名，`""` 表示无矿；`items` 是 `[{item,amount}]`，不是对象。
+
+`get_area.coverage.next` 是 tile 坐标；`get_context.rules.fog/staticFog` 可判断当前模式是否有迷雾。
+迷雾下 `get_tile/get_area` 返回隐藏占位，`query_area/get_unit/threats` 过滤不可见实体，
+地图 `/data` 只写已发现地形；不要用旧坐标或旧快照推断当前敌人。
+
+### 16.3 config 和 schema
+
+`get_tile.config` 的 JSON 形状：
+
+```text
+Item/Content -> "copper"        Point2 -> {x,y}
+Point2[]     -> [{x,y},...]     byte[] -> "hex"
+Number/Boolean/String -> 原类型  Object[] -> 递归数组
+未知类型     -> {type:"类名", value:"摘要"}
+```
+
+`get_config_schema`：
+
+```text
+{ block, configurable, configReadable, fields[], plans[], note }
+```
+
+`field.type` 可能是 `item|string|boolean|integer|array`；`power-node` 的 `links` 是只读
+`[{x,y}]`。`UnitFactory.plans[]` 是 `{index,unit,requirements,time,available}`；
+`Reconstructor` 的 plan 是 `{base,upgrade,available}`，不是可选择生产方案。
+
+### 16.4 状态和事件
+
+动作状态：`queued | running | done | failed | cancelled`；常见失败 code：
+`timeout`、`assistant_gone`、`target_gone`、`insufficient_resources`、
+`invalid_placement`、`out_of_range`、`game_paused`、`building_not_found`。
+
+事件信封：`{id,type,tick,timeMs,data{}}`。常用类型：
+
+```text
+unit_create   { unitId,type,team,x,y }
+unit_destroy  { unitId,type,team,x,y }
+unit_damage   { unitId,health,x,y }
+block_destroy { x,y,block,team }
+block_build_end { x,y,block,team,breaking }
+build_damage  { buildingId,x,y,health }
+game_pause/game_resume { paused,tick,source? }
+wave_start    { wave,enemies,winWave,tick }
+wave_end      { wave,next,tick }
+```
+
+事件有 FIFO 上限，使用 `since`/`types`/`next`；迷雾下实体事件按助手队伍可见性入队，
+但 `wave_*`/暂停事件可能仍是全局的。
+
+### 16.5 枚举速查
+
+```text
+control.mode: unit | building
+payload.type: unit | block | payload
+stance: stop | holdFire | pursueTarget | patrol | ram | boost | holdPosition | mineAuto
+command: move | stop | attack | repair | rebuild | assist | mine | enterPayload |
+         loadUnits | loadBlocks | unloadPayload | loopPayload
+```
+
 ---
 
-本指南是游戏知识层；工具字段、错误码和会话生命周期见 `GET /tools` 和
-`GET /guide`。更完整的 `docs/SESSION-API.md`、`docs/MCP-PROTOCOL.md` 是仓库文档，
-不在会话 API 中提供；精确数值永远以实时 `/content`、`/capabilities`、`/context` 为准。
+本指南是游戏知识层；完整字段表见仓库 `docs/API-DATA-CONTRACT.md`，工具名和输入
+schema 以 `GET /tools` 为准；精确数值永远以实时 `/content`、`/capabilities`、
+`/context` 为准。
