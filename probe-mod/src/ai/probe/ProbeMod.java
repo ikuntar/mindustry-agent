@@ -6200,6 +6200,8 @@ public class ProbeMod extends Mod {
             float bestDistance = range;
             for (Unit other : Groups.unit) {
                 if (other == null || other == unit || other.dead || other.team == unit.team) continue;
+                if (Vars.state.rules.fog
+                        && (Vars.fogControl == null || !Vars.fogControl.isVisible(unit.team, other.x, other.y))) continue;
                 float distance = (float) Math.hypot(other.x - unit.x, other.y - unit.y);
                 if (distance < bestDistance) {
                     best = other;
