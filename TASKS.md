@@ -67,8 +67,8 @@
 - [x] `get_context.eventsSince` 返回真实事件序号
 - [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
 - [x] `move_to` 基础 BFS 寻路：地面单位绕过 solid tile；Fortress 场景用 5 个 container 做墙，助手到达墙后目标（`1089,588` vs `1084,588`）；follow/attack 的接近移动共用该路径，attack 绕障接近已在固定场景验证
-- [x] 基础自动索敌/开火：空闲时扫描武器射程内最近敌军，设置 aim/isShooting；固定场景 `spawn_enemy ai=true` 后轮询 2s 内 health `150→141`，敌人也会还击
-- [x] 低血撤退：health < 30% 且无当前动作时优先退到远离敌人的同队核心，否则向远离最近敌军 120px 的方向移动；固定场景 core 距离 `209→62`，敌方距离 `63→84`
+- [x] 基础自动索敌/开火：已移除默认自动索敌；`attack` 是显式动作。旧的自动瞄准实测仅作历史记录。
+- [x] 低血撤退：已移除；助手默认无低血自动撤退/空闲自动索敌，显式动作才移动/攻击/跟随；死亡后从核心自动重生（与玩家一致）。
 - [x] `attack.unitId` 独立伤害：固定场景在核心附近生成 idle dagger 后按 `unitId` 攻击，health `150→141`（4 波后的低血助手路径不作为验收）
 - [x] 动作超时：`move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；固定场景分别实测
 - [x] `mine` 超时与正常完成：固定场景在助手附近放 `ore-copper`，`timeoutTicks=1` 返回 `failed/timeout`；无超时挖矿 `done` 并获得 1 copper
@@ -161,7 +161,7 @@
 - [x] 迷雾读取限制：`get_tile/get_area/query_area/get_unit/threats/map/events` 按助手队伍过滤；Fortress fog 实测通过
 - [x] API 数据契约：`docs/API-DATA-CONTRACT.md` + `/guide` 第 16 节（实体结构/枚举/config/错误码）
 - [x] 冷启动规划测试（2026-11-24）：无限流派 600s 超时（45 次调用，过度解析地图二进制）；收窄流 83.7s 完成，判定 `/guide` 足够但只到“够用”级，记录 wavetime/objective/供弹/建造时间/电力连线等缺口
-- [x] 助手低血逃跑行为说明：`ProbeController` 是无目标且 health<=30% 的本地反射，不是 move_to；guide/API 契约已文档化，并给 `nearestEnemy` 加迷雾过滤
+- [x] 默认动作策略：移除低血自动撤退和空闲自动索敌/开火；显式动作才移动/攻击/跟随；死亡后自动从核心重生，与玩家一致
 - [ ] 按冷启动反馈补 guide：wavetime 单位已补、actions 顶层字段已补；objective 本地化失败 fallback、炮塔供弹动作示例继续补
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）

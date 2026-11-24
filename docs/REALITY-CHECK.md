@@ -90,8 +90,8 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 地面单位 `move_to` 会拒绝 solid tile（`unreachable/Target tile is solid for a ground unit`）；固定场景附身 dagger 后验证该错误，飞行 alpha 不做此限制。
 - `mine`：固定场景在助手附近放 `ore-copper`；`timeoutTicks=1` 返回 `failed/timeout`，无超时挖矿 `done` 并获得 1 copper。
 - `move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 均可选 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，并清除对应控制器目标。
-- 自动防御：空闲时每 10 tick 扫描武器射程内最近敌军，设置 `aimX/aimY/isShooting`；固定场景用 `spawn_enemy ai=true` 生成会还击的 dagger，轮询 2s 内 health `150→141`。
-- 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 `209→62`、敌方距离 `63→84`。
+- 自动防御：**已按默认显式模式移除**；旧的空闲自动索敌/开火实测仅作历史记录，不再代表当前 HEAD。需要攻击时由 agent 发 `attack`。
+- 低血撤退：**已按用户要求移除**。当前助手没有低血自动撤退，也没有空闲自动索敌/开火；死亡后从核心自动重生。`docs/REALITY-CHECK.md` 此前的低血/自动防御实测仅作为历史记录，不代表当前 HEAD。
 - 供弹防守：固定场景建 `duo` 炮塔 `(113,75)` 和 feeder conveyor，从核心取 5 copper，传送带接收 5，炮塔 `ammoTotal=6`；再建上游 conveyor，deposit 1 copper 后炮塔 `ammoTotal 10→12`，两段链路可用。4 个启用真实 AI 的敌方 dagger 连续进攻，均被命中（150→141），炮塔弹药实际消耗到 0；长距离/多拐弯链路未验证。
 - 数据 token 轮换：probe 新增 `rotate_data_token`；旧 token 访问返回 401，新 token 访问 manifest 返回 200。
 - 数据面速率限制：`PROBE_DATA_RATE_LIMIT_PER_SEC`（默认 120）；固定场景 limit=10 时 11 个并发请求得到 9 个 200、2 个 429。

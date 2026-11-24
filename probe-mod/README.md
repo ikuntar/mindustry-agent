@@ -57,7 +57,7 @@ node client/probe-client.mjs
 - 数据面速率限制：`PROBE_DATA_RATE_LIMIT_PER_SEC` 默认 120；超限 429 + `Retry-After`，场景 limit=10 实测 9/11 成功。
 - 多客户端写互斥：`PROBE_REQUIRE_WRITER=1` 时先 `claim_writer`，写操作带 `writerToken`；第二个客户端 claim 得到 `writer_held`，无 token 写入得到 `writer_required`；`renew_writer` 续期，1s TTL 过期后新客户端可 claim。`scripts/run-writer-lock.sh` 验证 raw 客户端和 MCP adapter（`writer-harness`）两条路径。
 - `query_area` 真实动作/观测：固定场景 `query_area` 的 turret 建筑带 `ammoTotal=6`，`get_tile`/`get_area` 也返回有限物品字段。
-- 低血撤退：health < 30% 且空闲时优先退到远离敌人的同队核心，否则向远离最近敌军方向移动；固定场景核心距离 209→62、敌方距离 63→84。
+- 助手默认没有低血撤退/空闲自动索敌；显式动作才移动/攻击/跟随；死亡后从核心自动重生。
 - `deconstruct`/`repair` 已实现并实测：deconstruct 后建筑消失，repair conveyor 25→45。
 - `get_events` 事件环已接：unit_destroy/unit_create/block_destroy/block_build_end/build_damage/unit_damage，支持 since/limit/next/dropped。
 - 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`（port/token/protocol/version/pid）；`hello` 握手；`ping`/heartbeat；`PROBE_REQUIRE_AUTH=1` 启用 token 校验；socket 命令入队，游戏每帧最多处理 50 条。adapter 重连已有 fake probe 单测。

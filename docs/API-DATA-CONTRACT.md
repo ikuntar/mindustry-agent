@@ -65,9 +65,8 @@ item, itemAmount, boosting, payloads[], payloadUsed
 `isHome=true` 表示当前是 home body；`possessing=true` 表示控制的是借体。
 `item` 是当前携带物品名，`itemAmount` 是数量。
 
-本地反射：当没有 `move/attack/follow` 目标且 `health <= maxHealth*0.3` 时，控制器会
-自动向更安全的同队核心或远离 240px 内最近敌人的方向移动。它不是 `move_to` 的结果，
-不会生成 op/event；看 `assistant.x/y` 变化时不要误判为工具或路径失败。
+本地反射：当前版本默认**没有**低血自动撤退，也没有空闲自动索敌/开火；助手空闲时停止移动，
+死亡后由核心自动重生。移动/攻击/跟随必须由显式动作产生；不要把空闲位移误认为自动行为。
 
 ### 3.2 `control`
 

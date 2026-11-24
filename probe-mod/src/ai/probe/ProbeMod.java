@@ -6106,7 +6106,6 @@ public class ProbeMod extends Mod {
         private Vec2 pathTarget;
         private List<Vec2> path = Collections.emptyList();
         private int pathIndex;
-        private double lastAutoScanTick = -1;
 
         @Override
         public void unit(Unit unit) {
@@ -6162,71 +6161,13 @@ public class ProbeMod extends Mod {
                 }
             }
 
-            if (target == null && unit.health <= unit.maxHealth * 0.3f) {
-                Unit threat = nearestEnemy(240f);
-                if (threat != null) {
-                    float currentDistance = (float) Math.hypot(threat.x - unit.x, threat.y - unit.y);
-                    CoreBuild safeCore = unit.team.core();
-                    if (safeCore != null
-                            && Math.hypot(safeCore.x - threat.x, safeCore.y - threat.y) > currentDistance + 40f) {
-                        target = new Vec2(safeCore.x, safeCore.y);
-                    } else {
-                        float dx = unit.x - threat.x;
-                        float dy = unit.y - threat.y;
-                        float length = (float) Math.hypot(dx, dy);
-                        if (length > 1f) {
-                            target = new Vec2(unit.x + dx / length * 120f, unit.y + dy / length * 120f);
-                        }
-                    }
-                    if (target != null) {
-                        moveToward(target);
-                        return;
-                    }
-                }
-            }
-
             if (target == null) {
-                maybeAutoTarget();
                 clearPath();
                 unit.moveAt(new Vec2());
                 unit.vel.setZero();
                 return;
             }
             moveToward(target);
-        }
-
-        private Unit nearestEnemy(float range) {
-            Unit best = null;
-            float bestDistance = range;
-            for (Unit other : Groups.unit) {
-                if (other == null || other == unit || other.dead || other.team == unit.team) continue;
-                if (Vars.state.rules.fog
-                        && (Vars.fogControl == null || !Vars.fogControl.isVisible(unit.team, other.x, other.y))) continue;
-                float distance = (float) Math.hypot(other.x - unit.x, other.y - unit.y);
-                if (distance < bestDistance) {
-                    best = other;
-                    bestDistance = distance;
-                }
-            }
-            return best;
-        }
-
-        private void maybeAutoTarget() {
-            if (unit == null || unit.dead || unit.type.weapons.isEmpty()) return;
-            double tick = Vars.state.tick;
-            if (tick - lastAutoScanTick < 10) return;
-            lastAutoScanTick = tick;
-            float range = 0f;
-            for (var weapon : unit.type.weapons) range = Math.max(range, weapon.range());
-            if (range <= 0f) return;
-            Unit best = nearestEnemy(range);
-            if (best == null) {
-                unit.isShooting = false;
-                return;
-            }
-            unit.aimX = best.x;
-            unit.aimY = best.y;
-            unit.isShooting = true;
         }
 
         private void clearPath() {
