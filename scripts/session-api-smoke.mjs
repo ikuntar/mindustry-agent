@@ -133,6 +133,15 @@ const flatTree = await call("/actions", {
 });
 console.log("tech flat", flatTree.status, flatTree.body?.total, flatTree.body?.nodes?.length, flatTree.body?.nodes?.[0]?.planet);
 if (flatTree.status !== 200 || !flatTree.body?.total || flatTree.body.nodes?.[0]?.planet !== "serpulo") process.exit(1);
+const docs = await call("/docs/API-DATA-CONTRACT.md", { headers: auth });
+console.log("docs", docs.status, String(docs.body).slice(0, 20));
+if (docs.status !== 200 || !String(docs.body).includes("API 数据契约")) process.exit(1);
+const page1 = await call("/actions", { method: "POST", headers: auth, body: JSON.stringify({ kind: "get_area", x: 1032, y: 440, radius: 6, maxTiles: 5 }) });
+const next = page1.body?.coverage?.next;
+if (page1.status !== 200 || !next) process.exit(1);
+const page2 = await call("/actions", { method: "POST", headers: auth, body: JSON.stringify({ kind: "get_area", x: 1032, y: 440, radius: 6, maxTiles: 5, cursor: next }) });
+console.log("area cursor", page1.body?.tiles?.length, next, page2.body?.tiles?.[0]);
+if (page2.status !== 200 || !page2.body?.tiles?.length) process.exit(1);
 const forbidden = await call("/actions", {
   method: "POST",
   headers: auth,

@@ -391,9 +391,10 @@ public class ProbeMod extends Mod {
                 .put("wave", lastWave)
                 .put("next", wave)
                 .put("tick", Vars.state.tick));
+        int enemies = Groups.unit.count(u -> u.team == Vars.state.rules.waveTeam && u.isEnemy());
         addEvent("wave_start", Jval.newObject()
                 .put("wave", wave)
-                .put("enemies", Vars.state.enemies)
+                .put("enemies", enemies)
                 .put("winWave", Vars.state.rules.winWave)
                 .put("tick", Vars.state.tick));
         lastWave = wave;
@@ -1632,6 +1633,15 @@ public class ProbeMod extends Mod {
             float y = request.getFloat("y", 0f);
             int radius = Math.max(1, Math.min(24, request.getInt("radius", 6)));
             int maxTiles = Math.max(1, Math.min(512, request.getInt("maxTiles", 256)));
+            int cursorX = Integer.MIN_VALUE, cursorY = Integer.MIN_VALUE;
+            Jval cursor = request.get("cursor");
+            if (cursor != null && cursor.isObject()) {
+                Jval cx = cursor.get("x"), cy = cursor.get("y");
+                if (cx != null && cx.isNumber() && cy != null && cy.isNumber()) {
+                    cursorX = cx.asInt();
+                    cursorY = cy.asInt();
+                }
+            }
             int tileX = Vars.world.toTile(x);
             int tileY = Vars.world.toTile(y);
             Jval tiles = Jval.newArray();
@@ -1644,6 +1654,7 @@ public class ProbeMod extends Mod {
                 for (int dx = -radius; dx <= radius; dx++) {
                     Tile tile = Vars.world.tile(tileX + dx, tileY + dy);
                     if (tile == null) continue;
+                    if (cursorX != Integer.MIN_VALUE && (tile.y < cursorY || (tile.y == cursorY && tile.x < cursorX))) continue;
                     if (tiles.asArray().size >= maxTiles) {
                         truncated = true;
                         nextX = tileX + dx;
@@ -4056,14 +4067,17 @@ public class ProbeMod extends Mod {
             PowerGraph graph = building.power.graph;
             if (graphs.contains(graph)) continue;
             graphs.add(graph);
+            float stored = safeFloat(graph::getBatteryStored);
+            float freeCapacity = safeFloat(graph::getBatteryCapacity);
             Jval entry = Jval.newObject()
                     .put("team", team.id)
                     .put("id", graph.getID())
                     .put("produced", safeFloat(graph::getPowerProduced))
                     .put("needed", safeFloat(graph::getPowerNeeded))
                     .put("balance", safeFloat(graph::getPowerBalance))
-                    .put("stored", safeFloat(graph::getBatteryStored))
-                    .put("capacity", safeFloat(graph::getBatteryCapacity));
+                    .put("stored", stored)
+                    .put("freeCapacity", freeCapacity)
+                    .put("capacity", stored + freeCapacity);
             try {
                 entry.put("satisfaction", graph.getSatisfaction());
             } catch (Throwable ignored) {
@@ -4503,6 +4517,7 @@ public class ProbeMod extends Mod {
                                 .add("/content")
                                 .add("/guide")
                                 .add("/tools")
+                                .add("/docs/{name}")
                                 .add("/actions")
                                 .add("/actions/{opId}")
                                 .add("/events/wait")
@@ -4534,6 +4549,29 @@ public class ProbeMod extends Mod {
                 exchange.getResponseHeaders().set("X-Guide-Hash", guideHash(guide));
                 exchange.getResponseHeaders().set("X-Guide-Fallback", String.valueOf(!guideResourceAvailable()));
                 sendText(exchange, 200, guide, "text/markdown; charset=utf-8", false);
+                return;
+            }
+            if (path.startsWith("/docs/")) {
+                if (!"GET".equals(method)) {
+                    sendText(exchange, 405, "method not allowed", "text/plain", false);
+                    return;
+                }
+                if (!sessionAuthorized(exchange)) {
+                    sendText(exchange, 401, "unauthorized", "text/plain", false);
+                    return;
+                }
+                String doc = path.substring("/docs/".length());
+                String resource;
+                switch (doc) {
+                    case "SESSION-API.md", "API-DATA-CONTRACT.md", "MCP-PROTOCOL.md", "REALITY-CHECK.md" -> resource = "/ai/probe/docs/" + doc;
+                    default -> resource = null;
+                }
+                String text = resource == null ? null : readResourceText(resource);
+                if (text == null) {
+                    sendText(exchange, 404, "not found", "text/plain", false);
+                    return;
+                }
+                sendText(exchange, 200, text, "text/markdown; charset=utf-8", false);
                 return;
             }
             if ("/capabilities".equals(path)) {
@@ -5389,18 +5427,23 @@ public class ProbeMod extends Mod {
         }
     }
 
-    private String gameGuide() {
-        try (InputStream stream = ProbeMod.class.getResourceAsStream("/ai/probe/game-guide.md")) {
-            if (stream != null) {
-                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-                byte[] chunk = new byte[8192];
-                int read;
-                while ((read = stream.read(chunk)) != -1) buffer.write(chunk, 0, read);
-                return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
-            }
+    private String readResourceText(String resource) {
+        try (InputStream stream = ProbeMod.class.getResourceAsStream(resource)) {
+            if (stream == null) return null;
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            int read;
+            while ((read = stream.read(chunk)) != -1) buffer.write(chunk, 0, read);
+            return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
         } catch (IOException error) {
-            Log.err("[ai-probe] failed to read game guide", error);
+            Log.err("[ai-probe] failed to read resource " + resource, error);
+            return null;
         }
+    }
+
+    private String gameGuide() {
+        String text = readResourceText("/ai/probe/game-guide.md");
+        if (text != null) return text;
         return "# Mindustry AI session\n\n"
                 + "You control the assistant unit, not the human player.\n"
                 + "Start with GET /context?detail=summary.\n"
@@ -5497,12 +5540,17 @@ public class ProbeMod extends Mod {
                         .put("maxBytes", property("integer").put("maximum", 65536)),
                         Jval.newArray())));
         tools.add(tool("get_area",
-                "Read a bounded window around world coordinates in pixels (8 px per tile); returns tile coordinates. maxTiles truncates row-major and coverage.next gives the first unreturned tile.",
+                "Read a bounded window around world coordinates in pixels (8 px per tile); returns tile coordinates. maxTiles truncates row-major and coverage.next gives the first unreturned tile. Pass cursor={x,y} in tile coordinates from coverage.next to resume without skipping earlier cells.",
                 inputSchema(Jval.newObject()
                         .put("x", property("number").put("description", "world x in pixels"))
                         .put("y", property("number").put("description", "world y in pixels"))
                         .put("radius", property("number").put("maximum", 24))
-                        .put("maxTiles", property("integer").put("maximum", 512)),
+                        .put("maxTiles", property("integer").put("maximum", 512))
+                        .put("cursor", Jval.newObject()
+                                .put("type", "object")
+                                .put("properties", Jval.newObject()
+                                        .put("x", property("integer").put("description", "tile x"))
+                                        .put("y", property("integer").put("description", "tile y")))),
                         Jval.newArray().add("x").add("y").add("radius"))));
         tools.add(tool("get_tile",
                 "Read one tile in tile coordinates, including terrain/floor/liquid, block, team, drop, health, rotation, items and config. Pass block/rotation to preflight placement (canPlace/placeReason).",
@@ -5589,14 +5637,14 @@ public class ProbeMod extends Mod {
                         .put("timeoutTicks", property("integer").put("maximum", 1200)),
                         Jval.newArray())));
         tools.add(tool("withdraw",
-                "Withdraw items from a same-team building.",
+                "Withdraw items from a same-team building within 220 world units (~27.5 tiles); assistant carries one stack and returns the actual amount taken.",
                 inputSchema(Jval.newObject()
                         .put("target", transfer)
                         .put("item", property("string"))
                         .put("amount", property("integer")),
                         Jval.newArray().add("target").add("item").add("amount"))));
         tools.add(tool("deposit",
-                "Deposit carried items into a same-team building.",
+                "Deposit carried items into a same-team building within 220 world units (~27.5 tiles); a building may partially accept, and amount is the actual moved amount.",
                 inputSchema(Jval.newObject()
                         .put("target", transfer)
                         .put("item", property("string"))

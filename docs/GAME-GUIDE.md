@@ -161,8 +161,9 @@ Serpulo 常见物品：
   `canPlace`/`placeReason`；会话 build 会检查 buildRange，超出范围返回
   `out_of_range`。同队传送带等可被游戏允许覆盖时，响应会带 `replaced` 和
   `previousBlock`，不要静默覆盖现有产线。
-- `get_context.power` 按电力网络返回 `produced`/`needed`/`balance`/`stored`/`capacity`/
-  `satisfaction`；机器 tile 另外有 `efficiency`/`progress`/`warmup`/`enabled`。
+- `get_context.power` 按电力网络返回 `produced`/`needed`/`balance`/`stored`/
+  `freeCapacity`/`capacity`/`satisfaction`；`capacity=stored+freeCapacity` 是总容量，
+  `freeCapacity=0` 表示电池已满；机器 tile 另外有 `efficiency`/`progress`/`warmup`/`enabled`。
 - `configure` 用于分拣器物品、卸载器方向、开关布尔值、消息文本、逻辑处理器
   代码等；配置是否真的生效应以 `get_tile.config` 或返回的 `configure` 结果为准。
 - `deconstruct` 拆除建筑；拆除会返还部分材料，但不要依赖返还比例做精确预算。
@@ -252,6 +253,15 @@ Serpulo 常见物品：
 - 助手从核心生成，团队与核心相同；它只能使用该团队和该单位类型允许的能力。
 - 助手不是玩家：不能改变游戏规则、不能凭空生成资源、不能绕过科技解锁。
 - 资源来自团队共享库存；`withdraw`/`deposit` 只搬运，不创造物品。
+  - 距离上限是 220 世界单位（约 27.5 tile）；超出返回 `out_of_range`。
+  - 助手一次只能携带一种 stack；`withdraw` 时如果身上已有别的物品，会因
+    `maxAccepted`/stack 规则失败，不要把它当成“没有物品”。
+  - `withdraw` 返回实际拿到数量；`deposit` 可能只接收一部分，响应里的 `amount`
+    是实际搬走量，剩余仍留在助手身上。
+  - `withdraw`/`deposit` 的目标是 `{target:{buildingId|x,y}}`；`repair` 的坐标是
+    顶层 `{x,y}`，不要混用。
+- `query_area` 默认 `includeEnemies:false`；找敌人必须显式传 `includeEnemies:true`，
+  否则返回的 `units` 只含同队单位。
 - 暂停时 tick 不推进；`pause`/`resume` 是规则允许的显式动作，其他写动作会被 `game_paused` 拒绝。不要把暂停当成跳过 tick/资源/冷却的手段。
 - 助手没有低血自动撤退，也没有空闲自动索敌/开火；空闲时只停止移动。移动、攻击、跟随都必须由显式动作产生。助手死亡后由核心自动重生（和玩家一样），因此不要把“低血逃跑”当成默认策略；需要撤退时由 agent 发 `move_to`/`follow`。
 - 死亡后等待核心重生；没有核心时操作应失败，而不是反复重试。
@@ -350,7 +360,9 @@ unlockedNowHost/banned/hidden/hideDatabase`。`banned` 对应核心数据库的�
 block/team/items/config。`block:"air"` 是空地，`block:"hidden"` 是迷雾占位，不是方块名。
 `drop` 是矿物名，`""` 表示无矿；`items` 是 `[{item,amount}]`，不是对象。
 
-`get_area.coverage.next` 是 tile 坐标；`get_context.rules.fog/staticFog` 可判断当前模式是否有迷雾。
+`get_area.coverage.next` 是 tile 坐标；可以把 `cursor:{x,y}`（tile 坐标）传回
+`get_area` 从该格继续 row-major 扫描，不需要换中心重读。`get_context.rules.fog/staticFog`
+可判断当前模式是否有迷雾。
 迷雾下 `get_tile/get_area` 返回隐藏占位，`query_area/get_unit/threats` 过滤不可见实体，
 地图 `/data` 只写已发现地形；不要用旧坐标或旧快照推断当前敌人。
 
@@ -396,7 +408,8 @@ wave_end      { wave,next,tick }
 ```
 
 事件有 FIFO 上限，使用 `since`/`types`/`next`；迷雾下实体事件按助手队伍可见性入队，
-但 `wave_*`/暂停事件可能仍是全局的。
+但 `wave_*`/暂停事件可能仍是全局的。`wave_start.data.enemies` 是事件时刻波次队伍的
+敌军单位数，不再使用刷怪前的 `state.enemies`（那通常是 0）。
 
 ### 16.5 枚举速查
 
@@ -445,6 +458,7 @@ command: move | stop | attack | repair | rebuild | assist | mine | enterPayload 
 
 ---
 
-本指南是游戏知识层；完整字段表见仓库 `docs/API-DATA-CONTRACT.md`，工具名和输入
-schema 以 `GET /tools` 为准；精确数值永远以实时 `/content`、`/capabilities`、
-`/context` 为准。
+本指南是游戏知识层；拿到 sessionToken 后可读 `GET /docs/API-DATA-CONTRACT.md`、
+`GET /docs/SESSION-API.md`、`GET /docs/MCP-PROTOCOL.md`（仓库内同名文档也会打进
+mod jar），工具名和输入 schema 以 `GET /tools` 为准；精确数值永远以实时
+`/content`、`/capabilities`、`/context` 为准。

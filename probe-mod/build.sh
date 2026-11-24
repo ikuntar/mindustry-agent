@@ -15,7 +15,13 @@ mkdir -p "$ROOT/build/classes"
 find "$ROOT/src" -name '*.java' -print0 | xargs -0 javac -source 17 -target 17 -cp "$JAR" -d "$ROOT/build/classes"
 cp "$ROOT/mod.json" "$ROOT/build/classes/"
 mkdir -p "$ROOT/build/classes/ai/probe"
+mkdir -p "$ROOT/build/classes/ai/probe/docs"
 cp "$ROOT/../docs/GAME-GUIDE.md" "$ROOT/build/classes/ai/probe/game-guide.md"
+for doc in SESSION-API.md API-DATA-CONTRACT.md MCP-PROTOCOL.md REALITY-CHECK.md; do
+  if [[ -f "$ROOT/../docs/$doc" ]]; then
+    cp "$ROOT/../docs/$doc" "$ROOT/build/classes/ai/probe/docs/$doc"
+  fi
+done
 jar --create --file "$ROOT/build/ai-probe.jar" -C "$ROOT/build/classes" .
 
 echo "built: $ROOT/build/ai-probe.jar"

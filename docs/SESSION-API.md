@@ -245,7 +245,8 @@ socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct`
 ```
 
 `move_to` / `get_area` 的 `x/y` 是世界像素坐标（8 px = 1 tile），`mine`/`build`/
-`configure`/`deconstruct` 的 `x/y` 是 tile 坐标；session prompt 和 `/tools` 都标了单位。
+`configure`/`deconstruct` 的 `x/y` 是 tile 坐标；`get_area.coverage.next` 是 tile 坐标，
+可作为 `cursor:{x,y}` 传回继续分页；session prompt 和 `/tools` 都标了单位。
 
 `research` 使用 `{ "content": "duo" }`（也可用 `block`/`unit`），消耗队伍核心资源并解锁科技；`/content?type=blocks|units` 返回 `researched` 与 `researchCost`，`/context.rules.researched` 是当前研究集合。
 
@@ -260,7 +261,7 @@ socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct`
 ```json
 {
   "apiVersion": 1,
-  "control": ["/session", "/health", "/context", "/capabilities", "/content", "/guide", "/tools", "/actions", "/actions/{opId}", "/events/wait", "/cancel", "/stop", "/session/data-token", "/mcp"],
+  "control": ["/session", "/health", "/context", "/capabilities", "/content", "/guide", "/tools", "/docs/{name}", "/actions", "/actions/{opId}", "/events/wait", "/cancel", "/stop", "/session/data-token", "/mcp"],
   "data": ["/data/manifest/latest", "/data/map/latest", "/data/map/{revision}", "/data/map/{revision}/chunk/{x}/{y}", "/data/events/latest", "/data/events/{revision}/page/{cursor}"]
 }
 ```
@@ -450,6 +451,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/actions`：`{kind,...}` 复用现有动作实现，返回 `opId`
 - `/actions/{opId}`：动作状态轮询
 - `/guide`：完整游戏知识指南；`?topic=build|economy` 追加主题
+- `/docs/{name}`：session 后可读 `SESSION-API.md`、`API-DATA-CONTRACT.md`、`MCP-PROTOCOL.md`、`REALITY-CHECK.md`；只接受固定文件名，路径穿越/其他文件返回 404
 - `/tools`：34 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/possess/respawn/pause/resume/command_units/control_building/release_building/boost/pickup_payload/drop_payload/get_config_schema/get_tech_tree/follow/get_action_result/cancel/stop）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`

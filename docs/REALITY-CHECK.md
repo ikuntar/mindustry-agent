@@ -162,6 +162,12 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 测试结论（更新）：**允许地图 `get_tile/get_area` 采样时，API 足以推导高阶物品和完整阶段路线（同一星球/可达区域内）；只靠静态 `/content` 不够。**
 - 核心数据库投影验证（2026-11-24，`session-api-smoke`）：items 返回 copper `hardness=1`、titanium `hardness=3`；liquids water `heatCapacity=0.4`；`duo.parameters.turret.ammoTypes` 3 项且 `targetAir/targetGround` 可读；`separator.outputs[].chance` 为 0.416/0.25/0.166/0.166；`mechanical-drill.drillSpeeds` 返回 copper/lead/scrap/coal 等 floor→item 速度（首项 0.4 items/s），`get_tech_tree {flat:true}` 返回 `total=375`、`planet=serpulo`、`depth/parent`；block `role/functional` 已返回。`session-api-smoke` 全绿，guide bytes/hash 同步。
 
+### Issue #34/#37/#38 复核（2026-11-24）
+
+- #34：`get_area` 增加 `cursor:{x,y}`（tile 坐标）续读；`wave_start.data.enemies` 改为事件时刻 `waveTeam` 单位数；guide/`/tools` 补 `withdraw/deposit` 220 世界单位、单 stack、部分接收和 `query_area.includeEnemies=false`。smoke 验证 cursor 续读首格不重叠。
+- #37：`context.power` 拆成 `stored` / `freeCapacity` / `capacity=stored+freeCapacity`；原先 `capacity` 只是剩余可充电容量，电池满时 `stored>0, capacity=0` 不是矛盾。guide/契约同步。
+- #38：新增 session 鉴权的 `/docs/{name}`，固定白名单 `SESSION-API.md`、`API-DATA-CONTRACT.md`、`MCP-PROTOCOL.md`、`REALITY-CHECK.md`；guide 改为指向该路由。smoke 读 `/docs/API-DATA-CONTRACT.md` 返回 200。
+
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。
 - Probe mod + `ProbeGameAdapter` 已把 `get_context`/`get_capabilities`/`query_area`/`move_to`/单块 `build`/`withdraw`/`deposit`/`configure`/`command_units`/`set_stance`/`stop`/`possess`/`release`/`respawn`/`mine`/`attack` 接到真实游戏；物流、sorter 配置、指挥、stance、附身/释放、死亡重生、sand 挖矿、攻击容器已实测。

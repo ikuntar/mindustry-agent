@@ -9,7 +9,8 @@
 - 坐标：
   - `get_tile`、`build_plan`、`deconstruct`、`configure`、`mine` 使用 **tile** 坐标。
   - `get_area`、`query_area`、`move_to`、`attack` 的 `x/y` 使用 **世界像素**（默认 8 px/tile）。
-  - `get_area.coverage.next` 是 tile 坐标，并带 `unit:"tile"`。
+  - `get_area.coverage.next` 是 tile 坐标，并带 `unit:"tile"`；把它作为
+    `get_area.cursor:{x,y}` 传回可从下一格继续 row-major 扫描。
 - `get_context.wavetime` 单位是 **tick**；秒数为 `wavetime/60`。
 - `/actions` 的字段是顶层字段，不要包成 `args`；嵌套写法会被 `bad_request` 拒绝。
   `get_area`/`query_area` 必须提供数字 `x/y`，不会静默用 0,0 代替。
@@ -146,10 +147,13 @@ Timer 的精确 elapsed 是 protected 游戏字段，不通过反射读取；用
 ### 3.8 `power[]`
 
 ```text
-{ team, id, produced, needed, balance, stored, capacity, satisfaction }
+{ team, id, produced, needed, balance, stored, freeCapacity, capacity, satisfaction }
 ```
 
-只汇总助手当前队伍的电力网络；`satisfaction` 是 0..1，读取失败为 `-1`。
+`stored` 是电池当前电量；`freeCapacity` 是还能充入的电量；`capacity = stored +
+freeCapacity` 是总容量。旧版本把 `getBatteryCapacity()` 的“剩余可充电量”直接叫
+`capacity`，会出现 `stored>0, capacity=0` 的假矛盾（电池已满）。`satisfaction` 是 0..1，
+读取失败为 `-1`。
 
 ### 3.9 `rules`
 
@@ -427,6 +431,8 @@ insufficient_resources, invalid_placement, out_of_range, success
 
 有迷雾时，实体事件在入队时按助手队伍可见性过滤；`wave_*`/暂停事件仍可能全局出现。
 事件日志有 FIFO 上限；使用 `since`/`types`/`next`，不要假设一次全量。
+`wave_start.data.enemies` 是事件时刻 `waveTeam` 的敌军单位数，不是刷怪前的
+`state.enemies`。
 
 ## 8. 错误码与门控
 

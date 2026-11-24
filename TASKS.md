@@ -165,6 +165,7 @@
 - [ ] 按冷启动反馈补 guide：wavetime 单位已补、actions 顶层字段已补；objective 本地化失败 fallback、炮塔供弹动作示例继续补
 - [x] 长周期科技树测试（2026-11-24）：无上下文 agent 仅用 API，先判定 insufficient（缺 block inputs/配方、物品无 tech node、钻机/泵无产出映射、液体链缺失）；已补 `parameters.inputs`（含液体）、`liquidOutputs`、drill/pump 元数据、`get_tech_tree.depth`、`get_tile.dropHardness`。最终复测（289s）判定 sufficient=true（有保留）：地图采样下可从 4 种原矿 BFS 到 Serpulo 22 个物品中的 16 个，Erekir 6 个不可达；sector 链 groundZero→frozenForest→crateredBattleground 可排序研究阶段。
 - [x] 核心数据库投影：items `hardness/flammability/radioactivity/charge/explosiveness`、liquids `heatCapacity/viscosity/...`、turret `ammoTypes/targetAir/targetGround`、block `role/functional`、Separator `chance/weight`、`get_tech_tree` flat/offset/nextOffset/planet/sector；`session-api-smoke` 断言已补
+- [x] Issue #34/#37/#38：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明；power `freeCapacity`/总 capacity；`/docs/{name}` 路由；smoke 通过
 - [ ] 科技树跨区域/液体索引：为 planner 补跨 sector 资源可达性提示和 liquid producer 索引；跨区物流（launch-pad cargo）按用户决定暂缓；最终复测已能覆盖同一区域，多输出概率/item hardness 已补
 - [x] 科技树数据补充：ore 方块通过 `drillSpeeds[]` 暴露 floor→item/hardness/速度；item hardness 与 Separator chance/weight 已补；`drillSpeeds.presentInWorld` 区分当前地图是否出现
 - [ ] 放置/运行时关系：ore/liquid floor 的静态 drop 映射、电力/传送带拓扑、payload 接受关系仍是运行时或未结构化字段
