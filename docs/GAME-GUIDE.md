@@ -21,7 +21,8 @@ Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
 ## 2. 地图、坐标和时间
 
 - 世界由 tile 组成，默认 1 tile = 8 世界像素。
-- `get_area` / `move_to` 的 `x/y` 是世界像素；`mine` / `build` / `configure`
+- `get_area` / `move_to` 的 `x/y` 是世界像素；`get_area.radius` 是 **tile 数**（1–24），
+  `query_area.radius` 是 **像素**（上限 256）；`mine` / `build` / `configure`
   的 `x/y` 是 tile 坐标。混用是常见错误。
 - 地图有宽度和高度；越界会被拒绝。用 `get_context` 的 `worldWidth/worldHeight`
   和 `get_area` 的 `coverage` 判断边界。
@@ -210,6 +211,8 @@ Serpulo 常见物品：
   不同，不能按同一个接口假定。
 - 玩家可以直接控制自己的单位；AI 助手可以控制自己的助手身体、用 `command_units`
   指挥同队 CommandAI 单位、用 `possess` 附身同队 AI 单位。AI 不应抢玩家当前 body。
+- `/capabilities.weapons` 的 `damage`/`dpsEstimate` 是当前身体实际武器参数，不是
+  “AI 不能攻击”的开关；`canAttack` 和武器列表要一起看，防御规划不能假定助手只能看戏。
 - 建筑控制使用 `control_building`/`release_building`，只适用于 `ControlBlock` 且
   `canControl()` 为 true 的建筑（例如部分炮塔）；它不是单位附身，不改变 home body。
 - 指挥单位时先确认：单位是否同队、是否是 CommandAI、是否允许该命令。

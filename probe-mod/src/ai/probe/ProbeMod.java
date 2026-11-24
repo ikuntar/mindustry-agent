@@ -1464,7 +1464,9 @@ public class ProbeMod extends Mod {
                 weapons.add(Jval.newObject()
                         .put("name", weapon.name)
                         .put("range", weapon.range())
-                        .put("damage", 0));
+                        .put("reloadTicks", weapon.reload)
+                        .put("damage", weapon.bullet == null ? 0f : weapon.bullet.damage)
+                        .put("dpsEstimate", safeWeaponDps(weapon)));
             }
             Jval commands = Jval.newArray();
             for (var unitCommand : type.commands) {
@@ -3174,6 +3176,14 @@ public class ProbeMod extends Mod {
                     .put("liquidPerSecond", pump.pumpAmount * 60f * pump.size * pump.size);
         }
         return result;
+    }
+
+    private float safeWeaponDps(Weapon weapon) {
+        try {
+            return weapon.dps();
+        } catch (Throwable ignored) {
+            return 0f;
+        }
     }
 
     private Jval unitParameters(UnitType type) {
