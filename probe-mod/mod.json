@@ -3,7 +3,7 @@
   "displayName": "AI Probe",
   "author": "kuutar",
   "description": "Minimal local socket probe for the Mindustry AI assistant.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minGameVersion": "160",
   "main": "ai.probe.ProbeMod",
   "java": true

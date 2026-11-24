@@ -161,7 +161,7 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 
 `GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。
 
-`/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。
+`/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。`context.power` 只汇总助手当前队伍的电力网络（每条带 `team`）；`TimerObjective` 的 `current=-1`、`progressAvailable=false`，用 `display` 读取游戏给出的倒计时文本。
 
 ```text
 POST /session
@@ -279,7 +279,7 @@ GET /data/events/{revision}/page/{cursor}
 - 支持 `Content-Length`、`Content-Range`、`ETag`/revision；`If-None-Match` 命中返回 `304`。
 - raw 地图层 `drop_id` 的编码是 `0=无矿，item.id+1=该物品`；例如 copper 的 `drop_id=1`。客户端必须用 manifest 的 `schema.items` / `schema.dropIds` 解码，不能把 `drop_id == item.id` 当作矿。
 - token 用 header，不放 URL。
-- `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`、`modVersion`）；`/data` 只接受 data token，控制面只接受 session token。
+- `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`、`modVersion`、`guideBytes`、`guideHash`、`guideFallback`）；`/data` 只接受 data token，控制面只接受 session token。`/guide` 同时返回 `X-Guide-Bytes`、`X-Guide-Hash`、`X-Guide-Fallback` 响应头，agent 可据此判断是否拿到 fallback。
 - `POST /session/data-token` 用 session token 轮换 data token；旧 data token 立即 401。
 - 旧的 `dataToken` 仍可访问本地 `46501`；session server `/data` 使用同一个 data token，不做控制面越权。
 - manifest 的 `access.baseUrl` 按请求 Host 返回，LAN 客户端拿到的是 `http://<host>:47600/data`。

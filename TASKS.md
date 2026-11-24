@@ -157,6 +157,11 @@
 - [x] issue #36：get_tile/get_area 地形与 canPlace；buildRange/覆盖回报
 - [x] issue #37：config 结构化；context.power；机器运行态字段
 - [x] issue #38：bootstrap 只读 guide/tools；prompt/guide 顺序与 docs 404
+- [x] 数据访问审计：见 `docs/DATA-ACCESS-AUDIT.md`；移除 TimerObjective 反射，power 按队伍过滤，guide 增加 bytes/hash；全图可见性、raw debug 面留待拍板
+- [ ] 可见性决策：玩家等价（队伍/视野过滤）或显式全图感知；若玩家等价，需过滤 get_tile/get_area/query_area/map/events/get_unit
+- [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
+- [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）
+- [ ] issue #34 余项：get_area cursor 分页、guide 语义章节
 - [x] session prompt 先给出 `GET /tools`，再给动作示例
 - [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt

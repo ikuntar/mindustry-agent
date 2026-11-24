@@ -81,6 +81,7 @@ import java.util.function.Consumer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -110,7 +111,7 @@ public class ProbeMod extends Mod {
     private static final boolean EXPOSE_SESSION = "1".equals(System.getenv("PROBE_EXPOSE_SESSION"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.1.0";
+    private static final String VERSION = "0.1.1";
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
     private static final int MAX_OPS = 256;
@@ -3488,10 +3489,14 @@ public class ProbeMod extends Mod {
                     .put("unit", unit.unit == null ? "" : unit.unit.name);
         }
         if (objective instanceof mindustry.game.MapObjectives.TimerObjective timer) {
+            String display = timer.text();
             return Jval.newObject()
-                    .put("current", reflectedFloat(timer, "countup"))
+                    .put("current", -1)
                     .put("target", timer.duration)
-                    .put("unit", "seconds");
+                    .put("unit", "seconds")
+                    .put("display", display == null ? "" : display)
+                    .put("progressAvailable", false)
+                    .put("note", "TimerObjective elapsed time is protected by the game; use display countdown");
         }
         if (objective instanceof mindustry.game.MapObjectives.FlagObjective flag) {
             boolean set = flag.flag != null && Vars.state.rules.objectiveFlags.contains(flag.flag);
@@ -3527,16 +3532,6 @@ public class ProbeMod extends Mod {
         return count;
     }
 
-    private float reflectedFloat(Object object, String fieldName) {
-        try {
-            java.lang.reflect.Field field = object.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            return field.getFloat(object);
-        } catch (Throwable ignored) {
-            return 0f;
-        }
-    }
-
     private Jval researchedJson() {
         Jval result = Jval.newArray();
         if (Vars.state.rules.researched != null) {
@@ -3566,13 +3561,15 @@ public class ProbeMod extends Mod {
 
     private Jval powerSummary() {
         Jval result = Jval.newArray();
+        Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
         ArrayList<PowerGraph> graphs = new ArrayList<>();
         for (Building building : Groups.build) {
-            if (building == null || building.power == null || building.power.graph == null) continue;
+            if (building == null || building.team != team || building.power == null || building.power.graph == null) continue;
             PowerGraph graph = building.power.graph;
             if (graphs.contains(graph)) continue;
             graphs.add(graph);
             Jval entry = Jval.newObject()
+                    .put("team", team.id)
                     .put("id", graph.getID())
                     .put("produced", safeFloat(graph::getPowerProduced))
                     .put("needed", safeFloat(graph::getPowerNeeded))
@@ -4039,7 +4036,11 @@ public class ProbeMod extends Mod {
                     sendText(exchange, 401, "unauthorized", "text/plain", false);
                     return;
                 }
-                sendText(exchange, 200, guideFor(exchange), "text/markdown; charset=utf-8", false);
+                String guide = guideFor(exchange);
+                exchange.getResponseHeaders().set("X-Guide-Bytes", String.valueOf(guide.getBytes(StandardCharsets.UTF_8).length));
+                exchange.getResponseHeaders().set("X-Guide-Hash", guideHash(guide));
+                exchange.getResponseHeaders().set("X-Guide-Fallback", String.valueOf(!guideResourceAvailable()));
+                sendText(exchange, 200, guide, "text/markdown; charset=utf-8", false);
                 return;
             }
             if ("/capabilities".equals(path)) {
@@ -4148,6 +4149,7 @@ public class ProbeMod extends Mod {
                     }
                     sessionBootstrapUsed = true;
                     sessionToken = UUID.randomUUID().toString();
+                    String baseGuide = gameGuide();
                     Jval payload = Jval.newObject()
                             .put("sessionToken", sessionToken)
                             .put("dataToken", dataToken)
@@ -4157,6 +4159,9 @@ public class ProbeMod extends Mod {
                             .put("promptVersion", 1)
                             .put("modVersion", VERSION)
                             .put("guideVersion", 2)
+                            .put("guideBytes", baseGuide.getBytes(StandardCharsets.UTF_8).length)
+                            .put("guideHash", guideHash(baseGuide))
+                            .put("guideFallback", !guideResourceAvailable())
                             .put("endpoint", requestDataBaseUrl(exchange).replace("/data", ""))
                             .put("expires", "game-process");
                     sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
@@ -4876,6 +4881,21 @@ public class ProbeMod extends Mod {
         return guide.toString();
     }
 
+    private boolean guideResourceAvailable() {
+        return ProbeMod.class.getResource("/ai/probe/game-guide.md") != null;
+    }
+
+    private String guideHash(String guide) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(guide.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte value : digest) hex.append(String.format("%02x", value));
+            return hex.toString();
+        } catch (Throwable ignored) {
+            return "";
+        }
+    }
+
     private String gameGuide() {
         try (InputStream stream = ProbeMod.class.getResourceAsStream("/ai/probe/game-guide.md")) {
             if (stream != null) {
@@ -5233,8 +5253,8 @@ public class ProbeMod extends Mod {
                 + "Bootstrap token: " + sessionBootstrapToken + "\n\n"
                 + "Use this game API for this session only.\n"
                 + "0. Read GET /guide first: it is the complete Mindustry primer, not just API notes. The bootstrap token is accepted read-only for /guide and /tools.\n"
-                + "1. POST /session with Authorization: Bearer <bootstrap token>.\n"
-                + "2. Use the returned sessionToken as Authorization: Bearer <sessionToken>.\n"
+                + "1. POST /session with Authorization: Bearer (bootstrap token from above).\n"
+                + "2. Use the returned sessionToken as Authorization: Bearer (session token).\n"
                 + "3. GET /tools for the action names, required fields, and units.\n"
                 + "4. GET /context?detail=summary for the current state.\n"
                 + "5. POST /actions with {\"kind\":\"move_to\",\"x\":...,\"y\":...}; x/y are world pixels, not tiles. Poll GET /actions/{opId}.\n"

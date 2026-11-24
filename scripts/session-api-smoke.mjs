@@ -14,7 +14,7 @@ async function call(path, options = {}) {
   } catch {
     body = text;
   }
-  return { status: response.status, body };
+  return { status: response.status, body, headers: Object.fromEntries(response.headers.entries()) };
 }
 
 async function rawProbe(payload) {
@@ -55,8 +55,9 @@ const first = await call("/session", {
   method: "POST",
   headers: bootstrapHeaders,
 });
-console.log("session", first.status, Boolean(first.body?.sessionToken));
+console.log("session", first.status, Boolean(first.body?.sessionToken), first.body?.guideBytes, first.body?.guideHash?.slice(0, 8), first.body?.guideFallback);
 if (first.status !== 200) process.exit(1);
+if (!first.body?.guideBytes || String(first.body.guideHash ?? "").length !== 64 || first.body.guideFallback !== false) process.exit(1);
 
 const second = await call("/session", {
   method: "POST",
@@ -197,6 +198,7 @@ const blocked = await call("/actions", {
 });
 const unpaused = await rawProbe({ op: "set_paused", paused: false });
 console.log("pause gate", paused.ok, pauseEvent.body.events?.length, pausedContext.body.paused, blocked.status, blocked.body.code, unpaused.ok);
+const sessionEventStart = Number((await call("/context?detail=summary", { headers: auth })).body.eventsSince ?? 0);
 const sessionPause = await call("/actions", {
   method: "POST",
   headers: auth,
@@ -210,6 +212,12 @@ const sessionResume = await call("/actions", {
 });
 const sessionResumedContext = await call("/context?detail=summary", { headers: auth });
 console.log("session pause", sessionPause.status, sessionPause.body.paused, sessionPausedContext.body.paused, sessionResume.status, sessionResume.body.paused, sessionResumedContext.body.paused);
+const sessionPauseEvents = await call(`/events/wait?since=${sessionEventStart}&timeoutMs=1000&types=game_pause,game_resume`, { headers: auth });
+console.log("session pause events", sessionPauseEvents.body.events?.map((event) => `${event.type}:${event.data?.source}`).join(","));
+if (!sessionPauseEvents.body.events?.some((event) => event.type === "game_pause" && event.data?.source === "api")
+    || !sessionPauseEvents.body.events?.some((event) => event.type === "game_resume" && event.data?.source === "api")) {
+  process.exit(1);
+}
 
 const since = Number(context.body.eventsSince ?? 0);
 const waitPromise = call(`/events/wait?since=${since}&timeoutMs=3000&types=test`, { headers: auth });
@@ -247,7 +255,15 @@ console.log(
 );
 
 const guide = await call("/guide", { headers: auth });
-console.log("guide", guide.status, String(guide.body).split("\n")[0]);
+console.log(
+  "guide",
+  guide.status,
+  String(guide.body).split("\n")[0],
+  guide.headers["x-guide-bytes"],
+  guide.headers["x-guide-hash"]?.slice(0, 8),
+  guide.headers["x-guide-fallback"],
+);
+if (guide.status !== 200 || guide.headers["x-guide-fallback"] !== "false") process.exit(1);
 
 const refreshed = await call("/session/data-token", {
   method: "POST",
