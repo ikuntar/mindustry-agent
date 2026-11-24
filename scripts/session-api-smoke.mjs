@@ -104,6 +104,7 @@ const itemContent = await call("/content?type=items&query=copper&limit=1", { hea
 const liquidContent = await call("/content?type=liquids&query=water&limit=1", { headers: auth });
 const turretContent = await call("/content?type=blocks&query=duo&limit=1", { headers: auth });
 const separatorContent = await call("/content?type=blocks&query=separator&limit=1", { headers: auth });
+const drillContent = await call("/content?type=blocks&query=mechanical-drill&limit=1", { headers: auth });
 console.log(
   "content params",
   crafted.body.blocks?.[0]?.parameters?.craftTimeTicks,
@@ -114,6 +115,7 @@ console.log(
   liquidContent.body.liquids?.[0]?.parameters?.heatCapacity,
   turretContent.body.blocks?.[0]?.parameters?.turret?.ammoTypes?.length,
   separatorContent.body.blocks?.[0]?.parameters?.outputs?.[0]?.chance,
+  drillContent.body.blocks?.[0]?.parameters?.drillSpeeds?.[0]?.itemsPerSecond,
 );
 if (!crafted.body.blocks?.[0]?.parameters?.craftTimeTicks
     || !generator.body.blocks?.[0]?.parameters?.powerProductionPerSecond
@@ -122,7 +124,8 @@ if (!crafted.body.blocks?.[0]?.parameters?.craftTimeTicks
     || itemContent.body.items?.[0]?.parameters?.hardness !== 1
     || liquidContent.body.liquids?.[0]?.parameters?.heatCapacity !== 0.4
     || !turretContent.body.blocks?.[0]?.parameters?.turret?.ammoTypes?.length
-    || !separatorContent.body.blocks?.[0]?.parameters?.outputs?.[0]?.chance) process.exit(1);
+    || !separatorContent.body.blocks?.[0]?.parameters?.outputs?.[0]?.chance
+    || !drillContent.body.blocks?.[0]?.parameters?.drillSpeeds?.length) process.exit(1);
 const flatTree = await call("/actions", {
   method: "POST",
   headers: auth,

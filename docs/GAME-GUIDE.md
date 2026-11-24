@@ -419,8 +419,10 @@ command: move | stop | attack | repair | rebuild | assist | mine | enterPayload 
   `separator` 也能产 copper/lead/titanium，但它的 tech depth 很高，不是早期来源。
 - 原矿用地图查询，不要假设 `/content` 有 drill 的固定 outputs：
   `get_tile`/`get_area` 返回 `drop`、`dropHardness`，与钻机
-  `parameters.drillTier` 比较；`liquid` 字段给出 floor 的液体，与 pump 的
-  `liquidSource`/`liquidPerSecond` 配合。
+  `parameters.drillTier` 比较；`parameters.drillSpeeds[]` 给出 `floor → item`、
+  `hardness`、`secondsPerItem`、`itemsPerSecond` 和 `presentInWorld`；这是核心数据库
+  钻头页的同一套派生值，不是钻机自身的固定矿物列表。液体用 `liquid` 字段 +
+  pump 的 `liquidSource`/`liquidPerSecond`。
 - 物品属性读 `/content?type=items` 的 `parameters.hardness/flammability/
   radioactivity/charge/explosiveness`；液体属性读 `type=liquids` 的
   `heatCapacity/viscosity/flammability/temperature/coolant/effect`。

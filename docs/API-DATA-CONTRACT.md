@@ -286,7 +286,10 @@ parameters: {
   outputs?: [{item,amount,chance?,weight?}], // chance/weight 目前用于 Separator 类随机产出
   liquidOutputs?: [{liquid,amount,perSecond}],
   drillTier?: number, drillTimeTicks?: number, hardnessDrillMultiplier?: number,
-  mineableSource?: string, pumpAmountPerTick?: number, liquidPerSecond?: number, liquidSource?: string,
+  blockedItems?: string[],
+  drillSpeeds?: [{floor,item,hardness,drillTier,drillTimeTicks,speedMultiplier,
+                  secondsPerItem,itemsPerSecond,presentInWorld}],
+  pumpAmountPerTick?: number, liquidPerSecond?: number, liquidSource?: string,
   turret?: { maxAmmo, ammoPerShot, reloadTicks, targetAir, targetGround,
              ammoTypes?: [{item?,liquid?,ammoMultiplier,reloadMultiplier,rangeChange,
                            damage,splashDamage,lifetime,speed,collidesAir,collidesGround,bullet}] },

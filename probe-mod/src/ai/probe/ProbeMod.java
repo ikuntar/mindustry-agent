@@ -3247,6 +3247,43 @@ public class ProbeMod extends Mod {
                 .put("configurable", block.configurable);
     }
 
+    private Jval itemNamesJson(Seq<Item> items) {
+        Jval result = Jval.newArray();
+        if (items == null) return result;
+        for (Item item : items) {
+            if (item != null) result.add(item.name);
+        }
+        return result;
+    }
+
+    private Jval drillSpeedsJson(Drill drill) {
+        Jval result = Jval.newArray();
+        for (Block block : Vars.content.blocks()) {
+            if (!(block instanceof Floor floor) || floor.wallOre || floor.itemDrop == null) continue;
+            Item item = floor.itemDrop;
+            if (item.hardness > drill.tier) continue;
+            if (drill.blockedItems != null && drill.blockedItems.contains(item)) continue;
+            float multiplier = drill.drillMultipliers.get(item, 1f);
+            float ticks = (drill.drillTime + drill.hardnessDrillMultiplier * item.hardness) / Math.max(0.0001f, multiplier);
+            boolean present = false;
+            try {
+                present = Vars.indexer != null && Vars.indexer.isBlockPresent(floor);
+            } catch (Throwable ignored) {
+            }
+            result.add(Jval.newObject()
+                    .put("floor", floor.name)
+                    .put("item", item.name)
+                    .put("hardness", item.hardness)
+                    .put("drillTier", drill.tier)
+                    .put("drillTimeTicks", drill.drillTime)
+                    .put("speedMultiplier", multiplier)
+                    .put("secondsPerItem", ticks / 60f)
+                    .put("itemsPerSecond", 60f / Math.max(0.0001f, ticks) * drill.size * drill.size)
+                    .put("presentInWorld", present));
+        }
+        return result;
+    }
+
     private Jval blockParameters(Block block) {
         Jval result = Jval.newObject()
                 .put("role", blockRole(block))
@@ -3302,7 +3339,8 @@ public class ProbeMod extends Mod {
             result.put("drillTier", drill.tier)
                     .put("drillTimeTicks", drill.drillTime)
                     .put("hardnessDrillMultiplier", drill.hardnessDrillMultiplier)
-                    .put("mineableSource", "tile.drop where hardness <= drillTier; query get_tile/get_area");
+                    .put("blockedItems", itemNamesJson(drill.blockedItems))
+                    .put("drillSpeeds", drillSpeedsJson(drill));
         }
         if (block instanceof Pump pump) {
             result.put("pumpAmountPerTick", pump.pumpAmount)
