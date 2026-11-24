@@ -43,6 +43,7 @@ import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.consumers.ConsumePower;
 import mindustry.world.blocks.power.PowerGenerator;
+import mindustry.world.blocks.power.PowerNode;
 import mindustry.world.blocks.production.BeamDrill;
 import mindustry.world.blocks.production.BurstDrill;
 import mindustry.world.blocks.production.Drill;
@@ -1503,6 +1504,11 @@ public class ProbeMod extends Mod {
         }
 
         if ("query_area".equals(op)) {
+            if (request.get("x") == null || !request.get("x").isNumber()
+                    || request.get("y") == null || !request.get("y").isNumber()) {
+                replyError(command, "bad_request", "query_area requires numeric top-level x/y (world pixels), not nested args");
+                return;
+            }
             float x = request.getFloat("x", 0f);
             float y = request.getFloat("y", 0f);
             float requestedRadius = request.getFloat("radius", 20f);
@@ -1601,6 +1607,11 @@ public class ProbeMod extends Mod {
         }
 
         if ("get_area".equals(op)) {
+            if (request.get("x") == null || !request.get("x").isNumber()
+                    || request.get("y") == null || !request.get("y").isNumber()) {
+                replyError(command, "bad_request", "get_area requires numeric top-level x/y (world pixels), not nested args");
+                return;
+            }
             float x = request.getFloat("x", 0f);
             float y = request.getFloat("y", 0f);
             int radius = Math.max(1, Math.min(24, request.getInt("radius", 6)));
@@ -3116,7 +3127,9 @@ public class ProbeMod extends Mod {
     }
 
     private Jval blockParameters(Block block) {
-        Jval result = Jval.newObject();
+        Jval result = Jval.newObject()
+                .put("buildTimeTicks", block.buildTime)
+                .put("itemCapacity", block.itemCapacity);
         if (block.consPower != null) {
             ConsumePower power = block.consPower;
             result.put("power", Jval.newObject()
@@ -3127,6 +3140,9 @@ public class ProbeMod extends Mod {
         }
         if (block instanceof PowerGenerator generator) {
             result.put("powerProductionPerSecond", generator.powerProduction * 60f);
+        }
+        if (block instanceof PowerNode node) {
+            result.put("laserRangeTiles", node.laserRange);
         }
         if (block instanceof GenericCrafter crafter) {
             result.put("craftTimeTicks", crafter.craftTime)
@@ -3642,6 +3658,9 @@ public class ProbeMod extends Mod {
                 text = objective.text();
                 details = objective.details();
             } catch (Throwable ignored) {
+            }
+            if (text == null || text.startsWith("???")) {
+                text = objective.typeName();
             }
             Jval parents = Jval.newArray();
             if (objective.parents != null) {

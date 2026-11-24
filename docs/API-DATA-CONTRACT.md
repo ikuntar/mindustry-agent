@@ -10,6 +10,9 @@
   - `get_tile`、`build_plan`、`deconstruct`、`configure`、`mine` 使用 **tile** 坐标。
   - `get_area`、`query_area`、`move_to`、`attack` 的 `x/y` 使用 **世界像素**（默认 8 px/tile）。
   - `get_area.coverage.next` 是 tile 坐标，并带 `unit:"tile"`。
+- `get_context.wavetime` 单位是 **tick**；秒数为 `wavetime/60`。
+- `/actions` 的字段是顶层字段，不要包成 `args`；嵌套写法会被 `bad_request` 拒绝。
+  `get_area`/`query_area` 必须提供数字 `x/y`，不会静默用 0,0 代替。
 - `team` 字段是数字 id，不是名字；需要可读名字时用 `teamName` 或团队表。
 - 空字符串 `""` 表示“无该属性/无内容”，不要把它当作名字为空的实体。
 - `hidden=true` 表示当前受迷雾限制，`discovered=false` 表示连静态地形都未发现；
@@ -251,11 +254,13 @@ meta: {
 
 ```text
 parameters: {
+  buildTimeTicks, itemCapacity,
   power?: { usagePerTick, usePerSecond, capacity, buffered },
   powerProductionPerSecond?,
   craftTimeTicks?, craftsPerSecond?, outputs?,
   drillTimeTicks?, hardnessDrillMultiplier?,
   beamRangeTiles?,
+  laserRangeTiles?,
   pumpAmountPerTick?, liquidPerSecond?
 }
 ```

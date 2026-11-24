@@ -160,6 +160,8 @@
 - [x] 数据访问审计：见 `docs/DATA-ACCESS-AUDIT.md`；移除 TimerObjective 反射，power 按队伍过滤，guide 增加 bytes/hash；全图可见性、raw debug 面留待拍板
 - [x] 迷雾读取限制：`get_tile/get_area/query_area/get_unit/threats/map/events` 按助手队伍过滤；Fortress fog 实测通过
 - [x] API 数据契约：`docs/API-DATA-CONTRACT.md` + `/guide` 第 16 节（实体结构/枚举/config/错误码）
+- [x] 冷启动规划测试（2026-11-24）：无限流派 600s 超时（45 次调用，过度解析地图二进制）；收窄流 83.7s 完成，判定 `/guide` 足够但只到“够用”级，记录 wavetime/objective/供弹/建造时间/电力连线等缺口
+- [ ] 按冷启动反馈补 guide：wavetime 单位已补、actions 顶层字段已补；objective 本地化失败 fallback、炮塔供弹动作示例继续补
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）
 - [ ] issue #34 余项：get_area cursor 分页、guide 语义章节

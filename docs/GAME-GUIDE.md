@@ -26,6 +26,12 @@ Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
 - 地图有宽度和高度；越界会被拒绝。用 `get_context` 的 `worldWidth/worldHeight`
   和 `get_area` 的 `coverage` 判断边界。
 - 游戏以 tick 推进；`get_context.tick` 是当前 tick。暂停时 tick 不增长。
+- `get_context.wavetime` 也是 tick；换算秒数要除以 60。`waveTimer=false` 时它不是
+  倒计时承诺，只是规则/教学状态。
+- `POST /actions` 的动作字段是**顶层字段**，不是嵌套在 `args` 里；例如
+  `{"kind":"get_area","x":928,"y":584,"radius":6}`。`get_area` 的 `x/y` 是像素，
+  返回 tile 坐标。规划路线时不要为了读地图去解析 `/data` 二进制；先读
+  `/context` + `get_area`/`get_tile` 就够。
 - `GET /health` 不经过命令队列；如果 `lastUpdateAgo` 持续增大或 `queueDepth` 积压，
   说明模拟线程卡住/繁忙，先停止动作并报告，不要反复重试。
 - `gameOver=true` 或 `won=true` 后不要继续发写动作；先读上下文确认结果。
@@ -166,7 +172,10 @@ Serpulo 常见物品：
 
 ## 9. 防御和波次
 
-- 炮塔需要弹药；不同炮塔接受不同物品/液体，部分炮塔需要冷却液。
+- 炮塔需要弹药；不同炮塔接受不同物品/液体，部分炮塔需要冷却液。给炮塔供弹优先用
+  传送带/装填器；助手自身可以把同队炮塔作为 `deposit` 目标（受物品转移距离/
+  `maxAccepted` 限制），先查 `get_tile.items`/`get_config_schema` 和
+  `/content.parameters.itemCapacity`，不要把“炮塔有弹药”当成默认事实。
 - 墙壁用于阻挡地面单位，但不能阻挡飞行单位；不要把墙当成万能防御。
 - 敌人从地图边缘/波次生成点进攻，目标是核心和建筑。
 - 波次之间有准备时间；`get_context` 的 `wave`、`wavetime`、`waveTimer`、`enemies`
@@ -312,11 +321,12 @@ Serpulo 常见物品：
 unlockedNowHost/banned/hidden/hideDatabase`。`banned` 对应核心数据库的红叉；
 `unlockedNowHost` 是当前对局实际可用性；`detailsLocked` 表示详情因未解锁隐藏。
 
-`/content` 的 block 还有 `parameters`：`power{usagePerTick,usePerSecond,capacity}`、
-`powerProductionPerSecond`、`craftTimeTicks/craftsPerSecond`、`drillTimeTicks`、
-`pumpAmountPerTick/liquidPerSecond` 等；unit 的 `parameters.weapons[]` 是 `Weapon` 挂点，
-含 `reloadTicks/shotsPerSecond/dpsEstimate/range` 和 `bullet{type,damage,splashDamage,...}`。
-详细字段见 `docs/API-DATA-CONTRACT.md` 4.2。
+`/content` 的 block 还有 `parameters`：`buildTimeTicks/itemCapacity`、
+`power{usagePerTick,usePerSecond,capacity}`、`powerProductionPerSecond`、
+`craftTimeTicks/craftsPerSecond`、`drillTimeTicks`、`laserRangeTiles`
+（电力节点）、`pumpAmountPerTick/liquidPerSecond` 等；unit 的 `parameters.weapons[]`
+是 `Weapon` 挂点，含 `reloadTicks/shotsPerSecond/dpsEstimate/range` 和
+`bullet{type,damage,splashDamage,...}`。详细字段见 `docs/API-DATA-CONTRACT.md` 4.2。
 
 ### 16.2 Tile 和迷雾
 
