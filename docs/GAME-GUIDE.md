@@ -425,8 +425,12 @@ command: move | stop | attack | repair | rebuild | assist | mine | enterPayload 
   `parameters.liquidOutputs[{liquid,perSecond}]`；没有 `liquidOutputs` 的方块不要
   猜它会产液体。
 - 阶段顺序要同时用 `depth`、`requirements`（建造消耗）、`researchCost`（研究消耗）、
-  以及当前地图实际可采资源判断；fixture 下 `/content.researched` 可能全为 `true`，
-  真实科研进度以 `get_tech_tree.researched`/`rules.researched` 为准。
+  以及当前地图实际可采资源判断；`depth` 不是严格 tier，同一个物品可能有多条不同
+  深度的产线（如 surge-crucible 与 surge-smelter），必须取最早可用 producer。
+  fixture 下 `/content.researched` 可能全为 `true`，真实科研进度以
+  `get_tech_tree.researched`/`rules.researched` 为准。
+- TechTree 不是 `/content` 全集：`launch-pad` 等方块可能没有节点，查询结果要区分
+  “没有 tech node”和“拼写错误/未知 content”。
 - 完整科技树不要只查根：根响应可能 `truncated=true`，沿 `children` 或按目标
   content 查父链，逐节点读 `depth/parent/requirements`。
 
