@@ -42,6 +42,9 @@ import mindustry.ui.dialogs.BaseDialog;
 import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.consumers.ConsumePower;
+import mindustry.world.consumers.ConsumeItems;
+import mindustry.world.consumers.ConsumeLiquids;
+import mindustry.world.consumers.ConsumeLiquid;
 import mindustry.world.blocks.power.PowerGenerator;
 import mindustry.world.blocks.power.PowerNode;
 import mindustry.world.blocks.production.BeamDrill;
@@ -3132,6 +3135,35 @@ public class ProbeMod extends Mod {
         Jval result = Jval.newObject()
                 .put("buildTimeTicks", block.buildTime)
                 .put("itemCapacity", block.itemCapacity);
+        Jval inputs = Jval.newArray();
+        for (mindustry.world.consumers.Consume consume : block.consumers) {
+            if (consume instanceof ConsumeItems itemConsume) {
+                for (ItemStack stack : itemConsume.items) {
+                    inputs.add(Jval.newObject()
+                            .put("item", stack.item.name)
+                            .put("amount", stack.amount)
+                            .put("optional", consume.optional)
+                            .put("booster", consume.booster));
+                }
+            } else if (consume instanceof ConsumeLiquids liquidConsume) {
+                for (LiquidStack stack : liquidConsume.liquids) {
+                    inputs.add(Jval.newObject()
+                            .put("liquid", stack.liquid.name)
+                            .put("amount", stack.amount)
+                            .put("amountPerSecond", stack.amount * 60f)
+                            .put("optional", consume.optional)
+                            .put("booster", consume.booster));
+                }
+            } else if (consume instanceof ConsumeLiquid liquidConsume) {
+                inputs.add(Jval.newObject()
+                        .put("liquid", liquidConsume.liquid.name)
+                        .put("amount", liquidConsume.amount)
+                        .put("amountPerSecond", liquidConsume.amount * 60f)
+                        .put("optional", consume.optional)
+                        .put("booster", consume.booster));
+            }
+        }
+        if (inputs.asArray().size > 0) result.put("inputs", inputs);
         if (block.consPower != null) {
             ConsumePower power = block.consPower;
             result.put("power", Jval.newObject()
@@ -3309,9 +3341,12 @@ public class ProbeMod extends Mod {
         boolean researched = node != null && node.content != null
                 && Vars.state.rules.researched != null
                 && Vars.state.rules.researched.contains(node.content);
+        int depth = 0;
+        for (TechTree.TechNode cursor = node; cursor != null && cursor.parent != null; cursor = cursor.parent) depth++;
         return Jval.newObject()
                 .put("content", node == null || node.content == null ? "" : node.content.name)
                 .put("name", node == null ? "" : node.localizedName())
+                .put("depth", depth)
                 .put("parent", node == null || node.parent == null || node.parent.content == null
                         ? "" : node.parent.content.name)
                 .put("children", children)

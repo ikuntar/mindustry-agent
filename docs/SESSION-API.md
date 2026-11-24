@@ -217,7 +217,7 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
   按建筑自身接收规则，不额外造 `enter_payload`。
 - `get_config_schema {block}`：返回可配置字段和合法值；`UnitFactory` 的 `value`
   是 `plans[].index`，不是生产队列。
-- `get_tech_tree {content?,limit?}`：只读 parent/children、成本、objectives、
+- `get_tech_tree {content?,limit?}`：只读 parent/children、depth（根为 0）、成本、objectives、
   researched、blockedReason；研究仍是逐节点 `research`，无队列。
 
 会话 `/actions` 只允许 `/tools` 暴露的 34 个名字；内部调试 op 仍只走本地 probe

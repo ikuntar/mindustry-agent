@@ -326,6 +326,7 @@ unlockedNowHost/banned/hidden/hideDatabase`。`banned` 对应核心数据库的�
 `unlockedNowHost` 是当前对局实际可用性；`detailsLocked` 表示详情因未解锁隐藏。
 
 `/content` 的 block 还有 `parameters`：`buildTimeTicks/itemCapacity`、
+`inputs[{item|liquid,amount,optional}]`、`outputs[{item,amount}]`、
 `power{usagePerTick,usePerSecond,capacity}`、`powerProductionPerSecond`、
 `craftTimeTicks/craftsPerSecond`、`drillTimeTicks`、`laserRangeTiles`
 （电力节点）、`pumpAmountPerTick/liquidPerSecond` 等；unit 的 `parameters.weapons[]`

@@ -258,9 +258,11 @@ meta: {
 ```text
 parameters: {
   buildTimeTicks, itemCapacity,
+  inputs?: [{item?,liquid?,amount,amountPerSecond?,optional,booster}], // item amount=配方用量, liquid amount=每 tick 用量
+  outputs?: [{item,amount}],
   power?: { usagePerTick, usePerSecond, capacity, buffered },
   powerProductionPerSecond?,
-  craftTimeTicks?, craftsPerSecond?, outputs?,
+  craftTimeTicks?, craftsPerSecond?,
   drillTimeTicks?, hardnessDrillMultiplier?,
   beamRangeTiles?,
   laserRangeTiles?,
