@@ -100,17 +100,36 @@ const crafted = await call("/content?type=blocks&query=graphite-press&limit=1", 
 const generator = await call("/content?type=blocks&query=combustion-generator&limit=1", { headers: auth });
 const consumer = await call("/content?type=blocks&query=silicon-smelter&limit=1", { headers: auth });
 const unitContent = await call("/content?type=units&query=dagger&limit=1", { headers: auth });
+const itemContent = await call("/content?type=items&query=copper&limit=1", { headers: auth });
+const liquidContent = await call("/content?type=liquids&query=water&limit=1", { headers: auth });
+const turretContent = await call("/content?type=blocks&query=duo&limit=1", { headers: auth });
+const separatorContent = await call("/content?type=blocks&query=separator&limit=1", { headers: auth });
 console.log(
   "content params",
   crafted.body.blocks?.[0]?.parameters?.craftTimeTicks,
   generator.body.blocks?.[0]?.parameters?.powerProductionPerSecond,
   consumer.body.blocks?.[0]?.parameters?.power?.usePerSecond,
   unitContent.body.units?.[0]?.parameters?.weapons?.length,
+  itemContent.body.items?.[0]?.parameters?.hardness,
+  liquidContent.body.liquids?.[0]?.parameters?.heatCapacity,
+  turretContent.body.blocks?.[0]?.parameters?.turret?.ammoTypes?.length,
+  separatorContent.body.blocks?.[0]?.parameters?.outputs?.[0]?.chance,
 );
 if (!crafted.body.blocks?.[0]?.parameters?.craftTimeTicks
     || !generator.body.blocks?.[0]?.parameters?.powerProductionPerSecond
     || !consumer.body.blocks?.[0]?.parameters?.power?.usePerSecond
-    || !unitContent.body.units?.[0]?.parameters?.weapons?.length) process.exit(1);
+    || !unitContent.body.units?.[0]?.parameters?.weapons?.length
+    || itemContent.body.items?.[0]?.parameters?.hardness !== 1
+    || liquidContent.body.liquids?.[0]?.parameters?.heatCapacity !== 0.4
+    || !turretContent.body.blocks?.[0]?.parameters?.turret?.ammoTypes?.length
+    || !separatorContent.body.blocks?.[0]?.parameters?.outputs?.[0]?.chance) process.exit(1);
+const flatTree = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_tech_tree", flat: true, limit: 5 }),
+});
+console.log("tech flat", flatTree.status, flatTree.body?.total, flatTree.body?.nodes?.length, flatTree.body?.nodes?.[0]?.planet);
+if (flatTree.status !== 200 || !flatTree.body?.total || flatTree.body.nodes?.[0]?.planet !== "serpulo") process.exit(1);
 const forbidden = await call("/actions", {
   method: "POST",
   headers: auth,

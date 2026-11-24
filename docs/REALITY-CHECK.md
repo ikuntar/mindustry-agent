@@ -160,6 +160,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 最终复测（补 `liquidOutputs`/drill/pump/`dropHardness` 后，19:31）：约 289s，`sufficient=true`（有保留）。API 的 block `inputs/outputs/liquidOutputs` 与地图 `drop/dropHardness` 组成闭合图；以 Ground Zero 实测 4 种原料（copper/lead/scrap/water）做 BFS，可达 Serpulo 22 个物品中的 16 个；未达的 6 个是 Erekir 专属（beryllium/tungsten/oxide/carbide/fissile-matter/dormant-cyst）。TechTree 的 `depth/parent/requirements` + sector 节点链（groundZero→frozenForest→crateredBattleground）足以排序研究阶段；drill `drillTier` 与 tile `dropHardness` 可判定矿脉可采性。
 - 保留限制：单个区域的 API 只能给出当前地图实际资源，跨区域/跨星球仍需 sector 节点和实际地图采样；液体 producer 索引不完整；fixture 的 `/content.researched` 不能代表真实研究进度，应读 TechTree；根树可能 `truncated`，要沿 `children`/父链查询。`get_tech_tree.depth` 不是严格 tier：例如 `surge-crucible` depth=6 而 `surge-smelter` depth=8，同一物品可有多条不同深度的产线；必须按“最早可用 producer + 配方依赖”排序，不能只按 depth。TechTree 也不是 `/content` 全集，`launch-pad` 等方块可能没有节点；查询应区分 `techNode:null` 与未知 content。
 - 测试结论（更新）：**允许地图 `get_tile/get_area` 采样时，API 足以推导高阶物品和完整阶段路线（同一星球/可达区域内）；只靠静态 `/content` 不够。**
+- 核心数据库投影验证（2026-11-24，`session-api-smoke`）：items 返回 copper `hardness=1`、titanium `hardness=3`；liquids water `heatCapacity=0.4`；`duo.parameters.turret.ammoTypes` 3 项且 `targetAir/targetGround` 可读；`separator.outputs[].chance` 为 0.416/0.25/0.166/0.166；`get_tech_tree {flat:true}` 返回 `total=375`、`planet=serpulo`、`depth/parent`；block `role/functional` 已返回。`session-api-smoke` 全绿，guide bytes/hash 同步。
 
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。

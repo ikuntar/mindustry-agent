@@ -421,9 +421,16 @@ command: move | stop | attack | repair | rebuild | assist | mine | enterPayload 
   `get_tile`/`get_area` 返回 `drop`、`dropHardness`，与钻机
   `parameters.drillTier` 比较；`liquid` 字段给出 floor 的液体，与 pump 的
   `liquidSource`/`liquidPerSecond` 配合。
-- 液体链看 block 的 `parameters.inputs[{liquid}]` 和
-  `parameters.liquidOutputs[{liquid,perSecond}]`；没有 `liquidOutputs` 的方块不要
-  猜它会产液体。
+- 物品属性读 `/content?type=items` 的 `parameters.hardness/flammability/
+  radioactivity/charge/explosiveness`；液体属性读 `type=liquids` 的
+  `heatCapacity/viscosity/flammability/temperature/coolant/effect`。
+  这些是数据库字段，不是 UI 文案。
+- 炮塔看 `parameters.turret.ammoTypes[]`：`item|liquid`、`ammoMultiplier`、
+  `reloadMultiplier`、`rangeChange`、`damage`、`targetAir/targetGround`；
+  不要猜某个炮塔的弹药。
+- 方块功能看 `parameters.role` 和 `functional`（`hasItems/hasLiquids/hasPower/
+  consumesPower/outputsPower/requiresOre/requiresLiquidFloor/configurable`）；
+  `Separator` 类随机产出在 `outputs[].chance/weight`。
 - 阶段顺序要同时用 `depth`、`requirements`（建造消耗）、`researchCost`（研究消耗）、
   以及当前地图实际可采资源判断；`depth` 不是严格 tier，同一个物品可能有多条不同
   深度的产线（如 surge-crucible 与 surge-smelter），必须取最早可用 producer。

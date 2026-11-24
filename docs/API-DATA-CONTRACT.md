@@ -243,11 +243,31 @@ meta: {
 - `hidden/hideDatabase`：是否从数据库/UI 隐藏；
 - `detailsLocked`：`details` 因未解锁而被隐藏；
 - 核心数据库 UI 的“参数”还包括 `Stats` 显示值（攻击、生产、电力等），
-  这些是 UI 渲染值，当前 `/content` 不返回任意 `StatValue` 的完整结构；
-  需要精确战斗/生产参数时，优先读 `get_tile` 的运行时字段和 `/capabilities`。
+  这些是 UI 渲染值；`/content` 现在只把**有直接公开字段**的稳定子集放进
+  `parameters`，不返回任意 `StatValue` 的完整结构；需要精确运行态时，优先读
+  `get_tile`、`/capabilities` 和 `get_content.parameters`。
 
 `blocks[]` 额外有 `size,health,requirements,researched,researchCost`；
 `units[]` 额外有 `health,flying,playerControllable,researched,researchCost`。
+
+`items[]` 额外有 `parameters`：
+
+```text
+parameters: {
+  hardness, explosiveness, flammability, radioactivity, charge,
+  cost, healthScaling, lowPriority
+}
+```
+
+`liquids[]` 额外有 `parameters`：
+
+```text
+parameters: {
+  gas, flammability, temperature, heatCapacity, viscosity,
+  explosiveness, blockReactive, coolant, moveThroughBlocks,
+  incinerable, boilPoint, hidden, effect
+}
+```
 
 ### 4.2 `parameters`（核心数据库参数的常用子集）
 
@@ -258,12 +278,18 @@ meta: {
 
 ```text
 parameters: {
+  role: "drill|pump|turret|core|unit-factory|factory|power|conveyor|wall|logic|block",
+  functional: { hasItems, hasLiquids, hasPower, consumesPower, outputsPower,
+                requiresOre, requiresLiquidFloor, configurable },
   buildTimeTicks, itemCapacity,
   inputs?: [{item?,liquid?,amount,amountPerSecond?,optional,booster}], // item amount=配方用量, liquid amount=每 tick 用量
-  outputs?: [{item,amount}],
+  outputs?: [{item,amount,chance?,weight?}], // chance/weight 目前用于 Separator 类随机产出
   liquidOutputs?: [{liquid,amount,perSecond}],
   drillTier?: number, drillTimeTicks?: number, hardnessDrillMultiplier?: number,
   mineableSource?: string, pumpAmountPerTick?: number, liquidPerSecond?: number, liquidSource?: string,
+  turret?: { maxAmmo, ammoPerShot, reloadTicks, targetAir, targetGround,
+             ammoTypes?: [{item?,liquid?,ammoMultiplier,reloadMultiplier,rangeChange,
+                           damage,splashDamage,lifetime,speed,collidesAir,collidesGround,bullet}] },
   power?: { usagePerTick, usePerSecond, capacity, buffered },
   powerProductionPerSecond?,
   craftTimeTicks?, craftsPerSecond?,
@@ -305,6 +331,34 @@ parameters: {
 这些都是 `v0.1.1` 的常用参数；核心数据库 UI 还会显示更多 `StatValue`（例如状态效果、
 液体消耗、建造范围等），那些尚未全部 JSON 化。精确运行态优先用 `get_tile`、
 `get_capabilities`、`/context.power`。
+
+### 4.3 `get_tech_tree`（全量/分支）
+
+```text
+POST /actions {"op":"get_tech_tree","flat":true,"offset":0,"limit":500}
+```
+
+响应：
+
+```text
+{ nodes[], count, returned, total, offset, nextOffset, truncated }
+```
+
+每个 node：
+
+```text
+{ content, name, depth, planet, sector, parent, children[],
+  requirements[], objectives[], requiresUnlock, researched, unlocked, blockedReason }
+```
+
+- `flat=true` 用 `TechTree.all` 返回全量节点，可按 `offset/nextOffset` 分页；
+  `limit` 上限 500；普通根查询仍按树分支递归。
+- `depth` 是 TechTree 节点深度，不是物品 tier；同一物品可能有多个不同深度的 producer。
+- `planet`/`sector` 来自 TechTree 节点和 `SectorPreset`；根节点用根名（如 `serpulo`）
+  作为 planet 回退。
+- 物品本身不是 TechTree 节点；用 producer block 的 `depth` 和 `inputs/outputs` 推导。
+- `researched` 在测试 fixture 下可能全为 false、`unlocked=true`，真实战役进度要结合
+  `rules.researched` 解读。
 
 ## 5. `query_area`
 

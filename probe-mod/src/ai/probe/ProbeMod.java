@@ -35,6 +35,7 @@ import mindustry.type.ItemStack;
 import mindustry.type.Liquid;
 import mindustry.type.LiquidStack;
 import mindustry.type.PayloadStack;
+import mindustry.type.SectorPreset;
 import mindustry.type.UnitType;
 import mindustry.type.Weapon;
 import mindustry.entities.bullet.BulletType;
@@ -47,6 +48,11 @@ import mindustry.world.consumers.ConsumeLiquids;
 import mindustry.world.consumers.ConsumeLiquid;
 import mindustry.world.blocks.power.PowerGenerator;
 import mindustry.world.blocks.power.PowerNode;
+import mindustry.world.blocks.distribution.Conveyor;
+import mindustry.world.blocks.defense.Wall;
+import mindustry.world.blocks.defense.turrets.ItemTurret;
+import mindustry.world.blocks.defense.turrets.LiquidTurret;
+import mindustry.world.blocks.logic.LogicBlock;
 import mindustry.world.blocks.production.BeamDrill;
 import mindustry.world.blocks.production.BurstDrill;
 import mindustry.world.blocks.production.Drill;
@@ -1283,7 +1289,9 @@ public class ProbeMod extends Mod {
                 for (Item item : Vars.content.items()) {
                     if (!matches(item.name, query)) continue;
                     if (limit > 0 && items.asArray().size >= limit) break;
-                    items.add(Jval.newObject().put("name", item.name).put("id", item.id).put("meta", contentMeta(item)));
+                    items.add(Jval.newObject().put("name", item.name).put("id", item.id)
+                            .put("meta", contentMeta(item))
+                            .put("parameters", itemParameters(item)));
                 }
                 data.put("items", items);
             }
@@ -1292,7 +1300,9 @@ public class ProbeMod extends Mod {
                 for (Liquid liquid : Vars.content.liquids()) {
                     if (!matches(liquid.name, query)) continue;
                     if (limit > 0 && liquids.asArray().size >= limit) break;
-                    liquids.add(Jval.newObject().put("name", liquid.name).put("id", liquid.id).put("meta", contentMeta(liquid)));
+                    liquids.add(Jval.newObject().put("name", liquid.name).put("id", liquid.id)
+                            .put("meta", contentMeta(liquid))
+                            .put("parameters", liquidParameters(liquid)));
                 }
                 data.put("liquids", liquids);
             }
@@ -2517,8 +2527,10 @@ public class ProbeMod extends Mod {
         if ("get_tech_tree".equals(op)) {
             Team team = assistant == null ? Vars.state.rules.defaultTeam : assistant.team;
             String name = request.getString("content", "");
-            int limit = Math.max(1, Math.min(256, request.getInt("limit", 128)));
-            Jval nodes = Jval.newArray();
+            boolean flat = request.getBool("flat", false);
+            int offset = Math.max(0, request.getInt("offset", 0));
+            int limit = Math.max(1, Math.min(500, request.getInt("limit", 128)));
+            java.util.List<TechTree.TechNode> matches = new ArrayList<>();
             java.util.Set<TechTree.TechNode> seen = new java.util.HashSet<>();
             if (!name.trim().isEmpty()) {
                 UnlockableContent content = findResearchable(name);
@@ -2531,17 +2543,28 @@ public class ProbeMod extends Mod {
                     replyError(command, "not_in_tech_tree", "Content is not in the tech tree: " + name);
                     return;
                 }
-                collectTechNode(node, team, nodes, seen, limit);
+                collectTechList(node, matches, seen, limit);
+            } else if (flat) {
+                for (TechTree.TechNode node : TechTree.all) matches.add(node);
             } else {
                 for (TechTree.TechNode root : TechTree.roots) {
-                    collectTechNode(root, team, nodes, seen, limit);
-                    if (nodes.asArray().size >= limit) break;
+                    collectTechList(root, matches, seen, limit);
+                    if (matches.size() >= limit) break;
                 }
             }
+            int total = matches.size();
+            int start = Math.min(offset, total);
+            int end = Math.min(start + limit, total);
+            Jval nodes = Jval.newArray();
+            for (int i = start; i < end; i++) nodes.add(techNodeJson(matches.get(i), team));
             reply(command, Jval.newObject()
                     .put("nodes", nodes)
                     .put("count", nodes.asArray().size)
-                    .put("truncated", nodes.asArray().size >= limit));
+                    .put("returned", nodes.asArray().size)
+                    .put("total", total)
+                    .put("offset", offset)
+                    .put("nextOffset", end < total ? end : -1)
+                    .put("truncated", end < total));
             return;
         }
 
@@ -3133,10 +3156,104 @@ public class ProbeMod extends Mod {
                 .put("credit", content.credit == null ? "" : content.credit);
     }
 
+    private Jval itemParameters(Item item) {
+        return Jval.newObject()
+                .put("hardness", item.hardness)
+                .put("explosiveness", item.explosiveness)
+                .put("flammability", item.flammability)
+                .put("radioactivity", item.radioactivity)
+                .put("charge", item.charge)
+                .put("cost", item.cost)
+                .put("healthScaling", item.healthScaling)
+                .put("lowPriority", item.lowPriority);
+    }
+
+    private Jval liquidParameters(Liquid liquid) {
+        return Jval.newObject()
+                .put("gas", liquid.gas)
+                .put("flammability", liquid.flammability)
+                .put("temperature", liquid.temperature)
+                .put("heatCapacity", liquid.heatCapacity)
+                .put("viscosity", liquid.viscosity)
+                .put("explosiveness", liquid.explosiveness)
+                .put("blockReactive", liquid.blockReactive)
+                .put("coolant", liquid.coolant)
+                .put("moveThroughBlocks", liquid.moveThroughBlocks)
+                .put("incinerable", liquid.incinerable)
+                .put("boilPoint", liquid.boilPoint)
+                .put("hidden", liquid.hidden)
+                .put("effect", liquid.effect == null ? "" : liquid.effect.name);
+    }
+
+    private Jval ammoJson(String kind, String name, BulletType bullet) {
+        return Jval.newObject()
+                .put(kind, name)
+                .put("ammoMultiplier", bullet.ammoMultiplier)
+                .put("reloadMultiplier", bullet.reloadMultiplier)
+                .put("rangeChange", bullet.rangeChange)
+                .put("damage", bullet.damage)
+                .put("splashDamage", bullet.splashDamage)
+                .put("lifetime", bullet.lifetime)
+                .put("speed", bullet.speed)
+                .put("collidesAir", bullet.collidesAir)
+                .put("collidesGround", bullet.collidesGround)
+                .put("bullet", bullet.getClass().getSimpleName());
+    }
+
+    private Jval turretParameters(Turret turret) {
+        Jval result = Jval.newObject()
+                .put("maxAmmo", turret.maxAmmo)
+                .put("ammoPerShot", turret.ammoPerShot)
+                .put("reloadTicks", turret.reload)
+                .put("targetAir", turret.targetAir)
+                .put("targetGround", turret.targetGround);
+        Jval ammoTypes = Jval.newArray();
+        if (turret instanceof ItemTurret itemTurret) {
+            for (var entry : itemTurret.ammoTypes.entries()) {
+                ammoTypes.add(ammoJson("item", entry.key.name, entry.value));
+            }
+        } else if (turret instanceof LiquidTurret liquidTurret) {
+            for (var entry : liquidTurret.ammoTypes.entries()) {
+                ammoTypes.add(ammoJson("liquid", entry.key.name, entry.value));
+            }
+        }
+        if (ammoTypes.asArray().size > 0) result.put("ammoTypes", ammoTypes);
+        return result;
+    }
+
+    private String blockRole(Block block) {
+        if (block instanceof Drill || block instanceof BeamDrill || block instanceof BurstDrill) return "drill";
+        if (block instanceof Pump) return "pump";
+        if (block instanceof Turret) return "turret";
+        if (block instanceof CoreBlock) return "core";
+        if (block instanceof UnitFactory || block instanceof Reconstructor || block instanceof UnitAssembler) return "unit-factory";
+        if (block instanceof GenericCrafter || block instanceof Separator || block instanceof WallCrafter) return "factory";
+        if (block instanceof PowerGenerator || block instanceof PowerNode) return "power";
+        if (block instanceof Conveyor) return "conveyor";
+        if (block instanceof Wall) return "wall";
+        if (block instanceof LogicBlock) return "logic";
+        return "block";
+    }
+
+    private Jval blockFunctionalJson(Block block) {
+        return Jval.newObject()
+                .put("hasItems", block.hasItems)
+                .put("hasLiquids", block.hasLiquids)
+                .put("hasPower", block.hasPower)
+                .put("consumesPower", block.consPower != null)
+                .put("outputsPower", block.outputsPower)
+                .put("requiresOre", block instanceof Drill || block instanceof BeamDrill || block instanceof BurstDrill)
+                .put("requiresLiquidFloor", block instanceof Pump)
+                .put("configurable", block.configurable);
+    }
+
     private Jval blockParameters(Block block) {
         Jval result = Jval.newObject()
+                .put("role", blockRole(block))
+                .put("functional", blockFunctionalJson(block))
                 .put("buildTimeTicks", block.buildTime)
                 .put("itemCapacity", block.itemCapacity);
+        if (block instanceof Turret turret) result.put("turret", turretParameters(turret));
         Jval inputs = Jval.newArray();
         for (mindustry.world.consumers.Consume consume : block.consumers) {
             if (consume instanceof ConsumeItems itemConsume) {
@@ -3218,7 +3335,7 @@ public class ProbeMod extends Mod {
         if (block instanceof Separator separator) {
             result.put("craftTimeTicks", separator.craftTime)
                     .put("craftsPerSecond", separator.craftTime > 0f ? 60f / separator.craftTime : 0f)
-                    .put("outputs", stacksJson(separator.results));
+                    .put("outputs", separatorOutputsJson(separator.results));
         }
         if (block instanceof Drill drill) {
             result.put("drillTimeTicks", drill.drillTime)
@@ -3230,6 +3347,11 @@ public class ProbeMod extends Mod {
         }
         if (block instanceof WallCrafter wall) {
             result.put("drillTimeTicks", wall.drillTime);
+            if (wall.output != null) {
+                result.put("outputs", Jval.newArray().add(Jval.newObject()
+                        .put("item", wall.output.name)
+                        .put("amount", 1)));
+            }
         }
         if (block instanceof Pump pump) {
             result.put("pumpAmountPerTick", pump.pumpAmount)
@@ -3369,12 +3491,17 @@ public class ProbeMod extends Mod {
         boolean researched = node != null && node.content != null
                 && Vars.state.rules.researched != null
                 && Vars.state.rules.researched.contains(node.content);
-        int depth = 0;
-        for (TechTree.TechNode cursor = node; cursor != null && cursor.parent != null; cursor = cursor.parent) depth++;
+        int depth = node == null ? 0 : node.depth;
+        String planet = node == null || node.planet == null ? "" : node.planet.name;
+        if (planet.isEmpty() && node != null && node.parent == null && node.name != null) planet = node.name;
+        String sector = node != null && node.content instanceof SectorPreset preset ? preset.name : "";
+        if (planet.isEmpty() && node != null && node.content instanceof SectorPreset preset && preset.planet != null) planet = preset.planet.name;
         return Jval.newObject()
                 .put("content", node == null || node.content == null ? "" : node.content.name)
                 .put("name", node == null ? "" : node.localizedName())
                 .put("depth", depth)
+                .put("planet", planet)
+                .put("sector", sector)
                 .put("parent", node == null || node.parent == null || node.parent.content == null
                         ? "" : node.parent.content.name)
                 .put("children", children)
@@ -3386,11 +3513,11 @@ public class ProbeMod extends Mod {
                 .put("blockedReason", techBlockedReason(node, team));
     }
 
-    private void collectTechNode(TechTree.TechNode node, Team team, Jval nodes, java.util.Set<TechTree.TechNode> seen, int limit) {
-        if (node == null || nodes.asArray().size >= limit || !seen.add(node)) return;
-        nodes.add(techNodeJson(node, team));
+    private void collectTechList(TechTree.TechNode node, java.util.List<TechTree.TechNode> nodes, java.util.Set<TechTree.TechNode> seen, int limit) {
+        if (node == null || nodes.size() >= limit || !seen.add(node)) return;
+        nodes.add(node);
         if (node.children != null) {
-            for (TechTree.TechNode child : node.children) collectTechNode(child, team, nodes, seen, limit);
+            for (TechTree.TechNode child : node.children) collectTechList(child, nodes, seen, limit);
         }
     }
 
@@ -3424,6 +3551,22 @@ public class ProbeMod extends Mod {
                         .put("liquid", stack.liquid == null ? "" : stack.liquid.name)
                         .put("amount", stack.amount));
             }
+        }
+        return result;
+    }
+
+    private Jval separatorOutputsJson(ItemStack[] stacks) {
+        Jval result = Jval.newArray();
+        if (stacks == null) return result;
+        int total = 0;
+        for (ItemStack stack : stacks) if (stack != null) total += stack.amount;
+        for (ItemStack stack : stacks) {
+            if (stack == null) continue;
+            result.add(Jval.newObject()
+                    .put("item", stack.item.name)
+                    .put("amount", stack.amount)
+                    .put("weight", stack.amount)
+                    .put("chance", total <= 0 ? 0f : (float) stack.amount / total));
         }
         return result;
     }
@@ -5357,10 +5500,12 @@ public class ProbeMod extends Mod {
                         .put("block", property("string")),
                         Jval.newArray().add("block"))));
         tools.add(tool("get_tech_tree",
-                "Read a bounded branch of the vanilla TechTree with parent/children, costs, objectives, researched and blockedReason.",
+                "Read a bounded branch or flat slice of the vanilla TechTree with parent/children, depth, planet/sector, costs, objectives, researched and blockedReason.",
                 inputSchema(Jval.newObject()
                         .put("content", property("string").put("description", "block/unit name; omit for roots"))
-                        .put("limit", property("integer").put("maximum", 256)),
+                        .put("flat", property("boolean").put("description", "true to return a flat all-node slice"))
+                        .put("offset", property("integer").put("minimum", 0))
+                        .put("limit", property("integer").put("maximum", 500)),
                         Jval.newArray())));
         tools.add(tool("move_to",
                 "Move the assistant body to world coordinates in pixels (8 px per tile); returns an opId.",
