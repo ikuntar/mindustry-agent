@@ -307,6 +307,11 @@ Serpulo 常见物品：
 `control.mode` 是 `unit` 或 `building`，建筑控制时才有 `buildingId/block/unitId`。
 `cores[]` 是 `{id,block,x,y,health,maxHealth,itemCapacity,unitType,items{}}`。
 
+`GET /content` 的每个 block/unit/item/liquid 还有 `meta`：
+`localizedName/description/details/databaseCategory/databaseTag/unlocked/
+unlockedNowHost/banned/hidden/hideDatabase`。`banned` 对应核心数据库的红叉；
+`unlockedNowHost` 是当前对局实际可用性；`detailsLocked` 表示详情因未解锁隐藏。
+
 ### 16.2 Tile 和迷雾
 
 ```text

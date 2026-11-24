@@ -92,6 +92,10 @@ const toolNames = new Set((tools.body.tools ?? []).map((tool) => tool.name));
 const missingTools = expectedTools.filter((name) => !toolNames.has(name));
 console.log("tools", tools.status, tools.body.tools?.length, "missing", missingTools.join(",") || "none");
 if (tools.status !== 200 || missingTools.length > 0) process.exit(1);
+const content = await call("/content?type=blocks&query=conveyor&limit=1", { headers: auth });
+const contentMeta = content.body.blocks?.[0]?.meta;
+console.log("content meta", content.status, content.body.blocks?.[0]?.name, contentMeta?.description ? "description" : "no-description", contentMeta?.databaseCategory);
+if (content.status !== 200 || !contentMeta || contentMeta.databaseCategory !== "block") process.exit(1);
 const forbidden = await call("/actions", {
   method: "POST",
   headers: auth,

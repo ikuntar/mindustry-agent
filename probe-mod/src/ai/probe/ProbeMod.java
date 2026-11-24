@@ -1240,7 +1240,8 @@ public class ProbeMod extends Mod {
                             .put("health", block.health)
                             .put("requirements", requirements)
                             .put("researched", block.unlockedNowHost())
-                            .put("researchCost", blockResearch));
+                            .put("researchCost", blockResearch)
+                            .put("meta", contentMeta(block)));
                 }
                 data.put("blocks", blocks);
             }
@@ -1255,7 +1256,8 @@ public class ProbeMod extends Mod {
                             .put("flying", unit.flying)
                             .put("playerControllable", unit.playerControllable)
                             .put("researched", unit.unlockedNowHost())
-                            .put("researchCost", researchJson(unit)));
+                            .put("researchCost", researchJson(unit))
+                            .put("meta", contentMeta(unit)));
                 }
                 data.put("units", units);
             }
@@ -1264,7 +1266,7 @@ public class ProbeMod extends Mod {
                 for (Item item : Vars.content.items()) {
                     if (!matches(item.name, query)) continue;
                     if (limit > 0 && items.asArray().size >= limit) break;
-                    items.add(Jval.newObject().put("name", item.name).put("id", item.id));
+                    items.add(Jval.newObject().put("name", item.name).put("id", item.id).put("meta", contentMeta(item)));
                 }
                 data.put("items", items);
             }
@@ -1273,7 +1275,7 @@ public class ProbeMod extends Mod {
                 for (Liquid liquid : Vars.content.liquids()) {
                     if (!matches(liquid.name, query)) continue;
                     if (limit > 0 && liquids.asArray().size >= limit) break;
-                    liquids.add(Jval.newObject().put("name", liquid.name).put("id", liquid.id));
+                    liquids.add(Jval.newObject().put("name", liquid.name).put("id", liquid.id).put("meta", contentMeta(liquid)));
                 }
                 data.put("liquids", liquids);
             }
@@ -3074,6 +3076,30 @@ public class ProbeMod extends Mod {
         }
 
         replyError(command, "bad_request", "Unknown op " + op);
+    }
+
+    private Jval contentMeta(UnlockableContent content) {
+        boolean detailsVisible = content.details != null && (content.unlocked() || !content.hideDetails);
+        boolean unlockedNowHost;
+        try {
+            unlockedNowHost = content.unlockedNowHost();
+        } catch (Throwable ignored) {
+            unlockedNowHost = content.unlocked();
+        }
+        return Jval.newObject()
+                .put("localizedName", content.localizedName == null ? content.name : content.localizedName)
+                .put("description", content.description == null ? "" : content.description)
+                .put("details", detailsVisible ? content.details : "")
+                .put("detailsLocked", content.details != null && !detailsVisible)
+                .put("databaseCategory", content.databaseCategory == null ? content.getContentType().name() : content.databaseCategory)
+                .put("databaseTag", content.databaseTag == null ? "default" : content.databaseTag)
+                .put("unlocked", content.unlocked())
+                .put("unlockedNowHost", unlockedNowHost)
+                .put("alwaysUnlocked", content.alwaysUnlocked)
+                .put("banned", content.isBanned())
+                .put("hidden", content.isHidden())
+                .put("hideDatabase", content.hideDatabase)
+                .put("credit", content.credit == null ? "" : content.credit);
     }
 
     private Jval researchJson(UnlockableContent content) {

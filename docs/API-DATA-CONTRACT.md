@@ -215,6 +215,33 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 `Reconstructor` 的 `plans[]` 是 `{base,upgrade,available}`；它不是可选择的生产方案。
 `UnitAssembler` 的 plans 包含 `unit/requirements/payloadRequirements/liquids/time`。
 
+## 4.1 `get_content`（核心数据库的只读镜像）
+
+`GET /content?type=blocks|units|items|liquids&query=&limit=` 返回内容列表。v0.1.1 起
+`blocks[]`/`units[]`/`items[]`/`liquids[]` 的每一项都带 `meta`，来自游戏
+`UnlockableContent` / 核心数据库使用的同一套字段：
+
+```text
+meta: {
+  localizedName, description, details, detailsLocked,
+  databaseCategory, databaseTag,
+  unlocked, unlockedNowHost, alwaysUnlocked,
+  banned, hidden, hideDatabase, credit
+}
+```
+
+- `unlocked`：本地/客户端已解锁；`unlockedNowHost`：当前对局实际可用（战役按
+  `unlockedHost`，非战役通常为 true）；
+- `banned`：当前规则是否禁用该方块/单位（核心数据库显示红叉）；
+- `hidden/hideDatabase`：是否从数据库/UI 隐藏；
+- `detailsLocked`：`details` 因未解锁而被隐藏；
+- 核心数据库 UI 的“参数”还包括 `Stats` 显示值（攻击、生产、电力等），
+  这些是 UI 渲染值，当前 `/content` 不返回任意 `StatValue` 的完整结构；
+  需要精确战斗/生产参数时，优先读 `get_tile` 的运行时字段和 `/capabilities`。
+
+`blocks[]` 额外有 `size,health,requirements,researched,researchCost`；
+`units[]` 额外有 `health,flying,playerControllable,researched,researchCost`。
+
 ## 5. `query_area`
 
 ```text
