@@ -58,8 +58,8 @@ ProbeMod.java:3530  getDeclaredField + setAccessible
 
 ### F3 保留：宿主 PID 反射
 
-`ProbeMod.java:5516` 在 Android 用 `Class.forName("android.os.Process")`，桌面用
-`ManagementFactory` 取 PID，写入 discovery。它是进程标识，不涉及游戏状态；
+`ProbeMod.java:5539` 在 Android 用 `Class.forName("android.os.Process")`，桌面用
+`ManagementFactory` 取 PID（`ProbeMod.java:5547`），写入 discovery。它是进程标识，不涉及游戏状态；
 如果只看“游戏数据”，不构成采集通道。
 
 ### F4 规则风险：服务端全图可见性
