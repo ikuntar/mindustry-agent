@@ -155,8 +155,11 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 测试方式：新建无上下文 subagent，只给 `/tmp/tech-tier-prompt*.txt` 的 endpoint/bootstrap，不给仓库/网页/预训练知识；只允许 API 查询，要求输出物品层级、阶段路线、缺失字段。
 - 首轮（旧 API）：`sufficient=false`，14 次调用、279s。实际阻塞：447 个 block 只有 `outputs`（21 个），没有 `inputs`；22 个 item 只有 `{name,id,meta}`，没有 recipe/tier/research；物品不是 TechTree 节点（按 item 查询 404）；根查询 `count=128, truncated=true` 且没有 depth/cursor；fixture 下 `/content` 的 `researched` 与 TechTree 的 `researched` 语义不一致。
 - 已补：block `parameters.inputs`（item/liquid，81 个 block 有）、`liquidOutputs`、`drillTier/drillTimeTicks/hardnessDrillMultiplier/mineableSource`、pump `liquidSource`、`get_tech_tree.depth`、`get_tile/get_area.dropHardness`；配套 `API-DATA-CONTRACT`、`GAME-GUIDE`、`SESSION-API`。
-- 第二轮（补 inputs/depth 后）：仍 `sufficient=false`，但结论从“完全无法”变为“制成品层级可推导，完整路线不可”：原矿（copper/lead/coal/sand/titanium/thorium）没有方块 outputs，钻机产出依赖 `get_tile.drop`；液体链没有完整 producer/consumer 映射；`researched` fixture 状态干扰；TechTree 根分支需逐节点查询。
-- 结论：当前 API 能支撑“制成品相对高低端 + 技术树深度 + 建造/研究成本”的推导；不能只靠当前静态 `/content` 推导完整从原矿到高阶物品的战役路线。下一步应让 planner 明确先做地图 `get_tile/get_area` 取样，或补 drill/pump 的 tile→drop/liquid 约定和 liquid producer 索引，再做完整复测。
+- 第二轮派发（19:09）：因 bootstrap token 一次性，subagent 未能建立 session，149s 中断，不作为测试结果。
+- 有效复测（补 inputs/depth 后，19:12）：约 225s，`sufficient=false`，但结论从“完全无法”变为“制成品层级可推导，完整路线不可”：原矿（copper/lead/coal/sand/titanium/thorium）没有方块 outputs，钻机产出依赖 `get_tile.drop`；液体链没有完整 producer/consumer 映射；`researched` fixture 状态干扰；TechTree 根分支需逐节点查询。
+- 最终复测（补 `liquidOutputs`/drill/pump/`dropHardness` 后，19:31）：约 289s，`sufficient=true`（有保留）。API 的 block `inputs/outputs/liquidOutputs` 与地图 `drop/dropHardness` 组成闭合图；以 Ground Zero 实测 4 种原料（copper/lead/scrap/water）做 BFS，可达 Serpulo 22 个物品中的 16 个；未达的 6 个是 Erekir 专属（beryllium/tungsten/oxide/carbide/fissile-matter/dormant-cyst）。TechTree 的 `depth/parent/requirements` + sector 节点链（groundZero→frozenForest→crateredBattleground）足以排序研究阶段；drill `drillTier` 与 tile `dropHardness` 可判定矿脉可采性。
+- 保留限制：单个区域的 API 只能给出当前地图实际资源，跨区域/跨星球仍需 sector 节点和实际地图采样；液体 producer 索引不完整；fixture 的 `/content.researched` 不能代表真实研究进度，应读 TechTree；根树可能 `truncated`，要沿 `children`/父链查询。
+- 测试结论（更新）：**允许地图 `get_tile/get_area` 采样时，API 足以推导高阶物品和完整阶段路线（同一星球/可达区域内）；只靠静态 `/content` 不够。**
 
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。

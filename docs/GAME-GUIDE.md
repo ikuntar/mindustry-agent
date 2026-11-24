@@ -410,6 +410,28 @@ command: move | stop | attack | repair | rebuild | assist | mine | enterPayload 
 
 ---
 
+## 17. 从 API 推导物品层级和阶段路线
+
+- item 没有独立 TechTree 节点；不要用 `get_tech_tree {content:"copper"}`，会返回
+  404。物品层级用“生产它的方块在 TechTree 的 depth + 该方块的 `parameters.inputs/outputs`”
+  推导，不要用某一个能产出它的方块当唯一来源。
+- 一个物品可能有多个 producer，取**最早可用**的 producer 作为阶段依据；例如
+  `separator` 也能产 copper/lead/titanium，但它的 tech depth 很高，不是早期来源。
+- 原矿用地图查询，不要假设 `/content` 有 drill 的固定 outputs：
+  `get_tile`/`get_area` 返回 `drop`、`dropHardness`，与钻机
+  `parameters.drillTier` 比较；`liquid` 字段给出 floor 的液体，与 pump 的
+  `liquidSource`/`liquidPerSecond` 配合。
+- 液体链看 block 的 `parameters.inputs[{liquid}]` 和
+  `parameters.liquidOutputs[{liquid,perSecond}]`；没有 `liquidOutputs` 的方块不要
+  猜它会产液体。
+- 阶段顺序要同时用 `depth`、`requirements`（建造消耗）、`researchCost`（研究消耗）、
+  以及当前地图实际可采资源判断；fixture 下 `/content.researched` 可能全为 `true`，
+  真实科研进度以 `get_tech_tree.researched`/`rules.researched` 为准。
+- 完整科技树不要只查根：根响应可能 `truncated=true`，沿 `children` 或按目标
+  content 查父链，逐节点读 `depth/parent/requirements`。
+
+---
+
 本指南是游戏知识层；完整字段表见仓库 `docs/API-DATA-CONTRACT.md`，工具名和输入
 schema 以 `GET /tools` 为准；精确数值永远以实时 `/content`、`/capabilities`、
 `/context` 为准。

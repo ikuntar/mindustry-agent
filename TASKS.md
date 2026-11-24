@@ -163,8 +163,8 @@
 - [x] 冷启动规划测试（2026-11-24）：无限流派 600s 超时（45 次调用，过度解析地图二进制）；收窄流 83.7s 完成，判定 `/guide` 足够但只到“够用”级，记录 wavetime/objective/供弹/建造时间/电力连线等缺口
 - [x] 默认动作策略：移除低血自动撤退和空闲自动索敌/开火；显式动作才移动/攻击/跟随；死亡后自动从核心重生，与玩家一致
 - [ ] 按冷启动反馈补 guide：wavetime 单位已补、actions 顶层字段已补；objective 本地化失败 fallback、炮塔供弹动作示例继续补
-- [x] 长周期科技树测试（2026-11-24）：无上下文 agent 仅用 API，先判定 insufficient（缺 block inputs/配方、物品无 tech node、钻机/泵无产出映射、液体链缺失）；已补 `parameters.inputs`（含液体）、`liquidOutputs`、drill/pump 元数据、`get_tech_tree.depth`、`get_tile.dropHardness`。复测仍只能推导制成品相对层级，原矿/液体/区域链需 map 查询与进一步字段，见 docs/REALITY-CHECK
-- [ ] 科技树全链路复测：用新字段重跑无上下文 agent，验收“完整阶段路线”而非只判层级
+- [x] 长周期科技树测试（2026-11-24）：无上下文 agent 仅用 API，先判定 insufficient（缺 block inputs/配方、物品无 tech node、钻机/泵无产出映射、液体链缺失）；已补 `parameters.inputs`（含液体）、`liquidOutputs`、drill/pump 元数据、`get_tech_tree.depth`、`get_tile.dropHardness`。最终复测（289s）判定 sufficient=true（有保留）：地图采样下可从 4 种原矿 BFS 到 Serpulo 22 个物品中的 16 个，Erekir 6 个不可达；sector 链 groundZero→frozenForest→crateredBattleground 可排序研究阶段。
+- [ ] 科技树跨区域/液体索引：为 planner 补跨 sector 资源可达性提示和 liquid producer 索引；当前同一可达区域内已足够
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）
 - [ ] issue #34 余项：get_area cursor 分页、guide 语义章节
