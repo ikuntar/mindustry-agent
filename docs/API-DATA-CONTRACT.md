@@ -41,8 +41,10 @@
 
 ```text
 {
-  version, tick, timeMs, map, worldWidth, worldHeight,
-  wave, wavetime, waveTimer, enemies,
+  version, tick, timeMs, time, second, minute, server, client,
+  map, worldWidth, worldHeight,
+  wave, wavetime, waveSeconds, waveTimer, enemies,
+  contentCounts{blocks,units,items,liquids},
   team, teamName, paused, gameOver, won, captured, campaign, sector, winWave,
   mission, objectives[], tutorial, rules{},
   power[], eventsSince, eventsPending, eventSummary{total,byType},
@@ -54,6 +56,10 @@
 
 `detail` 参数目前是兼容参数；服务端始终返回这个有界结构，实际大小由 `maxBytes`/`maxUnits`
 和本地半径限制控制。
+
+`time` 是游戏内时间毫秒（`tick / 60 * 1000`，对应逻辑 `@time`）；`timeMs` 是 wall clock，
+不能混用。`second/minute` 是游戏内秒/分；`waveSeconds` 是 `wavetime / 60`（对应逻辑
+`@waveTime`）；`contentCounts` 是已加载内容类型数量，不是地图上的实体数量。
 
 ### 3.1 `assistant`
 
@@ -193,6 +199,53 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 - `efficiency`：0..1；`progress/warmup` 是 0..1；`enabled` 是逻辑/开关状态；
 - `items`：`[{item,amount}]`，不是对象；
 - `ammoTotal`：炮塔当前弹药总量。
+
+### 4.0 `entity` / `unit` / `building` 传感器
+
+`get_unit` 现在返回：
+
+```text
+{ ...legacy fields, entity:{...}, unit:{...} }
+```
+
+`get_tile` 在有建筑时返回：
+
+```text
+{ ...legacy fields, entity:{...}, building:{...} }
+```
+
+`query_area` 的每行有 `entity`；只有 `detail:"full"` 才额外返回 `unit`/`building`。
+
+```text
+entity: {
+  kind: "unit"|"building",
+  id, type, name, team, x, y, health, maxHealth, dead,
+  rotation, size, rangeTiles, solid
+}
+
+unit: {
+  health, maxHealth, x, y, velocityX, velocityY,
+  shootX, shootY, shooting, boosting, mining, mineX, mineY,
+  buildX, buildY, speed, ammo, ammoCapacity, armor, shield,
+  flag, controlled, payloadCount, totalPayload, payloadCapacity,
+  building?, breaking?, payloadType?, controller?, firstItem?,
+  selectedBlock?, selectedRotation
+}
+
+building: {
+  totalItems, firstItem?, totalLiquids, totalPower,
+  itemCapacity, liquidCapacity, powerCapacity,
+  powerNetIn, powerNetOut, powerNetStored, powerNetCapacity,
+  ammo, ammoCapacity, currentAmmoType, memoryCapacity,
+  heat, shield, armor, efficiency, progress, timescale, enabled,
+  controlled, payloadCount, totalPayload, payloadCapacity,
+  maxUnits, buildX, buildY, config?, payloadType?
+}
+```
+
+这些值直接来自 `Senseable.sense(LAccess)` / `senseObject(LAccess)`；不支持该字段的对象会省略字段，而不是返回 0。`unit.x/y`、`mineX/Y`、`buildX/Y`、`shootX/Y` 是逻辑处理器的 tile 坐标；
+`entity.x/y` 保持 API 的世界像素坐标。`get_tile` 的 legacy `rotation` 是度数，`unit.shooting/boosting/mining/solid/dead` 等是逻辑风格 0/1 数值。
+不暴露 `@client*`、`@links`、`@ipt` 或任意 settable 字段；所有读取仍受 team/fog 过滤。
 
 ### 4.1 `config` 形状
 

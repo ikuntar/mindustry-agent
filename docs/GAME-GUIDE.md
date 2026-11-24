@@ -26,7 +26,9 @@ Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
   的 `x/y` 是 tile 坐标。混用是常见错误。
 - 地图有宽度和高度；越界会被拒绝。用 `get_context` 的 `worldWidth/worldHeight`
   和 `get_area` 的 `coverage` 判断边界。
-- 游戏以 tick 推进；`get_context.tick` 是当前 tick。暂停时 tick 不增长。
+- 游戏以 tick 推进；`get_context.tick` 是当前 tick，`time` 是游戏内毫秒
+  (`tick/60*1000`)，`timeMs` 是 wall clock；`second/minute` 是游戏内时间。
+  `waveSeconds` 是 `wavetime/60`（逻辑 `@waveTime` 的单位）。
 - `get_context.wavetime` 也是 tick；换算秒数要除以 60。`waveTimer=false` 时它不是
   倒计时承诺，只是规则/教学状态。
 - `POST /actions` 的动作字段是**顶层字段**，不是嵌套在 `args` 里；例如
@@ -327,6 +329,14 @@ Serpulo 常见物品：
 { id, block, team, x, y, tileX, tileY, health, maxHealth, rotation,
   itemList?: [{item,amount}], ammoTotal? }
 ```
+
+`get_unit` 现在额外返回 `entity` 和 `unit`；`get_tile` 有建筑时额外返回 `entity` 和
+`building`；`query_area` 每行有 `entity`，传 `detail:"full"` 才返回完整
+`unit`/`building`。`unit`/`building` 使用逻辑处理器的 `LAccess` 字段（如
+`velocityX/Y`、`shooting`、`mining`、`totalItems`、`totalLiquids`、`totalPower`、
+`powerNet*`、`ammoCapacity`、`heat`、`efficiency`、`timescale`），不支持该字段的对象
+会省略字段；`entity.x/y` 是世界像素，`unit.x/y`/`mineX/Y`/`buildX/Y`/`shootX/Y` 是
+tile 坐标。详见 `API-DATA-CONTRACT` 4.0。
 
 `get_context.assistant` 另有 `isHome/possessing/boosting/payloads/payloadUsed`；
 `control.mode` 是 `unit` 或 `building`，建筑控制时才有 `buildingId/block/unitId`。

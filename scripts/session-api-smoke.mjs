@@ -155,10 +155,25 @@ const plan = await call("/actions", {
 console.log("session action gate", forbidden.status, plan.status, plan.body.message ?? plan.body.code);
 const context = await call("/context?detail=summary", { headers: auth });
 console.log("context", context.status, context.body.map, context.body.assistant?.x, context.body.assistant?.y);
-const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime", "waveTimer", "captured", "power"];
+const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime", "waveTimer", "captured", "power", "time", "second", "server", "contentCounts"];
 const missingContextFields = contextFields.filter((key) => !(key in (context.body ?? {})));
 console.log("context fields", missingContextFields.join(",") || "none");
 if (context.status !== 200 || missingContextFields.length > 0) process.exit(1);
+const sensorUnit = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_unit", unitId: context.body.assistant?.id }),
+});
+console.log("sensor unit", sensorUnit.status, sensorUnit.body?.entity?.kind, sensorUnit.body?.unit?.shooting);
+if (sensorUnit.status !== 200 || sensorUnit.body?.entity?.kind !== "unit" || sensorUnit.body?.unit?.shooting === undefined) process.exit(1);
+const core = context.body.cores?.[0];
+const sensorTile = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_tile", x: Math.floor((core?.x ?? context.body.assistant?.x ?? 0) / 8), y: Math.floor((core?.y ?? context.body.assistant?.y ?? 0) / 8) }),
+});
+console.log("sensor tile", sensorTile.status, sensorTile.body?.entity?.kind, sensorTile.body?.building?.totalItems);
+if (sensorTile.status !== 200 || sensorTile.body?.entity?.kind !== "building" || sensorTile.body?.building?.totalItems === undefined) process.exit(1);
 
 const badPlan = await call("/actions", {
   method: "POST",

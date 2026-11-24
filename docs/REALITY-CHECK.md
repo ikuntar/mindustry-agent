@@ -167,6 +167,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - #34：`get_area` 增加 `cursor:{x,y}`（tile 坐标）续读；`wave_start.data.enemies` 改为事件时刻 `waveTeam` 单位数；guide/`/tools` 补 `withdraw/deposit` 220 世界单位、单 stack、部分接收和 `query_area.includeEnemies=false`。smoke 验证 cursor 续读首格不重叠。
 - #37：`context.power` 拆成 `stored` / `freeCapacity` / `capacity=stored+freeCapacity`；原先 `capacity` 只是剩余可充电容量，电池满时 `stored>0, capacity=0` 不是矛盾。guide/契约同步。
 - #38：新增 session 鉴权的 `/docs/{name}`，固定白名单 `SESSION-API.md`、`API-DATA-CONTRACT.md`、`MCP-PROTOCOL.md`、`REALITY-CHECK.md`；guide 改为指向该路由。smoke 读 `/docs/API-DATA-CONTRACT.md` 返回 200。
+- Logic sensor 实体层（2026-11-24）：`get_unit` 返回 `entity+unit`，`get_tile` 有建筑时返回 `entity+building`，`query_area` 默认摘要、`detail:"full"` 才附加完整对象；字段走 `Senseable.sense/senseObject(LAccess)`，unsupported 省略；smoke 断言 `unit.shooting` 与 `building.totalItems` 可读。
 
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。

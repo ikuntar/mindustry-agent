@@ -169,7 +169,8 @@
 - [ ] 科技树跨区域/液体索引：为 planner 补跨 sector 资源可达性提示和 liquid producer 索引；跨区物流（launch-pad cargo）按用户决定暂缓；最终复测已能覆盖同一区域，多输出概率/item hardness 已补
 - [x] 科技树数据补充：ore 方块通过 `drillSpeeds[]` 暴露 floor→item/hardness/速度；item hardness 与 Separator chance/weight 已补；`drillSpeeds.presentInWorld` 区分当前地图是否出现
 - [ ] 放置/运行时关系：ore/liquid floor 的静态 drop 映射、电力/传送带拓扑、payload 接受关系仍是运行时或未结构化字段
-- [ ] Logic sensor 对齐（分层）：先建共享 `entity` 基座（id/type/team/x/y/health/maxHealth/dead/rotation/range/size/solid），再挂 `unit`（velocity/shoot/mine/boost/payload/flag/controller）与 `building`（totalItems/Liquids/Power、capacity、powerNet*、ammo/ammoCapacity/currentAmmoType、heat/shield/armor、efficiency/progress/timescale、enabled/config/memory）；不直接照抄 `@client*`，不把 unsupported 字段填 0；所有字段仍走 fog/team 可见性过滤
+- [x] Logic sensor 对齐（实体层）：`get_unit` 返回 `entity+unit`、`get_tile` 返回 `entity+building`、`query_area detail:"full"`；字段走 `Senseable.sense/LAccess`，unsupported 省略，不暴露 `@client*`/links/ipt/settable
+- [x] Logic 全局量（常用）：context 增加 `time/second/minute/waveSeconds/server/client/contentCounts`；剩余 `@thisx/@thisy/@links/@ipt` 仅在控制逻辑处理器时需要
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）
 - [x] issue #34 余项：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明已完成

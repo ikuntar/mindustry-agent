@@ -33,6 +33,8 @@ import mindustry.mod.Mod;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.Liquid;
+import mindustry.logic.LAccess;
+import mindustry.logic.Senseable;
 import mindustry.type.LiquidStack;
 import mindustry.type.PayloadStack;
 import mindustry.type.SectorPreset;
@@ -723,6 +725,164 @@ public class ProbeMod extends Mod {
         return Jval.newObject()
                 .put("type", config.getClass().getName())
                 .put("value", String.valueOf(config));
+    }
+
+    private Jval sensorValueJson(Object value) {
+        if (value == null || value == Senseable.noSensed) return null;
+        if (value instanceof UnlockableContent content) return Jval.valueOf(content.name);
+        if (value instanceof Team team) return Jval.valueOf(team.name);
+        if (value instanceof Building building) {
+            return Jval.newObject()
+                    .put("block", building.block.name)
+                    .put("id", building.id)
+                    .put("x", building.x)
+                    .put("y", building.y);
+        }
+        if (value instanceof Unit unit) {
+            return Jval.newObject()
+                    .put("type", unit.type.name)
+                    .put("id", unit.id)
+                    .put("x", unit.x)
+                    .put("y", unit.y);
+        }
+        if (value instanceof Point2 point) {
+            return Jval.newObject().put("x", point.x).put("y", point.y);
+        }
+        if (value instanceof Number number) return Jval.valueOf(number.doubleValue());
+        if (value instanceof Boolean bool) return Jval.valueOf(bool);
+        if (value instanceof String string) return Jval.valueOf(string);
+        if (value instanceof Object[] array) {
+            Jval result = Jval.newArray();
+            for (Object entry : array) {
+                Jval converted = sensorValueJson(entry);
+                if (converted != null) result.add(converted);
+            }
+            return result;
+        }
+        return Jval.valueOf(value.getClass().getSimpleName());
+    }
+
+    private void putSensor(Jval result, String key, Senseable entity, LAccess access) {
+        try {
+            double value = entity.sense(access);
+            if (!Double.isNaN(value) && !Double.isInfinite(value)) result.put(key, value);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void putSensorObject(Jval result, String key, Senseable entity, LAccess access) {
+        try {
+            Jval value = sensorValueJson(entity.senseObject(access));
+            if (value != null) result.put(key, value);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private Jval entityJson(Senseable entity) {
+        Jval result = Jval.newObject();
+        if (entity instanceof Unit unit) {
+            result.put("kind", "unit")
+                    .put("id", unit.id)
+                    .put("type", unit.type.name)
+                    .put("name", unit.type.localizedName == null ? unit.type.name : unit.type.localizedName)
+                    .put("team", unit.team.id)
+                    .put("x", unit.x)
+                    .put("y", unit.y)
+                    .put("health", unit.health)
+                    .put("maxHealth", unit.maxHealth)
+                    .put("dead", unit.dead);
+        } else if (entity instanceof Building building) {
+            result.put("kind", "building")
+                    .put("id", building.id)
+                    .put("type", building.block.name)
+                    .put("name", building.block.localizedName == null ? building.block.name : building.block.localizedName)
+                    .put("team", building.team.id)
+                    .put("x", building.x)
+                    .put("y", building.y)
+                    .put("health", building.health)
+                    .put("maxHealth", building.maxHealth)
+                    .put("dead", !building.isValid());
+        } else {
+            return result;
+        }
+        putSensor(result, "rotation", entity, LAccess.rotation);
+        putSensor(result, "size", entity, LAccess.size);
+        putSensor(result, "rangeTiles", entity, LAccess.range);
+        putSensor(result, "solid", entity, LAccess.solid);
+        return result;
+    }
+
+    private Jval unitJson(Unit unit) {
+        Jval result = Jval.newObject();
+        putSensor(result, "health", unit, LAccess.health);
+        putSensor(result, "maxHealth", unit, LAccess.maxHealth);
+        putSensor(result, "x", unit, LAccess.x);
+        putSensor(result, "y", unit, LAccess.y);
+        putSensor(result, "velocityX", unit, LAccess.velocityX);
+        putSensor(result, "velocityY", unit, LAccess.velocityY);
+        putSensor(result, "shootX", unit, LAccess.shootX);
+        putSensor(result, "shootY", unit, LAccess.shootY);
+        putSensor(result, "shooting", unit, LAccess.shooting);
+        putSensor(result, "boosting", unit, LAccess.boosting);
+        putSensor(result, "mining", unit, LAccess.mining);
+        putSensor(result, "mineX", unit, LAccess.mineX);
+        putSensor(result, "mineY", unit, LAccess.mineY);
+        putSensor(result, "buildX", unit, LAccess.buildX);
+        putSensor(result, "buildY", unit, LAccess.buildY);
+        putSensor(result, "speed", unit, LAccess.speed);
+        putSensor(result, "ammo", unit, LAccess.ammo);
+        putSensor(result, "ammoCapacity", unit, LAccess.ammoCapacity);
+        putSensor(result, "armor", unit, LAccess.armor);
+        putSensor(result, "shield", unit, LAccess.shield);
+        putSensor(result, "flag", unit, LAccess.flag);
+        putSensor(result, "controlled", unit, LAccess.controlled);
+        putSensor(result, "payloadCount", unit, LAccess.payloadCount);
+        putSensor(result, "totalPayload", unit, LAccess.totalPayload);
+        putSensor(result, "payloadCapacity", unit, LAccess.payloadCapacity);
+        putSensorObject(result, "building", unit, LAccess.building);
+        putSensorObject(result, "breaking", unit, LAccess.breaking);
+        putSensorObject(result, "payloadType", unit, LAccess.payloadType);
+        putSensorObject(result, "controller", unit, LAccess.controller);
+        putSensorObject(result, "firstItem", unit, LAccess.firstItem);
+        putSensorObject(result, "selectedBlock", unit, LAccess.selectedBlock);
+        putSensor(result, "selectedRotation", unit, LAccess.selectedRotation);
+        return result;
+    }
+
+    private Jval buildingJson(Building building) {
+        Jval result = Jval.newObject();
+        putSensor(result, "totalItems", building, LAccess.totalItems);
+        putSensorObject(result, "firstItem", building, LAccess.firstItem);
+        putSensor(result, "totalLiquids", building, LAccess.totalLiquids);
+        putSensor(result, "totalPower", building, LAccess.totalPower);
+        putSensor(result, "itemCapacity", building, LAccess.itemCapacity);
+        putSensor(result, "liquidCapacity", building, LAccess.liquidCapacity);
+        putSensor(result, "powerCapacity", building, LAccess.powerCapacity);
+        putSensor(result, "powerNetIn", building, LAccess.powerNetIn);
+        putSensor(result, "powerNetOut", building, LAccess.powerNetOut);
+        putSensor(result, "powerNetStored", building, LAccess.powerNetStored);
+        putSensor(result, "powerNetCapacity", building, LAccess.powerNetCapacity);
+        putSensor(result, "ammo", building, LAccess.ammo);
+        putSensor(result, "ammoCapacity", building, LAccess.ammoCapacity);
+        putSensor(result, "currentAmmoType", building, LAccess.currentAmmoType);
+        putSensor(result, "memoryCapacity", building, LAccess.memoryCapacity);
+        putSensor(result, "heat", building, LAccess.heat);
+        putSensor(result, "shield", building, LAccess.shield);
+        putSensor(result, "armor", building, LAccess.armor);
+        putSensor(result, "efficiency", building, LAccess.efficiency);
+        putSensor(result, "progress", building, LAccess.progress);
+        putSensor(result, "timescale", building, LAccess.timescale);
+        putSensor(result, "enabled", building, LAccess.enabled);
+        putSensor(result, "controlled", building, LAccess.controlled);
+        putSensor(result, "payloadCount", building, LAccess.payloadCount);
+        putSensor(result, "totalPayload", building, LAccess.totalPayload);
+        putSensor(result, "payloadCapacity", building, LAccess.payloadCapacity);
+        putSensor(result, "maxUnits", building, LAccess.maxUnits);
+        putSensor(result, "buildX", building, LAccess.buildX);
+        putSensor(result, "buildY", building, LAccess.buildY);
+        putSensorObject(result, "config", building, LAccess.config);
+        putSensorObject(result, "payloadType", building, LAccess.payloadType);
+        return result;
     }
 
     private String hex(byte[] bytes) {
@@ -1463,6 +1623,7 @@ public class ProbeMod extends Mod {
                 if (config != null) {
                     data.put("config", jsonConfig(config));
                 }
+                data.put("entity", entityJson(tile.build)).put("building", buildingJson(tile.build));
             }
             reply(command, data);
             return;
@@ -1537,6 +1698,7 @@ public class ProbeMod extends Mod {
             boolean includeUnits = request.getBool("includeUnits", true);
             boolean includeBuildings = request.getBool("includeBuildings", true);
             boolean includeEnemies = request.getBool("includeEnemies", false);
+            boolean fullDetail = "full".equals(request.getString("detail", ""));
             Team team = assistant != null ? assistant.team : Vars.state.rules.defaultTeam;
             Jval units = Jval.newArray();
             boolean unitsTruncated = false;
@@ -1549,7 +1711,7 @@ public class ProbeMod extends Mod {
                         unitsTruncated = true;
                         break;
                     }
-                    units.add(Jval.newObject()
+                    Jval entry = Jval.newObject()
                             .put("id", unit.id)
                             .put("type", unit.type.name)
                             .put("team", unit.team.id)
@@ -1557,7 +1719,10 @@ public class ProbeMod extends Mod {
                             .put("y", unit.y)
                             .put("health", unit.health)
                             .put("maxHealth", unit.maxHealth)
-                            .put("dead", unit.dead));
+                            .put("dead", unit.dead)
+                            .put("entity", entityJson(unit));
+                    if (fullDetail) entry.put("unit", unitJson(unit));
+                    units.add(entry);
                 }
             }
 
@@ -1604,6 +1769,8 @@ public class ProbeMod extends Mod {
                         if (building instanceof Turret.TurretBuild turret) {
                             entry.put("ammoTotal", turret.totalAmmo);
                         }
+                        entry.put("entity", entityJson(building));
+                        if (fullDetail) entry.put("building", buildingJson(building));
                         buildings.add(entry);
                     }
                 }
@@ -2978,7 +3145,7 @@ public class ProbeMod extends Mod {
                 replyError(command, "unit_not_found", "Unit not found or hidden by fog");
                 return;
             }
-            reply(command, Jval.newObject()
+            Jval data = Jval.newObject()
                     .put("id", unit.id)
                     .put("type", unit.type.name)
                     .put("team", unit.team.id)
@@ -2993,7 +3160,9 @@ public class ProbeMod extends Mod {
                     .put("flying", unit.type.flying)
                     .put("controller", unit.controller() == null ? "" : unit.controller().getClass().getSimpleName())
                     .put("item", unit.item() == null ? "" : unit.item().name)
-                    .put("itemAmount", unit.stack == null ? 0 : unit.stack.amount));
+                    .put("itemAmount", unit.stack == null ? 0 : unit.stack.amount);
+            data.put("entity", entityJson(unit)).put("unit", unitJson(unit));
+            reply(command, data);
             return;
         }
 
@@ -4129,13 +4298,24 @@ public class ProbeMod extends Mod {
                 .put("version", VERSION)
                 .put("tick", Vars.state.tick)
                 .put("timeMs", Time.millis())
+                .put("time", Vars.state.tick / 60.0 * 1000.0)
+                .put("second", Vars.state.tick / 60f)
+                .put("minute", Vars.state.tick / 3600f)
+                .put("server", Vars.net.server() || !Vars.net.active())
+                .put("client", Vars.net.client())
                 .put("map", Vars.state.map == null ? "" : Vars.state.map.name())
                 .put("worldWidth", Vars.world.width())
                 .put("worldHeight", Vars.world.height())
                 .put("wave", Vars.state.wave)
                 .put("wavetime", Vars.state.wavetime)
+                .put("waveSeconds", Vars.state.wavetime / 60f)
                 .put("waveTimer", Vars.state.rules.waveTimer)
                 .put("enemies", Vars.state.enemies)
+                .put("contentCounts", Jval.newObject()
+                        .put("blocks", Vars.content.blocks().size)
+                        .put("units", Vars.content.units().size)
+                        .put("items", Vars.content.items().size)
+                        .put("liquids", Vars.content.liquids().size))
                 .put("team", team.id)
                 .put("teamName", team.name)
                 .put("paused", Vars.state.isPaused())
@@ -5561,7 +5741,7 @@ public class ProbeMod extends Mod {
                         .put("rotation", property("integer")),
                         Jval.newArray().add("x").add("y"))));
         tools.add(tool("query_area",
-                "Read units and buildings within a radius around world coordinates in pixels (8 px per tile). includeUnits/includeBuildings default true; includeEnemies defaults false, so pass includeEnemies=true when searching for enemies.",
+                "Read units and buildings within a radius around world coordinates in pixels (8 px per tile). includeUnits/includeBuildings default true; includeEnemies defaults false, so pass includeEnemies=true when searching for enemies. Each row has entity; detail=full adds the unit/building sensor object.",
                 inputSchema(Jval.newObject()
                         .put("x", property("number").put("description", "world x in pixels"))
                         .put("y", property("number").put("description", "world y in pixels"))
@@ -5570,7 +5750,8 @@ public class ProbeMod extends Mod {
                         .put("maxBuildings", property("integer").put("maximum", 64))
                         .put("includeUnits", property("boolean"))
                         .put("includeBuildings", property("boolean"))
-                        .put("includeEnemies", property("boolean")),
+                        .put("includeEnemies", property("boolean"))
+                        .put("detail", property("string").put("enum", Jval.newArray().add("summary").add("full"))),
                         Jval.newArray().add("x").add("y"))));
         tools.add(tool("get_unit",
                 "Read one unit by unitId, including controller and cargo.",
