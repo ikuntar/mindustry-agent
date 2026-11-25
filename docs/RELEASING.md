@@ -31,14 +31,33 @@ scripts/publish-github.sh mindustry-agent
 
 The script asks for a GitHub PAT with repository-creation permission, creates
 `<your-login>/mindustry-agent` (empty, no README), adds a `github` remote, and
-pushes the current branch. The PAT is read without echo and is not written to
-`.git/config` or `.git-credentials`; the existing Gitea `origin` is untouched.
+pushes the current branch. The PAT is read from `GITHUB_PAT`, or from
+`~/.config/mindustry-agent/github_pat` (override with `GITHUB_PAT_FILE`), or
+from a hidden prompt if neither exists. It is not written to `.git/config` or
+`.git-credentials`; the existing Gitea `origin` is untouched.
 The push uses an isolated git config so a stale global `gh-proxy.com` rewrite or
 local proxy setting cannot break the upload.
 
+To store the PAT outside the repository:
+
+```bash
+mkdir -p ~/.config/mindustry-agent
+chmod 700 ~/.config/mindustry-agent
+read -r -s -p 'GitHub PAT: ' GITHUB_PAT
+printf '%s' "$GITHUB_PAT" > ~/.config/mindustry-agent/github_pat
+unset GITHUB_PAT
+chmod 600 ~/.config/mindustry-agent/github_pat
+```
+
+Do not put the PAT in an ignored folder inside the public repository; an
+untracked file can still be exposed by backups, archives, or a later
+`git add -f`. Prefer `~/.config/mindustry-agent/`.
+
 Use `scripts/publish-github.sh mindustry-agent --private` for a private repo.
 The script requires a classic PAT with `repo`, or a fine-grained PAT with
-Administration and Contents write access. It does not create a release or
+Contents read/write and Metadata read. Creating a new repository additionally
+needs repository-creation permission; an existing repository only needs
+Contents write to push. It does not create a release or
 upload the jar.
 
 1. Update `probe-mod/mod.json` and `ProbeMod.VERSION` together.

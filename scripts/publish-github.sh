@@ -2,16 +2,20 @@
 #
 # Create a GitHub repository and push this checkout to it.
 #
-# The PAT is read without echo and is never written to .git/config or
-# .git-credentials. It is passed to git through GIT_ASKPASS for this one push.
+# The PAT is read from GITHUB_PAT, or from
+# ~/.config/mindustry-agent/github_pat (override with GITHUB_PAT_FILE).
+# If neither exists, it is prompted without echo. It is never written to
+# .git/config or .git-credentials; it is passed to git through GIT_ASKPASS for
+# this one push.
 #
 # Usage:
 #   scripts/publish-github.sh [repo-name] [--private]
 #
-# Requires a GitHub PAT with repository creation permission:
+# Requires a GitHub PAT:
 #   - classic PAT: repo scope
-#   - fine-grained PAT: Administration (read/write) + Contents (read/write)
-#     for the target account/repository
+#   - fine-grained PAT: Contents (read/write) + Metadata (read)
+#   - creating a new repository additionally needs permission to create repos
+#     (Administration); an existing repo only needs Contents write to push
 #
 # The existing "origin" remote (Gitea) is left untouched. A separate
 # "github" remote is added or updated.
@@ -20,7 +24,7 @@ set -euo pipefail
 
 REPO_NAME="${1:-mindustry-agent}"
 if [[ "${REPO_NAME}" == "--help" || "${REPO_NAME}" == "-h" ]]; then
-    sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 fi
 VISIBILITY="public"
@@ -55,6 +59,15 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 PAT="${GITHUB_PAT:-}"
+PAT_FILE="${GITHUB_PAT_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/mindustry-agent/github_pat}"
+if [[ -z "${PAT}" && -f "${PAT_FILE}" ]]; then
+    PAT="$(<"${PAT_FILE}")"
+    PAT_MODE="$(stat -c '%a' "${PAT_FILE}" 2>/dev/null || true)"
+    if [[ "${PAT_MODE}" != "600" && "${PAT_MODE}" != "400" ]]; then
+        printf 'warning: %s has mode %s; use chmod 600 %s\n' \
+            "${PAT_FILE}" "${PAT_MODE:-unknown}" "${PAT_FILE}" >&2
+    fi
+fi
 if [[ -z "${PAT}" ]]; then
     printf 'GitHub PAT (input hidden): ' >&2
     IFS= read -r -s PAT
@@ -64,6 +77,8 @@ if [[ -z "${PAT}" ]]; then
     printf 'empty PAT\n' >&2
     exit 2
 fi
+PAT="${PAT//$'\r'/}"
+PAT="${PAT//$'\n'/}"
 
 umask 077
 TMP_DIR="$(mktemp -d)"
