@@ -153,7 +153,7 @@ A live Mindustry co-op assistant API for this game. You control the assistant un
 Endpoint: http://192.0.2.10:47600
 Bootstrap token: ***
 
-Use: GET /guide and GET /tools first. POST /session with the bootstrap token to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.
+Use: GET /guide and GET /tools first with Authorization: Bearer <bootstrap>. POST /session with Authorization: Bearer <bootstrap> to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.
 Action policy: there is no default retreat, idle targeting, or auto-fire. Move/attack/follow/build/mine only on an explicit action; do not repeat a failed action without reading its error.
 The bootstrap token is single-use; a world load rotates it (copy the new prompt); sessionToken survives world reloads; dataToken expires.
 ```
