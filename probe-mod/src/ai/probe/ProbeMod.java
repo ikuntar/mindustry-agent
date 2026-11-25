@@ -6136,21 +6136,12 @@ public class ProbeMod extends Mod {
 
     private String sessionPrompt() {
         String endpoint = preferredSessionUrl();
-        return "Mindustry Agent session\n\n"
+        return "Mindustry Agent session\n"
+                + "A live Mindustry co-op assistant API for this game. You control the assistant unit, not the human player.\n"
                 + "Endpoint: " + endpoint + "\n"
                 + "Bootstrap token: " + sessionBootstrapToken + "\n\n"
-                + "Use this game API for this session only.\n"
-                + "0. Read GET /guide first: it is the complete Mindustry primer, not just API notes. The bootstrap token is accepted read-only for /guide and /tools.\n"
-                + "1. POST /session with Authorization: Bearer " + sessionBootstrapToken + " (the bootstrap token above).\n"
-                + "2. Use the returned sessionToken as Authorization: Bearer <sessionToken returned by step 1>.\n"
-                + "3. GET /tools for the action names, required fields, and units.\n"
-                + "4. GET /context?detail=summary for the current state.\n"
-                + "5. POST /actions with {\"kind\":\"move_to\",\"x\":...,\"y\":...}; x/y are world pixels, not tiles. Poll GET /actions/{opId}.\n"
-                + "6. GET /guide for game rules.\n"
-                + "7. Use GET /events/wait?since=N&timeoutMs=15000&types=... to wait for events; timedOut=true means no event.\n"
-                + "8. pause/resume are rule-gated actions; do not use them to skip ticks, resources, or cooldowns. Other write actions fail while paused.\n"
-                + "9. Use the returned dataToken (not sessionToken) with GET /data/map/latest; write large files to disk. dataToken expires after 1h by default (410 after expiry); use POST /session/data-token to rotate it, and use ETag/If-None-Match for maps.\n"
-                + "sessionToken survives world reloads; the bootstrap token is single-use and a world reload rotates it.\n";
+                + "Use: GET /guide and GET /tools first. POST /session with the bootstrap token to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.\n"
+                + "The bootstrap token is single-use; sessionToken survives world reloads; dataToken expires.\n";
     }
 
     private void showSessionDialog() {

@@ -149,21 +149,16 @@ Content-Type: application/json
 
 ```text
 Mindustry Agent session
-
+A live Mindustry co-op assistant API for this game. You control the assistant unit, not the human player.
 Endpoint: http://192.0.2.10:47600
 Bootstrap token: ***
 
-Do this for this game session only:
-1. POST /session with the bootstrap token and keep the returned session token.
-2. GET /context?detail=summary to inspect the game.
-3. Use POST /actions for writes; poll GET /actions/{opId} until done/failed.
-4. GET /guide for complete game rules; optional GET /guide?topic=build or topic=economy for a short checklist.
-5. Do not use mock state. Do not ask questions. The token is valid only while
-   this game is running.
-
-If your host supports shell, use curl. If your host supports MCP, the optional
-MCP endpoint is http://192.0.2.10:47600/mcp with the same token.
+Use: GET /guide and GET /tools first. POST /session with the bootstrap token to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.
+The bootstrap token is single-use; sessionToken survives world reloads; dataToken expires.
 ```
+
+`GET /guide` 和 `GET /tools` 接受未使用的 bootstrap token；后续动作必须换成
+sessionToken。需要重新接入时，在 UI 设置里 `Refresh token`，再复制新的 prompt。
 
 要点：
 
@@ -369,7 +364,7 @@ POST /mcp   MCP Streamable HTTP
 - `tools/list`：35 个核心工具
 - `tools/call`：复用现有游戏动作队列，返回 MCP text content
 - `resources/list` / `resources/read`：`mindustry://guide`
-- `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
+- `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`；这些是可选的**任务提示词**，会追加 `gameGuide()`，不是 host 的 system prompt
 - `ping`
 - 错误使用 JSON-RPC 错误码；未知方法 `-32601`
 - 鉴权：`Authorization: Bearer <sessionToken>`；`POST /session` 用一次性 bootstrap。
@@ -511,7 +506,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - 35 个核心工具与 REST 共用 `toolsJson()` schema
 - `Mcp-Session-Id`
 - `resources/list` / `resources/read`：`mindustry://guide`
-- `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
+- `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`；这些是可选的**任务提示词**，会追加 `gameGuide()`，不是 host 的 system prompt
 - 已用官方 `@modelcontextprotocol/sdk` 验证 connect/list/call/resources/prompts
 - 尚未做：GET SSE、完整兼容性矩阵、bootstrap token 直接用来初始化
 

@@ -8,6 +8,8 @@
   breaking rename for a project that is still pre-1.0.
 - Add the in-game settings panel for session port/LAN binding, bootstrap-token
   refresh, and editable/copyable session prompt.
+- Shorten the generated session prompt to state what the API is and the minimum
+  handshake/usage steps; detailed rules remain in `/guide`.
 - Keep the Java package `ai.probe` and repository folder `probe-mod` for now;
   neither is part of the user-facing mod identity.
 
