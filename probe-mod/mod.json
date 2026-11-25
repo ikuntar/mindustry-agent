@@ -6,6 +6,6 @@
   "version": "0.3.0",
   "minGameVersion": "160",
   "main": "ai.probe.ProbeMod",
-  "repo": "https://github.com/kuutar/mindustry-agent",
+  "repo": "https://github.com/ikuntar/mindustry-agent",
   "java": true
 }

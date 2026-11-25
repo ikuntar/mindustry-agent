@@ -33,7 +33,7 @@ The session API is the product path used by the in-game assistant. The Node MCP 
 
 ## Install the mod
 
-Download `mindustry-agent-<version>.jar` from the [GitHub Releases page](https://github.com/kuutar/mindustry-agent/releases) and place it in the game's mods directory:
+Download `mindustry-agent-<version>.jar` from the [GitHub Releases page](https://github.com/ikuntar/mindustry-agent/releases) and place it in the game's mods directory:
 
 ```text
 Linux:   ~/.local/share/Mindustry/mods/
