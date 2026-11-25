@@ -148,14 +148,14 @@ case "${HTTP_CODE}" in
         FULL_NAME="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["full_name"])' "${RESPONSE}")"
         printf 'Created %s\n' "${FULL_NAME}" >&2
         ;;
-    422)
-        # The repository may already exist. Only continue if it is readable
-        # by this PAT; otherwise show GitHub's validation error.
+    403|422)
+        # The repository may already exist, or the token may lack repository
+        # creation permission. Only continue if this token can read the repo.
         if api "https://api.github.com/repos/${LOGIN}/${REPO_NAME}" >/dev/null 2>&1; then
             printf 'Repository already exists; continuing with the push.\n' >&2
         else
             cat "${RESPONSE}" >&2
-            printf '\nGitHub rejected repository creation (HTTP 422).\n' >&2
+            printf '\nGitHub rejected repository creation (HTTP %s).\n' "${HTTP_CODE}" >&2
             exit 1
         fi
         ;;
