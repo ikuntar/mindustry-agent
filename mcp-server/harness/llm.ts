@@ -45,7 +45,7 @@ const transport = new StdioClientTransport({
   stderr: "inherit",
 });
 
-const client = new Client({ name: "mindustry-ai-llm-harness", version: "0.1.0" });
+const client = new Client({ name: "mindustry-agent-llm-harness", version: "0.1.0" });
 
 function parse(result: unknown): { text: string; parsed?: unknown } {
   const content = (result as { content?: { type: string; text?: string }[] }).content ?? [];

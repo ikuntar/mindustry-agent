@@ -35,7 +35,7 @@
 - [x] Probe/真实 adapter 动作：deconstruct/repair/cancel/follow 均有入口和实测；follow 语义仍简化
 - [x] 真实 adapter 事件日志：事件环已接，见 `get_events`
 - [x] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
-- [x] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手：`/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol/version，`PROBE_REQUIRE_AUTH=1` 时校验 token
+- [x] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手：`/tmp/mindustry-agent-probe/bridge-info.json`，`hello` 返回 protocol/version，`PROBE_REQUIRE_AUTH=1` 时校验 token
 - [x] 游戏线程动作队列 + 每帧预算：socket 只入队，游戏 `update` 每帧最多处理 50 条；LLM 调用不在游戏线程
 - [x] 心跳与连接重试：probe `ping`；adapter 每 `PROBE_HEARTBEAT_MS`（默认 15s）发心跳，连接失败重试 3 次；`PROBE_HEARTBEAT_MS=200` 固定场景通过
 - [x] 运行中服务器重启重连：`ProbeGameAdapter` 在 fake probe 崩溃并同端口重启后自动重连并读到新 `map`；单测 16/16
@@ -173,8 +173,8 @@
 - [x] Logic 全局量（常用）：context 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；剩余 `@thisx/@thisy/@links/@ipt` 仅在控制逻辑处理器时需要
 - [x] Logic processor 指南：`docs/LOGIC-PROCESSOR-GUIDE.md`，含全局变量/sensor/control/radar/ucontrol/memory/display/特权指令/API 名字映射；打包到 `/docs/LOGIC-PROCESSOR-GUIDE.md`
 - [x] 敌方固定出生点：`get_spawns` 读取 `WaveSpawner.getSpawns()`，返回 tile/world 坐标、waveTeam、dropZoneRadius、show/hideSpawns 与 fog 可见性；session smoke 验证 200/数组
-- [x] Release prep（0.2.0）：默认 session bind 改为 loopback；测试辅助 op 默认关闭；增加 GPL-3.0、SECURITY、CI、`fetch-mindustry.sh`、`release.sh`、README 重写与发布校验
-- [x] 游戏内设置：Settings -> AI Probe / session 弹窗 Settings；端口+LAN 实时 rebind、刷新 bootstrap token、编辑/重置/复制 session prompt
+- [x] Release prep（0.3.0）：默认 session bind 改为 loopback；测试辅助 op 默认关闭；增加 GPL-3.0、SECURITY、CI、`fetch-mindustry.sh`、`release.sh`、README 重写与发布校验
+- [x] 游戏内设置：Settings -> Mindustry Agent / session 弹窗 Settings；端口+LAN 实时 rebind、刷新 bootstrap token、编辑/重置/复制 session prompt
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [x] 正式构建默认关闭 raw debug op（give/spawn_enemy/set_floor 等）；`PROBE_ENABLE_DEBUG_OPS=1` 仅用于测试
 - [x] issue #34 余项：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明已完成
@@ -234,4 +234,4 @@
 
 见 `docs/OPEN-QUESTIONS.md`。未落 TASKS 的设计项视为未收尾。
 
-- [x] 自定义 `ai-probe-ai-alpha`/`ai-beta`/`ai-gamma` 类型：按核心等级复制能力，`playerControllable=false`，避免玩家死亡时原版自动选中助手导致 ValidateException
+- [x] 自定义 `mindustry-agent-ai-alpha`/`ai-beta`/`ai-gamma` 类型：按核心等级复制能力，`playerControllable=false`，避免玩家死亡时原版自动选中助手导致 ValidateException

@@ -1,5 +1,5 @@
 import net from "node:net";
-const discoveryPath = "/tmp/mindustry-ai-probe/bridge-info.json";
+const discoveryPath = "/tmp/mindustry-agent-probe/bridge-info.json";
 const fs = await import("node:fs");
 const info = JSON.parse(fs.readFileSync(discoveryPath, "utf8"));
 const base = `http://127.0.0.1:${info.sessionPort}`;

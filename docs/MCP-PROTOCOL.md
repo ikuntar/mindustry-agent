@@ -313,7 +313,7 @@ deconstruct 等到目标消失，mine 等到携带量增加，configure 等到 c
 
 行为：
 
-- 64×64 地图，两队；助手自定义 `ai-probe-ai-alpha`（外观为 alpha），玩家 alpha，同队 dagger，敌方 dagger。
+- 64×64 地图，两队；助手自定义 `mindustry-agent-ai-alpha`（外观为 alpha），玩家 alpha，同队 dagger，敌方 dagger。
 - 两个核心（10,10 / 30,30）；资源 copper/lead/graphite；若干传送带/分拣器/处理器。
 - 动作按 tick 推进（默认 50ms）；`autoTick=false` 时可由测试调用 `advance(ms)`。
 - 建造每块扣 10 copper，逐块完成；拆除/修理/取物/配置/指挥/附身/释放/重生都有基本校验。

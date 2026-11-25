@@ -5,14 +5,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="$(node -p "require('$ROOT/probe-mod/mod.json').version")"
 OUT="$ROOT/release"
-JAR="$ROOT/probe-mod/build/ai-probe.jar"
+JAR="$ROOT/probe-mod/build/mindustry-agent.jar"
 
 mkdir -p "$OUT"
 "$ROOT/probe-mod/build-universal.sh"
-cp "$JAR" "$OUT/ai-probe-$VERSION.jar"
+cp "$JAR" "$OUT/mindustry-agent-$VERSION.jar"
 (
   cd "$OUT"
-  sha256sum "ai-probe-$VERSION.jar" > SHA256SUMS
+  sha256sum "mindustry-agent-$VERSION.jar" > SHA256SUMS
 )
-printf 'release artifact: %s\n' "$OUT/ai-probe-$VERSION.jar"
+printf 'release artifact: %s\n' "$OUT/mindustry-agent-$VERSION.jar"
 cat "$OUT/SHA256SUMS"

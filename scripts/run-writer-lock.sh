@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_DIR="$ROOT/refs/mindustry-v160.8"
 SERVER_LOG="$ROOT/artifacts/writer-lock-server.log"
-DISCOVERY="/tmp/mindustry-ai-probe/bridge-info.json"
+DISCOVERY="/tmp/mindustry-agent-probe/bridge-info.json"
 
 mkdir -p "$ROOT/artifacts"
 cleanup() {

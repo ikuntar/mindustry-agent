@@ -60,7 +60,7 @@ defaultTeam = sharded
 - `build` 走真实 `BuildPlan` + `BuilderComp` 后可以完成：`query_area` 能从 MCP 侧读回 `conveyor`（health 45），不是只返回 accepted。
 - Ground Zero 测试服曾出现 `build` 返回成功但方块不落地：手动 `host` sector 地图没有建立 campaign 科技树，`conveyor.unlockedNowHost()` 为 false；`Build.validPlace` 不检查解锁，`BuilderComp.updateBuildLogic` 会静默丢弃计划。现在 `build` 对 campaign 未解锁返回 `block_locked`，op 只有目标 tile 真正出现方块才 `done`，计划被移除则 `failed/build_dropped`；`scripts/start-ground-zero-server.sh` 作为测试 fixture 显式 unlock 方块。
 - 关键发现：`spawnedByCore=true` 的非 `Player` 单位会被 `UnitComp.update()` 每帧 `Call.unitDespawn`。助手身体必须 `spawnedByCore=false`，用自己的 `isHome` 标记；附身时显式 despawn home body。
-- 助手身体使用 mod 自定义 `ai-probe-ai-alpha`（参数由核心类型复制，外观基于 alpha），`playerControllable=false`、`isAI=false`、`isPlayer=false`，避免被原版自动控制逻辑选中。
+- 助手身体使用 mod 自定义 `mindustry-agent-ai-alpha`（参数由核心类型复制，外观基于 alpha），`playerControllable=false`、`isAI=false`、`isPlayer=false`，避免被原版自动控制逻辑选中。
 
 ### MCP 真实 adapter 验证
 
@@ -124,7 +124,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - `query_area`：building snapshot 增加 `itemList` 和炮塔 `ammoTotal`；固定场景 turret `ammoTotal=6`。
 - `get_tile` 返回 `config`；固定场景 sorter `configure {item:"copper"}` 回读 `"copper"`，switch `configure true/false` 分别回读 `"true"`/`"false"`。布尔配置曾因 `asInt()` 抛 `Not a number`，已改为 `asBool()`。
 - `get_config_schema`：probe 从真实 `Vars.content.block` 读取；固定场景 sorter `configurable=true` 且 values 含 `copper`，unloader 含 `north`，switch 字段为 `boolean`，message/processor 字段为 `string`。
-- 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。固定场景脚本现在默认以 `PROBE_REQUIRE_AUTH=1` 运行，seed、raw probe、MCP adapter 全部通过 token 握手。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
+- 传输层：probe 写 `/tmp/mindustry-agent-probe/bridge-info.json`，`hello` 返回 protocol=1/version=0.1.0；`PROBE_REQUIRE_AUTH=1` 时按 discovery token 校验。动作 socket 只入队，游戏每帧最多处理 50 条。`ping`/heartbeat 与连接重试已接；`PROBE_HEARTBEAT_MS=200` 固定场景通过。固定场景脚本现在默认以 `PROBE_REQUIRE_AUTH=1` 运行，seed、raw probe、MCP adapter 全部通过 token 握手。fake probe 同端口重启后 adapter 自动重连并读到新 map，单测 16/16。
 - 状态一致性审计（2026-11-22）：`build`/`deconstruct`/`repair`/`mine` 的 op 只有在游戏状态真正变化后才结束；`build_dropped`、`deconstruct_dropped`、`target_gone`、`assistant_gone` 都会失败而不是假 done。`configure` 在调用后回读 `building.config()`，未应用则 `configure_rejected`。`stop` 会清空移动/攻击/跟随/采矿/建造目标并把 running op 标为 cancelled；`cancel` 对 mine/build/deconstruct/repair 做同样清理。助手死亡或附身换体后，旧 op 以 `assistant_gone` 结束。`mine` 以开始时携带量为基线，不会因为身上已有物品而立即 done。`command_units` 的目标 unit/building 不存在时返回 `target_not_found`。
 - HTTP 健壮性（2026-11-22）：畸形 request line、空请求、超大 header、chunked body 均返回 400 并关闭 socket；连接数上限 64；accept 瞬时异常不再停服；`eventSeq`/`mapRevision` 改为 volatile，`/events/wait` 的 gameOver/won 读游戏线程缓存；`dataBaseUrl` 不再回显客户端 `Host`。
 - 会话入口收口（2026-11-22）：`/context` 只接受 `detail/radius/since/includeEnemies/maxUnits/maxBytes`；`/mcp` 的 `tools/call` 同样走 34 个工具白名单，`build_plan` 走 session 展开路径。`/context?op=...` 和 `/mcp {name:"set_paused"}` 均实测被拒。
@@ -132,7 +132,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 命令超时（2026-11-22）：队列 Command 带 `started/cancelled`；HTTP 超时未开始时 503 `not_executed` 且不会执行，已开始则 504 `execution_unknown`。实测游戏线程 stall 6.5s 时返回 503、`moved=0`。
 - 失败会返回错误或保持 running，不是假成功。
 
-- 会话能力对齐（2026-11-23）：session `/tools` 27 个，新增 `possess`/`respawn`/`pause`/`resume`/`command_units`；`session-api-smoke` 断言 27 个工具、session `pause`/`resume`、暂停写门控。`possess` 经 session 实测 dagger 借用、`assistant.type=dagger`、`release` 回 home；`respawn` 按 `core-foundation`/`core-nucleus` 分别得到 `ai-probe-ai-beta`/`ai-probe-ai-gamma`。`Rules.pauseDisabled=true` 时 `pause` 返回 `pause_disabled`；MCP `/mcp` tools/list 27 个。
+- 会话能力对齐（2026-11-23）：session `/tools` 27 个，新增 `possess`/`respawn`/`pause`/`resume`/`command_units`；`session-api-smoke` 断言 27 个工具、session `pause`/`resume`、暂停写门控。`possess` 经 session 实测 dagger 借用、`assistant.type=dagger`、`release` 回 home；`respawn` 按 `core-foundation`/`core-nucleus` 分别得到 `mindustry-agent-ai-beta`/`mindustry-agent-ai-gamma`。`Rules.pauseDisabled=true` 时 `pause` 返回 `pause_disabled`；MCP `/mcp` tools/list 27 个。
 
 - 玩家能力补齐（2026-11-23）：`get_config_schema {block:"ground-factory"}` 返回 3 个可选方案（0 dagger、1 crawler、2 nova）；`configure {buildingId,value:1}` 回读 `config=1`。`get_tech_tree {content:"duo"}` 返回 parent/children/requirements/objectives/researched/blockedReason。`control_building` 控制 Fortress 同队 `duo`，`context.control.mode=building`、unitType=`block`；`attack` 对敌方 container 返回 done；`release_building` 不删除建筑。payload-capable mega 附身后 `pickup_payload` 同队 dagger、`drop_payload` 清空 payload。session `/tools` 34 个，session smoke 和 `/mcp` smoke 均通过；boost 对无 canBoost 的 body 返回 `cannot_boost`。
 
@@ -170,7 +170,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - Logic sensor 实体层（2026-11-24）：`get_unit` 返回 `entity+unit`，`get_tile` 有建筑时返回 `entity+building`，`query_area` 默认摘要、`detail:"full"` 才附加完整对象；字段走 `Senseable.sense/senseObject(LAccess)`，unsupported 省略；smoke 断言 `unit.shooting` 与 `building.totalItems` 可读。
 - Logic 指南与全局量（2026-11-24）：新增 `docs/LOGIC-PROCESSOR-GUIDE.md`，打包到 jar 的 `/docs/LOGIC-PROCESSOR-GUIDE.md`；`context` 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；smoke 验证 docs 200 与 context 字段。
 - 固定出生点（2026-11-24）：新增 `get_spawns`，数据来自 `WaveSpawner.getSpawns()` 的 `Blocks.spawn` 覆盖层；Ground Zero smoke 返回 `count=1`、`showSpawns=false`、`hideSpawns=true`，`spawns` 为数组。Ground Zero 的 minimap 默认隐藏出生点，但 API 在无雾时仍返回固定地图点；有雾时只返回可见点（除非 `hideSpawns=false`）。
-- Release prep（2026-11-25）：mod 升到 `0.2.0`；默认 session bind 改为 `127.0.0.1`；测试辅助 op 默认关闭（`PROBE_ENABLE_DEBUG_OPS=1` 才开启）；新增 GPL-3.0、CI、`fetch-mindustry.sh`、`release.sh`。`session-api-smoke` 在 Ground Zero 全绿；关闭 debug 后 raw `give` 返回 `debug_disabled`，`hello` 正常。
+- Release prep（2026-11-25）：mod 升到 `0.3.0`；默认 session bind 改为 `127.0.0.1`；测试辅助 op 默认关闭（`PROBE_ENABLE_DEBUG_OPS=1` 才开启）；新增 GPL-3.0、CI、`fetch-mindustry.sh`、`release.sh`。`session-api-smoke` 在 Ground Zero 全绿；关闭 debug 后 raw `give` 返回 `debug_disabled`，`hello` 正常。
 
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。
@@ -193,4 +193,4 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - issue #30（2026-11-23）：`/context.objectives` 返回全部（上限 64），补 `type/progress/parents/flagsAdded/flagsRemoved`，`rules.objectiveFlags`；Ground Zero fixture 实测 17 条。
 - issue #31（2026-11-23）：新增直连 `GET /health`；`events/wait.paused` 直接读当前状态；`query_area` 半径上限 256px、units/buildings 各 64 条并返回 `truncated`。实测 session smoke：health 200、query cap 256、context fields 完整。
 - 崩溃（2026-11-23）：客户端 `ValidateException: Player attempted to control invalid unit`。日志与 `InputHandler.update` 实现显示：玩家死亡后原版会找 `type == controlledType && playerControllable && !dead` 的最近单位并自动 `unitControl`；助手若用普通 `alpha` 类型会被选中，而 `ProbeController` 不是 AI controller，服务端校验失败。
-  修复：助手改为 mod 内的 `ai-probe-ai-alpha` 类型（从 alpha 复制外观/武器/采矿/建造参数，`playerControllable=false`、`useUnitCap=false`、hidden），因此不会被原版自动复活逻辑选中；同时保留 player/justSwitch 保护和 `playerTransitioning` 清理门控。
+  修复：助手改为 mod 内的 `mindustry-agent-ai-alpha` 类型（从 alpha 复制外观/武器/采矿/建造参数，`playerControllable=false`、`useUnitCap=false`、hidden），因此不会被原版自动复活逻辑选中；同时保留 player/justSwitch 保护和 `playerTransitioning` 清理门控。

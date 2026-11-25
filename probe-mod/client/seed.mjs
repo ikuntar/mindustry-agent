@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import net from "node:net";
 
-const discoveryPath = process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+const discoveryPath = process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-agent-probe", "bridge-info.json");
 let token;
 try {
   token = JSON.parse(fs.readFileSync(discoveryPath, "utf8")).token;

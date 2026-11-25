@@ -12,7 +12,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MCP_DIR="$ROOT/mcp-server"
 ENTRY="$MCP_DIR/dist/src/index.js"
-DISCOVERY="${PROBE_DISCOVERY:-/tmp/mindustry-ai-probe/bridge-info.json}"
+DISCOVERY="${PROBE_DISCOVERY:-/tmp/mindustry-agent-probe/bridge-info.json}"
 
 if [[ "${1:-}" == "--check" ]]; then
   if [[ ! -f "$DISCOVERY" ]]; then

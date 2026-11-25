@@ -1,4 +1,4 @@
-# mindustry-ai
+# mindustry-agent
 
 An experimental co-op AI assistant for [Mindustry](https://github.com/Anuken/Mindustry), exposed as a mod, a local session API, and MCP tools.
 
@@ -33,7 +33,7 @@ The session API is the product path used by the in-game assistant. The Node MCP 
 
 ## Install the mod
 
-Download `ai-probe-<version>.jar` from the [GitHub Releases page](https://github.com/kuutar/mindustry-ai/releases) and place it in the game's mods directory:
+Download `mindustry-agent-<version>.jar` from the [GitHub Releases page](https://github.com/kuutar/mindustry-agent/releases) and place it in the game's mods directory:
 
 ```text
 Linux:   ~/.local/share/Mindustry/mods/
@@ -48,6 +48,8 @@ Mods -> Import Mod -> Import File -> choose the jar/zip
 ```
 
 The universal jar contains both JVM classes and `classes.dex`; desktop and Android use different parts of the same archive.
+
+If you are upgrading from the old `AI Probe` name, remove the old `ai-probe.jar` before installing `mindustry-agent.jar`. Do not keep both mod jars loaded: they use different mod ids and both would spawn an assistant. Old saves using the previous mod id are not migrated.
 
 The jar is intentionally a probe/assistant mod, not a standalone client. Start Mindustry, load a map, then use the session prompt shown by the mod to connect a harness.
 
@@ -105,7 +107,7 @@ Read [docs/SESSION-API.md](docs/SESSION-API.md) for endpoints and [docs/API-DATA
 
 ### In-game settings
 
-Open `Settings -> AI Probe`, or use the `Settings` button in the session dialog:
+Open `Settings -> Mindustry Agent`, or use the `Settings` button in the session dialog:
 
 - change the session port (1024–65535) and rebind the HTTP server immediately
 - opt into LAN binding with the `0.0.0.0` checkbox

@@ -27,7 +27,7 @@ Android 模拟器已通过游戏内导入加载，真机仍需验收。
 目标：
 
 ```text
-Mindustry + ai-probe.jar
+Mindustry + mindustry-agent.jar
   ├── 游戏内工具实现
   ├── HTTP session/control API
   ├── HTTP data plane
@@ -84,7 +84,7 @@ EndpointInfo:
 
 ### 3.1 游戏内设置
 
-客户端非 headless 模式会在 `Settings -> AI Probe` 注册设置入口；世界加载弹窗也有
+客户端非 headless 模式会在 `Settings -> Mindustry Agent` 注册设置入口；世界加载弹窗也有
 `Settings` 按钮。设置面板可以：
 
 - 修改 session 端口（1024–65535）并立即停止/重启 HTTP server
@@ -92,8 +92,8 @@ EndpointInfo:
 - 刷新一次性 bootstrap token
 - 编辑、重置、复制 session prompt；编辑只影响复制文本，不改变 API 行为
 
-端口和 LAN 选项保存到 Mindustry settings（`ai-probe.session-port`、
-`ai-probe.session-lan`）。`PROBE_SESSION_PORT` / `PROBE_SESSION_BIND` 环境变量在进程
+端口和 LAN 选项保存到 Mindustry settings（`mindustry-agent.session-port`、
+`mindustry-agent.session-lan`）。`PROBE_SESSION_PORT` / `PROBE_SESSION_BIND` 环境变量在进程
 启动时优先，覆盖保存值。rebind 不会改变已有 sessionToken、dataToken 或游戏状态；
 客户端需要连接新 endpoint。若端口被占用，面板显示失败并恢复旧端口。
 
@@ -148,7 +148,7 @@ Content-Type: application/json
 弹窗生成简短、可直接粘贴的 prompt：
 
 ```text
-Mindustry AI session
+Mindustry Agent session
 
 Endpoint: http://192.0.2.10:47600
 Bootstrap token: ***
@@ -363,7 +363,7 @@ POST /mcp   MCP Streamable HTTP
 
 已实现最小子集：
 
-- `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-ai`、
+- `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-agent`、
   `Mcp-Session-Id`
 - `notifications/initialized`：202，无 body
 - `tools/list`：35 个核心工具
@@ -401,9 +401,9 @@ POST /mcp   MCP Streamable HTTP
 
 安装位置：
 
-- Linux 客户端：`~/.local/share/Mindustry/mods/ai-probe.jar`
-- Windows 客户端：`%APPDATA%\Mindustry\mods\ai-probe.jar`
-- 专用服：`<server>/config/mods/ai-probe.jar`
+- Linux 客户端：`~/.local/share/Mindustry/mods/mindustry-agent.jar`
+- Windows 客户端：`%APPDATA%\Mindustry\mods\mindustry-agent.jar`
+- 专用服：`<server>/config/mods/mindustry-agent.jar`
 - 同一端口同一时间只能有一个实例监听 `47600`；不要同时开客户端和专用服。
 
 验收方式：
@@ -416,7 +416,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
   java -jar Mindustry.jar
 ```
 
-实测：Mindustry v160.8 主菜单加载 mod 后自动进入 Fortress，出现 `Mindustry AI`
+实测：Mindustry v160.8 主菜单加载 mod 后自动进入 Fortress，出现 `Mindustry Agent`
 弹窗，显示 LAN endpoint、bootstrap token、6 步 API 说明和
 `Copy session prompt` / `Close` 按钮。截图在 `artifacts/xvfb-popup.png`。
 
@@ -628,7 +628,7 @@ MCP 冒烟：
 
 ```text
 session 200
-initialize 200 mindustry-ai 2024-11-05
+initialize 200 mindustry-agent 2024-11-05
 initialized notification 202
 tools/list 200 26
 tools/call get_context 200 Fortress 928 584

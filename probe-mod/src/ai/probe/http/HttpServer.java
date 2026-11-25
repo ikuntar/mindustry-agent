@@ -50,7 +50,7 @@ public final class HttpServer {
         server = new ServerSocket();
         server.bind(address, backlog);
         running = true;
-        Thread accept = new Thread(this::acceptLoop, "ai-probe-http-accept");
+        Thread accept = new Thread(this::acceptLoop, "mindustry-agent-http-accept");
         accept.setDaemon(true);
         accept.start();
     }
@@ -91,7 +91,7 @@ public final class HttpServer {
                 } catch (RuntimeException error) {
                     permits.release();
                     closeQuietly(socket);
-                    arc.util.Log.err("[ai-probe] http executor rejected connection", error);
+                    arc.util.Log.err("[mindustry-agent] http executor rejected connection", error);
                 }
             } catch (IOException error) {
                 if (!running || server == null || server.isClosed()) {
@@ -100,7 +100,7 @@ public final class HttpServer {
                 }
                 // A transient accept failure (EMFILE, reset, ...) must not
                 // permanently disable the data/session HTTP server.
-                arc.util.Log.err("[ai-probe] http accept failed; continuing", error);
+                arc.util.Log.err("[mindustry-agent] http accept failed; continuing", error);
                 try {
                     Thread.sleep(50L);
                 } catch (InterruptedException interrupted) {
@@ -139,7 +139,7 @@ public final class HttpServer {
             if (exchange == null) {
                 sendBadRequest(socket);
             }
-            arc.util.Log.err("[ai-probe] http handler failed", error);
+            arc.util.Log.err("[mindustry-agent] http handler failed", error);
         } finally {
             if (eventPermitHeld) eventPermits.release();
             if (permitHeld) permits.release();

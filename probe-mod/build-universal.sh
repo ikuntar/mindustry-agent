@@ -25,7 +25,7 @@ if [[ -z "$ANDROID_JAR" || ! -f "$ANDROID_JAR" ]]; then
 fi
 
 "$ROOT/build.sh"
-cp "$ROOT/build/ai-probe.jar" "$ROOT/build/ai-probe-desktop.jar"
+cp "$ROOT/build/mindustry-agent.jar" "$ROOT/build/mindustry-agent-desktop.jar"
 rm -rf "$ROOT/build/dex"
 mkdir -p "$ROOT/build/dex"
 
@@ -35,15 +35,15 @@ mkdir -p "$ROOT/build/dex"
   --output "$ROOT/build/dex" \
   --classpath "$ROOT/../refs/mindustry-v160.8/server-release.jar" \
   --lib "$ANDROID_JAR" \
-  "$ROOT/build/ai-probe-desktop.jar"
+  "$ROOT/build/mindustry-agent-desktop.jar"
 
 if [[ ! -f "$ROOT/build/dex/classes.dex" ]]; then
   printf 'd8 did not produce classes.dex\n' >&2
   exit 1
 fi
 
-cp "$ROOT/build/ai-probe-desktop.jar" "$ROOT/build/ai-probe.jar"
-jar --update --file "$ROOT/build/ai-probe.jar" -C "$ROOT/build/dex" classes.dex
+cp "$ROOT/build/mindustry-agent-desktop.jar" "$ROOT/build/mindustry-agent.jar"
+jar --update --file "$ROOT/build/mindustry-agent.jar" -C "$ROOT/build/dex" classes.dex
 
-printf 'built universal: %s\n' "$ROOT/build/ai-probe.jar"
-jar tf "$ROOT/build/ai-probe.jar" | grep -E '^(mod.json|classes.dex|ai/probe/ProbeMod.class)$' || true
+printf 'built universal: %s\n' "$ROOT/build/mindustry-agent.jar"
+jar tf "$ROOT/build/mindustry-agent.jar" | grep -E '^(mod.json|classes.dex|ai/probe/ProbeMod.class)$' || true

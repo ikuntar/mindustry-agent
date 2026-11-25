@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- Rename the project, mod id, display name, discovery directory, and release
+  artifact from `mindustry-ai`/`ai-probe` to `mindustry-agent`/`Mindustry Agent`.
+- Old saves using the previous mod id are not migrated; this is an intentional
+  breaking rename for a project that is still pre-1.0.
+- Add the in-game settings panel for session port/LAN binding, bootstrap-token
+  refresh, and editable/copyable session prompt.
+- Keep the Java package `ai.probe` and repository folder `probe-mod` for now;
+  neither is part of the user-facing mod identity.
+
 ## 0.2.0
 
 - Add `get_spawns` for fixed wave spawn points (`WaveSpawner.getSpawns()`), with

@@ -51,7 +51,7 @@ Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
   物品转移距离和建筑接受规则限制。
 - 一个玩家同时只有一个可控身体；死亡后从核心重生。AI 助手也遵守这一点，
   但它的身体由 mod 管理，`isHome`/`possessing` 表示当前身体状态。
-- 保存/读档时，助手 home body 会作为单位存入存档；新 mod 用 `Unit.flag` 标记并在 world load 清理旧助手，避免每次读档多一个助手。助手使用 mod 自定义的 `ai-probe-ai-alpha` 类型（外观基于 alpha，`playerControllable=false`），不会被玩家死亡后的自动选体逻辑选中。
+- 保存/读档时，助手 home body 会作为单位存入存档；新 mod 用 `Unit.flag` 标记并在 world load 清理旧助手，避免每次读档多一个助手。助手使用 mod 自定义的 `mindustry-agent-ai-alpha` 类型（外观基于 alpha，`playerControllable=false`），不会被玩家死亡后的自动选体逻辑选中。
 - `get_context.assistantBodies` 只列出由 `ProbeController` 控制的助手身体；
   同类型的普通单位可能是玩家身体（controller=Player）或普通 AI（controller=CommandAI），
   不是助手。`release` 会故意把借体留在世界并恢复其 AI，因此看到借体 + 新 home body

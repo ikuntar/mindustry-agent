@@ -16,8 +16,8 @@ scripts/fetch-mindustry.sh
 scripts/release.sh
 ```
 
-This builds `probe-mod/build/ai-probe.jar`, copies it to
-`release/ai-probe-<version>.jar`, and writes `release/SHA256SUMS`.
+This builds `probe-mod/build/mindustry-agent.jar`, copies it to
+`release/mindustry-agent-<version>.jar`, and writes `release/SHA256SUMS`.
 
 ## GitHub release
 
@@ -26,14 +26,14 @@ This builds `probe-mod/build/ai-probe.jar`, copies it to
 3. Commit and push.
 4. Create a tag matching the mod version:
    ```bash
-   git tag v0.2.0
-   git push origin v0.2.0
+   git tag v0.3.0
+   git push origin v0.3.0
    ```
-5. Attach `release/ai-probe-<version>.jar` and `release/SHA256SUMS` to the
+5. Attach `release/mindustry-agent-<version>.jar` and `release/SHA256SUMS` to the
    GitHub release.
 6. Verify the jar is non-zero and opens with `jar tf`:
    ```bash
-   jar tf release/ai-probe-<version>.jar | head
+   jar tf release/mindustry-agent-<version>.jar | head
    ```
 
 Do not attach `refs/`, `artifacts/`, probe discovery files, logs, or tokens.

@@ -1,4 +1,4 @@
-# AI Probe Mod
+# Mindustry Agent Mod
 
 Mindustry 真实游戏 mod：提供本地 session/MCP 接口、助手身体控制、只读数据面和
 固定场景验证。它是当前项目的 mod 入口，不是独立 AI 客户端；harness 负责目标循环。
@@ -19,7 +19,7 @@ cd probe-mod
 ## 运行
 
 ```bash
-cp probe-mod/build/ai-probe.jar refs/mindustry-v160.8/config/mods/
+cp probe-mod/build/mindustry-agent.jar refs/mindustry-v160.8/config/mods/
 cd refs/mindustry-v160.8
 (printf 'host\n'; sleep 60) | java -jar server-release.jar
 ```
@@ -58,7 +58,7 @@ node client/probe-client.mjs
 - `query_area` 真实动作/观测：固定场景 `query_area` 的 turret 建筑带 `ammoTotal=6`，`get_tile`/`get_area` 也返回有限物品字段。
 - `deconstruct`/`repair` 已实现并实测：deconstruct 后建筑消失，repair conveyor 25→45。
 - `get_events` 事件环已接：unit_destroy/unit_create/block_destroy/block_build_end/build_damage/unit_damage，支持 since/limit/next/dropped。
-- 传输层：probe 写 `/tmp/mindustry-ai-probe/bridge-info.json`（port/token/protocol/version/pid）；`hello` 握手；`ping`/heartbeat；`PROBE_REQUIRE_AUTH=1` 启用 token 校验；socket 命令入队，游戏每帧最多处理 50 条。adapter 重连已有 fake probe 单测。
+- 传输层：probe 写 `/tmp/mindustry-agent-probe/bridge-info.json`（port/token/protocol/version/pid）；`hello` 握手；`ping`/heartbeat；`PROBE_REQUIRE_AUTH=1` 启用 token 校验；socket 命令入队，游戏每帧最多处理 50 条。adapter 重连已有 fake probe 单测。
 - `query_area` 的建筑扫描必须按世界 tile 读 `tile.build`；服务端 `Groups.build.getByID` 的 mapping 未启用。`query_area` 默认只返回助手队伍单位，`includeEnemies=true` 才返回敌军。`spawn_ally`/`spawn_enemy`/`spawn_ally_core`/`destroy_core`/`give`/`set_core_items`/`start_wave`/`set_possession_allowed`/`list_unit_types`/`set_type_player_controllable`/`set_writes_enabled`/`set_require_writer`/`kill_assistant`/`damage_building` 是测试辅助，不是 MCP 工具；发布/正常运行默认禁用，只有 `PROBE_ENABLE_DEBUG_OPS=1` 才启用。`get_unit` 是正常读工具，额外返回 `isAI`/`isPlayer`/`playerControllable`/`controller`。
 - `spawn_enemy` 默认 `ai=false`（IdleController，静止靶子）；传 `ai=true` 保留引擎默认 AI，单位会主动攻击。固定场景用 3 个 `ai=true` dagger 验证核心受击 1100→1082。
 - 失败注入：固定场景验证未知物品 withdraw、越界 mine/move_to/build_plan、攻击同队单位、资源不足建造。

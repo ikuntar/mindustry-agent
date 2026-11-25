@@ -25,7 +25,7 @@ except ImportError:  # pragma: no cover
 def _discovery_path() -> str:
     return os.environ.get(
         "MINDUSTRY_DATA_DISCOVERY",
-        os.path.join(tempfile.gettempdir(), "mindustry-ai-probe", "bridge-info.json"),
+        os.path.join(tempfile.gettempdir(), "mindustry-agent-probe", "bridge-info.json"),
     )
 
 

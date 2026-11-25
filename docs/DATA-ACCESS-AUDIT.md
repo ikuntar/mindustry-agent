@@ -108,7 +108,7 @@ ProbeMod.java:3530  getDeclaredField + setAccessible
   要 `sessionToken`，`/data` 要独立 `dataToken`（默认 1h，可轮换）。
 - 数据面同时监听 `127.0.0.1:DATA_PORT`；session server 也挂 `/data`，因此开启 LAN 时
   地图/事件会暴露给持有 data token 的局域网客户端。
-- discovery 文件桌面写 `/tmp/mindustry-ai-probe/bridge-info.json` 并尝试设为仅当前用户
+- discovery 文件桌面写 `/tmp/mindustry-agent-probe/bridge-info.json` 并尝试设为仅当前用户
   可读写；Android 写 `Vars.dataDirectory`。文件包含 bootstrap/data token，不应被其他用户读取。
 - 没有把游戏数据写进仓库或发往第三方；大体积地图/事件走本地 HTTP，不塞进模型上下文。
 

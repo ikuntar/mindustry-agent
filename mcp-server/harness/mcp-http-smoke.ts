@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
-const info = JSON.parse(fs.readFileSync("/tmp/mindustry-ai-probe/bridge-info.json", "utf8"));
+const info = JSON.parse(fs.readFileSync("/tmp/mindustry-agent-probe/bridge-info.json", "utf8"));
 const base = `http://127.0.0.1:${info.sessionPort}`;
 
 async function openSession(): Promise<string> {
@@ -35,8 +35,8 @@ try {
   const guide = await client.readResource({ uri: "mindustry://guide" });
   const firstContent = guide.contents?.[0];
   const guideText = firstContent && "text" in firstContent ? firstContent.text : undefined;
-  console.log("sdk guide", typeof guideText === "string" && guideText.startsWith("# Mindustry AI session"));
-  if (typeof guideText !== "string" || !guideText.startsWith("# Mindustry AI session")) process.exitCode = 1;
+  console.log("sdk guide", typeof guideText === "string" && guideText.startsWith("# Mindustry Agent session"));
+  if (typeof guideText !== "string" || !guideText.startsWith("# Mindustry Agent session")) process.exitCode = 1;
 
   const prompts = await client.listPrompts();
   console.log("sdk prompts", prompts.prompts.length);

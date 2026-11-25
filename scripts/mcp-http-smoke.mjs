@@ -1,5 +1,5 @@
 const fs = await import("node:fs");
-const info = JSON.parse(fs.readFileSync("/tmp/mindustry-ai-probe/bridge-info.json", "utf8"));
+const info = JSON.parse(fs.readFileSync("/tmp/mindustry-agent-probe/bridge-info.json", "utf8"));
 const base = `http://127.0.0.1:${info.sessionPort}`;
 const headers = { "content-type": "application/json" };
 

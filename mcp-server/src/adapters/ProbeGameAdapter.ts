@@ -84,7 +84,7 @@ export class ProbeGameAdapter implements GameAdapter {
     let discovery: { port?: number; token?: string } | undefined;
     try {
       const discoveryPath =
-        process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+        process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-agent-probe", "bridge-info.json");
       discovery = JSON.parse(fs.readFileSync(discoveryPath, "utf8"));
     } catch {
       discovery = undefined;

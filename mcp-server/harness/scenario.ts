@@ -20,7 +20,7 @@ const transport = new StdioClientTransport({
   stderr: "inherit",
 });
 
-const client = new Client({ name: "mindustry-ai-fixed-scenario", version: "0.1.0" });
+const client = new Client({ name: "mindustry-agent-fixed-scenario", version: "0.1.0" });
 const checks: { name: string; ok: boolean; detail?: string }[] = [];
 
 function parse(result: unknown): any {
@@ -60,7 +60,7 @@ async function expectToolError(
 
 async function rawProbe(name: string, args: Record<string, unknown> = {}): Promise<any> {
   const discoveryPath =
-    process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+    process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-agent-probe", "bridge-info.json");
   const discovery = JSON.parse(fs.readFileSync(discoveryPath, "utf8"));
   return await new Promise((resolve, reject) => {
     const socket = net.createConnection({ host: "127.0.0.1", port: Number(discovery.port) });
@@ -1122,7 +1122,7 @@ async function main(): Promise<void> {
   }
 
   const discoveryPath =
-    process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+    process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-agent-probe", "bridge-info.json");
   const oldDataToken = JSON.parse(fs.readFileSync(discoveryPath, "utf8")).dataToken;
   const rotated = await rawProbe("rotate_data_token");
   const dataBase = String(rotated.dataBaseUrl ?? "").replace(/\/$/, "");

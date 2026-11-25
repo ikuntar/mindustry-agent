@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 const discoveryPath =
-  process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-ai-probe", "bridge-info.json");
+  process.env.PROBE_DISCOVERY ?? path.join(os.tmpdir(), "mindustry-agent-probe", "bridge-info.json");
 const discovery = JSON.parse(fs.readFileSync(discoveryPath, "utf8"));
 
 const socket = net.createConnection({ host: "127.0.0.1", port: Number(discovery.port) });

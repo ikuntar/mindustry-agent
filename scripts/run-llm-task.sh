@@ -6,7 +6,7 @@ SERVER_DIR="$ROOT/refs/mindustry-v160.8"
 SERVER_LOG="$ROOT/artifacts/llm-task-server.log"
 SEED_JSON="$ROOT/artifacts/llm-task-seed.json"
 LLM_LOG="$ROOT/artifacts/llm-task.json"
-DISCOVERY="/tmp/mindustry-ai-probe/bridge-info.json"
+DISCOVERY="/tmp/mindustry-agent-probe/bridge-info.json"
 
 mkdir -p "$ROOT/artifacts"
 

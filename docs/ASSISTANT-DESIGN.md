@@ -1,4 +1,4 @@
-# Mindustry AI 助手设计
+# Mindustry Agent 助手设计
 
 状态：设计稿，2026-11-18
 定位：单机/本地对局里的 AI co-op 助手，不是独立 AI 客户端。

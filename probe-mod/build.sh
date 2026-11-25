@@ -22,6 +22,6 @@ for doc in SESSION-API.md API-DATA-CONTRACT.md MCP-PROTOCOL.md REALITY-CHECK.md 
     cp "$ROOT/../docs/$doc" "$ROOT/build/classes/ai/probe/docs/$doc"
   fi
 done
-jar --create --file "$ROOT/build/ai-probe.jar" -C "$ROOT/build/classes" .
+jar --create --file "$ROOT/build/mindustry-agent.jar" -C "$ROOT/build/classes" .
 
-echo "built: $ROOT/build/ai-probe.jar"
+echo "built: $ROOT/build/mindustry-agent.jar"

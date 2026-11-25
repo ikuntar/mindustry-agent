@@ -84,7 +84,7 @@ const readOnly = { readOnlyHint: true, openWorldHint: false } as const;
 
 export function createMcpServer(adapter: GameAdapter): McpServer {
   const server = new McpServer(
-    { name: "mindustry-ai-assistant", version: "0.1.0" },
+    { name: "mindustry-agent-assistant", version: "0.1.0" },
     {
       maxToolInputElements: 4096,
       instructions: [

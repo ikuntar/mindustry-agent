@@ -1,11 +1,11 @@
 {
-  "name": "ai-probe",
-  "displayName": "AI Probe",
+  "name": "mindustry-agent",
+  "displayName": "Mindustry Agent",
   "author": "kuutar",
   "description": "AI co-op assistant probe for Mindustry: local session API, MCP tools, and a universal desktop/Android mod jar.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "minGameVersion": "160",
   "main": "ai.probe.ProbeMod",
-  "repo": "https://github.com/kuutar/mindustry-ai",
+  "repo": "https://github.com/kuutar/mindustry-agent",
   "java": true
 }

@@ -26,10 +26,10 @@ Harness 会话的第一轮应先 `GET /guide`：它返回完整的 `docs/GAME-GU
    ```
 2. 已启动带 probe mod 的 Mindustry 服务端：
    ```bash
-   /ABS/PATH/mindustry-ai/scripts/start-game-server.sh
-   /ABS/PATH/mindustry-ai/scripts/mindustry-mcp --check
+   /ABS/PATH/mindustry-agent/scripts/start-game-server.sh
+   /ABS/PATH/mindustry-agent/scripts/mindustry-mcp --check
    ```
-   `start-game-server.sh` 需要先有 `probe-mod/build/ai-probe.jar`；停止用
+   `start-game-server.sh` 需要先有 `probe-mod/build/mindustry-agent.jar`；停止用
    `scripts/stop-game-server.sh`。`run-fixed-scenario.sh` 是一次性验收，不要
    和长期 host 共用。
 3. Harness 启动的 command 必须是 **`scripts/mindustry-mcp`**，不要直接
@@ -45,14 +45,14 @@ Harness 会话的第一轮应先 `GET /guide`：它返回完整的 `docs/GAME-GU
 ### Claude Code
 
 ```bash
-claude mcp add -s user mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
+claude mcp add -s user mindustry -- /ABS/PATH/mindustry-agent/scripts/mindustry-mcp
 claude mcp list
 ```
 
 项目级：
 
 ```bash
-claude mcp add -s project mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
+claude mcp add -s project mindustry -- /ABS/PATH/mindustry-agent/scripts/mindustry-mcp
 ```
 
 ### Claude Desktop
@@ -63,7 +63,7 @@ claude mcp add -s project mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-
 {
   "mcpServers": {
     "mindustry": {
-      "command": "/ABS/PATH/mindustry-ai/scripts/mindustry-mcp",
+      "command": "/ABS/PATH/mindustry-agent/scripts/mindustry-mcp",
       "args": []
     }
   }
@@ -73,14 +73,14 @@ claude mcp add -s project mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-
 ### Codex
 
 ```bash
-codex mcp add mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
+codex mcp add mindustry -- /ABS/PATH/mindustry-agent/scripts/mindustry-mcp
 ```
 
 或 `~/.codex/config.toml`：
 
 ```toml
 [mcp_servers.mindustry]
-command = "/ABS/PATH/mindustry-ai/scripts/mindustry-mcp"
+command = "/ABS/PATH/mindustry-agent/scripts/mindustry-mcp"
 args = []
 startup_timeout_sec = 20
 tool_timeout_sec = 120
@@ -89,7 +89,7 @@ tool_timeout_sec = 120
 ### OpenCode
 
 ```bash
-opencode mcp add mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
+opencode mcp add mindustry -- /ABS/PATH/mindustry-agent/scripts/mindustry-mcp
 ```
 
 或 `opencode.json(c)`（当前 schema 用 `mcp.servers`）：
@@ -101,7 +101,7 @@ opencode mcp add mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
     "servers": {
       "mindustry": {
         "type": "local",
-        "command": ["/ABS/PATH/mindustry-ai/scripts/mindustry-mcp"],
+        "command": ["/ABS/PATH/mindustry-agent/scripts/mindustry-mcp"],
         "timeout": 120000
       }
     }
@@ -116,7 +116,7 @@ opencode mcp add mindustry -- /ABS/PATH/mindustry-ai/scripts/mindustry-mcp
 launcher：
 
 ```bash
-cd /ABS/PATH/mindustry-ai
+cd /ABS/PATH/mindustry-agent
 scripts/omp-mindustry
 ```
 
@@ -136,7 +136,7 @@ launcher 会把配置写到 `~/.mindustry-omp/.omp/mcp.json`（可用
   "mcpServers": {
     "mindustry": {
       "type": "stdio",
-      "command": "/ABS/PATH/mindustry-ai/scripts/mindustry-mcp",
+      "command": "/ABS/PATH/mindustry-agent/scripts/mindustry-mcp",
       "env": { "MINDUSTRY_AI_ADAPTER": "probe" }
     }
   }
@@ -159,7 +159,7 @@ scripts/omp-mindustry -p --no-session --max-time 120 \
 ```yaml
 mcp_servers:
   mindustry:
-    command: "/ABS/PATH/mindustry-ai/scripts/mindustry-mcp"
+    command: "/ABS/PATH/mindustry-agent/scripts/mindustry-mcp"
     args: []
     timeout: 120
 ```
@@ -241,7 +241,7 @@ scripts/mindustry-mcp --check
 命令形态：
 
 ```bash
-omp -p --no-session --max-time 90 --cwd /ABS/PATH/mindustry-ai \
+omp -p --no-session --max-time 90 --cwd /ABS/PATH/mindustry-agent \
   'Use mindustry MCP get_context detail="full" ...'
 ```
 
@@ -264,15 +264,15 @@ cd mcp-server && npm run host-smoke
 # 期望：{"ok":true,"tools":27,"adapter":"mock","moveStatus":"done"}
 
 # 2) 真实游戏（先启动 probe 服务端）
-/ABS/PATH/mindustry-ai/scripts/start-game-server.sh
-/ABS/PATH/mindustry-ai/scripts/mindustry-mcp --check
+/ABS/PATH/mindustry-agent/scripts/start-game-server.sh
+/ABS/PATH/mindustry-agent/scripts/mindustry-mcp --check
 cd mcp-server && MINDUSTRY_AI_ADAPTER=probe npm run harness
 # wrapper + 真实 probe 的通用 host 冒烟（本机已通过：27 tools, move done）
 cd mcp-server && MINDUSTRY_AI_ADAPTER=probe npm run host-smoke
-/ABS/PATH/mindustry-ai/scripts/stop-game-server.sh
+/ABS/PATH/mindustry-agent/scripts/stop-game-server.sh
 
 # 3) 固定地图回归
-/ABS/PATH/mindustry-ai/scripts/run-fixed-scenario.sh
+/ABS/PATH/mindustry-agent/scripts/run-fixed-scenario.sh
 ```
 
 真实 host 上应能看到 27 个工具；调用 `get_context` 返回真实 `Fortress` 地图和

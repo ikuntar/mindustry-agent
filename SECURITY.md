@@ -1,6 +1,6 @@
 # Security
 
-`mindustry-ai` exposes a local game-control API. Treat the session token and
+`mindustry-agent` exposes a local game-control API. Treat the session token and
 the raw probe token as credentials for controlling a running game.
 
 ## Supported versions

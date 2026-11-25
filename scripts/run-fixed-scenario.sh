@@ -6,7 +6,7 @@ SERVER_DIR="$ROOT/refs/mindustry-v160.8"
 SERVER_LOG="$ROOT/artifacts/fixed-map-server.log"
 SEED_JSON="$ROOT/artifacts/fixed-map-seed.json"
 SCENARIO_LOG="$ROOT/artifacts/fixed-map-scenario.log"
-DISCOVERY="/tmp/mindustry-ai-probe/bridge-info.json"
+DISCOVERY="/tmp/mindustry-agent-probe/bridge-info.json"
 
 mkdir -p "$ROOT/artifacts"
 

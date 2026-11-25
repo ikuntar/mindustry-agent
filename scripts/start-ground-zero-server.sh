@@ -10,13 +10,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_DIR="$ROOT/refs/mindustry-v160.8"
 JAR="$SERVER_DIR/server-release.jar"
-PROBE_JAR="$ROOT/probe-mod/build/ai-probe.jar"
+PROBE_JAR="$ROOT/probe-mod/build/mindustry-agent.jar"
 LOG="$ROOT/artifacts/ground-zero-server.log"
-DISCOVERY="/tmp/mindustry-ai-probe/bridge-info.json"
+DISCOVERY="/tmp/mindustry-agent-probe/bridge-info.json"
 
 mkdir -p "$ROOT/artifacts" "$SERVER_DIR/config/mods"
 if [[ ! -f "$JAR" || ! -f "$PROBE_JAR" ]]; then
-  printf 'missing server-release.jar or probe-mod/build/ai-probe.jar\n' >&2
+  printf 'missing server-release.jar or probe-mod/build/mindustry-agent.jar\n' >&2
   exit 1
 fi
 if pgrep -f '^java -jar server-release.jar' >/dev/null; then
@@ -24,7 +24,8 @@ if pgrep -f '^java -jar server-release.jar' >/dev/null; then
   exit 1
 fi
 
-cp "$PROBE_JAR" "$SERVER_DIR/config/mods/ai-probe.jar"
+rm -f "$SERVER_DIR/config/mods/ai-probe.jar"
+cp "$PROBE_JAR" "$SERVER_DIR/config/mods/mindustry-agent.jar"
 rm -f "$DISCOVERY" "$LOG"
 cd "$SERVER_DIR"
 (

@@ -80,8 +80,8 @@ core-nucleus -> gamma
 - 已改为按核心类型注册 `ai-alpha`/`ai-beta`/`ai-gamma` 三个非
   playerControllable 克隆类型；`spawnAssistantAt` 按 `CoreBlock.unitType`
   选择对应克隆。
-- Fortress 实测 `core-foundation` 重生得到 `ai-probe-ai-beta`、health 170。
-- gamma 也已实测 `core-nucleus -> ai-probe-ai-gamma`、health 220。
+- Fortress 实测 `core-foundation` 重生得到 `mindustry-agent-ai-beta`、health 170。
+- gamma 也已实测 `core-nucleus -> mindustry-agent-ai-gamma`、health 220。
 - 仍需补：`supportsEnv` 校验、异常核心类型 fallback、存档中自定义类型 id 的兼容性。
 - `respawn` 选择目标核心，不缓存旧坐标。
 

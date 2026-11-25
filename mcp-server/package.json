@@ -1,9 +1,9 @@
 {
-  "name": "mindustry-ai-mcp",
-  "version": "0.2.0",
+  "name": "mindustry-agent-mcp",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "MCP tool interface for the Mindustry AI co-op assistant",
+  "description": "MCP tool interface for the Mindustry Agent co-op assistant",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/index.js",

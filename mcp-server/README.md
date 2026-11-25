@@ -1,4 +1,4 @@
-# Mindustry AI MCP server
+# Mindustry Agent MCP server
 
 MCP tool interface for the in-game co-op assistant. The MCP host owns goals and
 the agent loop; this server exposes a stateless game tool surface.
@@ -18,9 +18,9 @@ npm run harness       # mock by default
 For a real game, use the repository wrapper so the adapter is not mock:
 
 ```bash
-/ABS/PATH/mindustry-ai/scripts/mindustry-mcp --check
+/ABS/PATH/mindustry-agent/scripts/mindustry-mcp --check
 # In an MCP host, command is:
-/ABS/PATH/mindustry-ai/scripts/mindustry-mcp
+/ABS/PATH/mindustry-agent/scripts/mindustry-mcp
 ```
 
 The wrapper defaults to `MINDUSTRY_AI_ADAPTER=probe`; it never runs `npm build`

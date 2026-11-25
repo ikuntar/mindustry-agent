@@ -137,8 +137,8 @@ public class ProbeMod extends Mod {
     private static final int DATA_PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_DATA_PORT", "46501"));
     private static final int SESSION_PORT_DEFAULT = 47600;
     private static final String SESSION_BIND_DEFAULT = "127.0.0.1";
-    private static final String SESSION_PORT_SETTING = "ai-probe.session-port";
-    private static final String SESSION_LAN_SETTING = "ai-probe.session-lan";
+    private static final String SESSION_PORT_SETTING = "mindustry-agent.session-port";
+    private static final String SESSION_LAN_SETTING = "mindustry-agent.session-lan";
     private volatile int sessionPort = SESSION_PORT_DEFAULT;
     private volatile String sessionBind = SESSION_BIND_DEFAULT;
     private volatile HttpServer sessionServer;
@@ -147,7 +147,7 @@ public class ProbeMod extends Mod {
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.2.0";
+    private static final String VERSION = "0.3.0";
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
     private static final int MAX_OPS = 256;
@@ -249,7 +249,7 @@ public class ProbeMod extends Mod {
             UnitType type = createAssistantType(baseName);
             if (type == null) continue;
             assistantTypes.put(baseName, type);
-            Log.info("[ai-probe] registered assistant unit type: " + type.name + " from " + baseName);
+            Log.info("[mindustry-agent] registered assistant unit type: " + type.name + " from " + baseName);
         }
         assistantType = assistantTypes.get("alpha");
     }
@@ -268,10 +268,10 @@ public class ProbeMod extends Mod {
                 String mapName = System.getenv().getOrDefault("PROBE_TEST_MAP", "Fortress");
                 mindustry.maps.Map map = Vars.maps.byName(mapName);
                 if (map == null) {
-                    Log.warn("[ai-probe] autoload map not found: " + mapName);
+                    Log.warn("[mindustry-agent] autoload map not found: " + mapName);
                     return;
                 }
-                Log.info("[ai-probe] autoloading map: " + mapName);
+                Log.info("[mindustry-agent] autoloading map: " + mapName);
                 Vars.control.playMap(map, map.applyRules(Gamemode.survival), false);
             }));
         }
@@ -337,9 +337,9 @@ public class ProbeMod extends Mod {
         sessionPort = configuredSessionPort();
         sessionBind = configuredSessionBind();
         startSessionServer();
-        Log.info("[ai-probe] listening on 127.0.0.1:" + PORT);
-        Log.info("[ai-probe] data plane on 127.0.0.1:" + DATA_PORT + "/data");
-        Log.info("[ai-probe] session API on " + sessionBind + ":" + sessionPort);
+        Log.info("[mindustry-agent] listening on 127.0.0.1:" + PORT);
+        Log.info("[mindustry-agent] data plane on 127.0.0.1:" + DATA_PORT + "/data");
+        Log.info("[mindustry-agent] session API on " + sessionBind + ":" + sessionPort);
     }
 
     private void addEvent(String type, Jval data) {
@@ -450,7 +450,7 @@ public class ProbeMod extends Mod {
             sessionBootstrapUsed = false;
         }
         if (EXPOSE_SESSION) writeDiscovery();
-        Log.info("[ai-probe] world loaded, waiting for requests");
+        Log.info("[mindustry-agent] world loaded, waiting for requests");
     }
 
     private void update() {
@@ -493,7 +493,7 @@ public class ProbeMod extends Mod {
             } catch (OpCapacityException capacity) {
                 replyError(command, "op_capacity", "Too many live game operations");
             } catch (Throwable error) {
-                Log.err("[ai-probe] command failed", error);
+                Log.err("[mindustry-agent] command failed", error);
                 replyError(command, "internal_error", "internal game command failed");
             }
         }
@@ -952,7 +952,7 @@ public class ProbeMod extends Mod {
             if (candidate.flag() == ASSISTANT_FLAG && !isPlayerUnit(candidate)) stale.add(candidate);
         }
         for (Unit candidate : stale) {
-            Log.info("[ai-probe] removing persisted assistant body id=" + candidate.id);
+            Log.info("[mindustry-agent] removing persisted assistant body id=" + candidate.id);
             candidate.remove();
         }
     }
@@ -1016,7 +1016,7 @@ public class ProbeMod extends Mod {
         for (Unit candidate : stray) {
             // Only one ProbeController body may exist. A second one is a
             // stale body from an aborted possess/respawn; remove it.
-            Log.warn("[ai-probe] removing stray assistant body id=" + candidate.id);
+            Log.warn("[mindustry-agent] removing stray assistant body id=" + candidate.id);
             candidate.remove();
         }
     }
@@ -1061,7 +1061,7 @@ public class ProbeMod extends Mod {
         }
         assistant = unit;
         homeBody = unit;
-        Log.info("[ai-probe] assistant spawned: id=" + unit.id + " type=" + type.name + " team=" + team.name
+        Log.info("[mindustry-agent] assistant spawned: id=" + unit.id + " type=" + type.name + " team=" + team.name
                 + " valid=" + unit.isValid() + " added=" + unit.isAdded() + " dead=" + unit.dead + " health=" + unit.health);
     }
 
@@ -4688,9 +4688,9 @@ public class ProbeMod extends Mod {
             server.createContext("/data", this::handleData);
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
-            Log.info("[ai-probe] data plane started: " + dataBaseUrl);
+            Log.info("[mindustry-agent] data plane started: " + dataBaseUrl);
         } catch (IOException error) {
-            Log.err("[ai-probe] data plane failed", error);
+            Log.err("[mindustry-agent] data plane failed", error);
         }
     }
 
@@ -4723,13 +4723,13 @@ public class ProbeMod extends Mod {
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
             sessionServer = server;
-            Log.info("[ai-probe] session API listening on " + sessionBind + ":" + sessionPort);
+            Log.info("[mindustry-agent] session API listening on " + sessionBind + ":" + sessionPort);
             for (String url : lanSessionUrls()) {
-                Log.info("[ai-probe] session LAN URL: " + url);
+                Log.info("[mindustry-agent] session LAN URL: " + url);
             }
             return true;
         } catch (IOException error) {
-            Log.err("[ai-probe] session API failed", error);
+            Log.err("[mindustry-agent] session API failed", error);
             return false;
         }
     }
@@ -5205,7 +5205,7 @@ public class ProbeMod extends Mod {
 
             sendText(exchange, 404, "not found", "text/plain", false);
         } catch (Throwable error) {
-            Log.err("[ai-probe] session handler failed", error);
+            Log.err("[mindustry-agent] session handler failed", error);
             try {
                 sendText(exchange, 500, "internal error", "text/plain", false);
             } catch (Throwable ignored) {
@@ -5259,7 +5259,7 @@ public class ProbeMod extends Mod {
                                 .put("resources", Jval.newObject())
                                 .put("prompts", Jval.newObject()))
                         .put("serverInfo", Jval.newObject()
-                                .put("name", "mindustry-ai")
+                                .put("name", "mindustry-agent")
                                 .put("version", VERSION))
                         .put("instructions", gameGuide());
                 response.put("result", result);
@@ -5269,7 +5269,7 @@ public class ProbeMod extends Mod {
                 response.put("result", Jval.newObject().put("resources", Jval.newArray().add(
                         Jval.newObject()
                                 .put("uri", "mindustry://guide")
-                                .put("name", "Mindustry AI guide")
+                                .put("name", "Mindustry Agent guide")
                                 .put("description", "Game rules and session usage")
                                 .put("mimeType", "text/markdown"))));
             } else if ("resources/read".equals(method)) {
@@ -5294,7 +5294,7 @@ public class ProbeMod extends Mod {
                     response.put("error", Jval.newObject().put("code", -32602).put("message", "unknown prompt: " + name));
                 } else {
                     response.put("result", Jval.newObject()
-                            .put("description", "Mindustry AI session prompt")
+                            .put("description", "Mindustry Agent session prompt")
                             .put("messages", Jval.newArray().add(Jval.newObject()
                                     .put("role", "user")
                                     .put("content", Jval.newObject()
@@ -5777,7 +5777,7 @@ public class ProbeMod extends Mod {
             while ((read = stream.read(chunk)) != -1) buffer.write(chunk, 0, read);
             return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
         } catch (IOException error) {
-            Log.err("[ai-probe] failed to read resource " + resource, error);
+            Log.err("[mindustry-agent] failed to read resource " + resource, error);
             return null;
         }
     }
@@ -5785,7 +5785,7 @@ public class ProbeMod extends Mod {
     private String gameGuide() {
         String text = readResourceText("/ai/probe/game-guide.md");
         if (text != null) return text;
-        return "# Mindustry AI session\n\n"
+        return "# Mindustry Agent session\n\n"
                 + "You control the assistant unit, not the human player.\n"
                 + "Start with GET /context?detail=summary.\n"
                 + "Use POST /actions with {kind,...}; poll GET /actions/{opId} until done/failed.\n"
@@ -5823,7 +5823,7 @@ public class ProbeMod extends Mod {
         return Jval.newArray()
                 .add(Jval.newObject()
                         .put("name", "play-session")
-                        .put("description", "Start a Mindustry AI session and inspect the current game."))
+                        .put("description", "Start a Mindustry Agent session and inspect the current game."))
                 .add(Jval.newObject()
                         .put("name", "defend-core")
                         .put("description", "Defend the team core from nearby threats."))
@@ -6136,7 +6136,7 @@ public class ProbeMod extends Mod {
 
     private String sessionPrompt() {
         String endpoint = preferredSessionUrl();
-        return "Mindustry AI session\n\n"
+        return "Mindustry Agent session\n\n"
                 + "Endpoint: " + endpoint + "\n"
                 + "Bootstrap token: " + sessionBootstrapToken + "\n\n"
                 + "Use this game API for this session only.\n"
@@ -6156,7 +6156,7 @@ public class ProbeMod extends Mod {
     private void showSessionDialog() {
         if (Vars.headless) return;
         Core.app.post(() -> {
-            BaseDialog dialog = new BaseDialog("Mindustry AI");
+            BaseDialog dialog = new BaseDialog("Mindustry Agent");
             dialog.cont.add("Copy this prompt into a new harness session:").left().row();
             Label endpoint = new Label(preferredSessionUrl());
             dialog.cont.add(endpoint).left().row();
@@ -6175,17 +6175,17 @@ public class ProbeMod extends Mod {
     private void registerSettings() {
         if (Vars.headless || settingsRegistered || Vars.ui == null || Vars.ui.settings == null) return;
         settingsRegistered = true;
-        Vars.ui.settings.addCategory("AI Probe", table -> {
-            table.add("AI Probe session API").left().row();
+        Vars.ui.settings.addCategory("Mindustry Agent", table -> {
+            table.add("Mindustry Agent session API").left().row();
             table.add("Change the port, LAN binding, and session prompt in game.").left().wrap().row();
-            table.button("Open AI Probe settings", this::showSettingsDialog).size(280f, 50f).left().row();
+            table.button("Open Mindustry Agent settings", this::showSettingsDialog).size(280f, 50f).left().row();
         });
     }
 
     private void showSettingsDialog() {
         if (Vars.headless) return;
         Core.app.post(() -> {
-            BaseDialog dialog = new BaseDialog("AI Probe settings");
+            BaseDialog dialog = new BaseDialog("Mindustry Agent settings");
             TextField port = new TextField(String.valueOf(sessionPort));
             CheckBox lan = new CheckBox("Bind to LAN (0.0.0.0)");
             lan.setChecked("0.0.0.0".equals(sessionBind));
@@ -6475,14 +6475,14 @@ public class ProbeMod extends Mod {
                 writeDiscovery();
                 while (true) {
                     Socket socket = server.accept();
-                    Thread client = new Thread(() -> clientLoop(socket), "ai-probe-client");
+                    Thread client = new Thread(() -> clientLoop(socket), "mindustry-agent-client");
                     client.setDaemon(true);
                     client.start();
                 }
             } catch (IOException error) {
-                Log.err("[ai-probe] socket server failed", error);
+                Log.err("[mindustry-agent] socket server failed", error);
             }
-        }, "ai-probe-socket");
+        }, "mindustry-agent-socket");
         thread.setDaemon(true);
         thread.start();
     }
@@ -6529,15 +6529,15 @@ public class ProbeMod extends Mod {
             if (Vars.android) {
                 // Android cannot use /tmp. Keep discovery in the app data directory;
                 // the session prompt still exposes the bootstrap token.
-                Fi base = Vars.dataDirectory != null ? Vars.dataDirectory : Core.files.local("mindustry-ai-probe");
-                Fi directory = base.child("mindustry-ai-probe");
+                Fi base = Vars.dataDirectory != null ? Vars.dataDirectory : Core.files.local("mindustry-agent-probe");
+                Fi directory = base.child("mindustry-agent-probe");
                 directory.mkdirs();
                 Fi file = directory.child("bridge-info.json");
                 file.writeString(json, false, "UTF-8");
-                Log.info("[ai-probe] discovery written: " + file.absolutePath());
+                Log.info("[mindustry-agent] discovery written: " + file.absolutePath());
                 return;
             }
-            File directory = new File(System.getProperty("java.io.tmpdir"), "mindustry-ai-probe");
+            File directory = new File(System.getProperty("java.io.tmpdir"), "mindustry-agent-probe");
             if (!directory.exists() && !directory.mkdirs()) {
                 throw new IOException("cannot create discovery directory: " + directory);
             }
@@ -6552,9 +6552,9 @@ public class ProbeMod extends Mod {
                 file.setWritable(true, true);
             } catch (Throwable ignored) {
             }
-            Log.info("[ai-probe] discovery written: " + file);
+            Log.info("[mindustry-agent] discovery written: " + file);
         } catch (IOException error) {
-            Log.err("[ai-probe] failed to write discovery file", error);
+            Log.err("[mindustry-agent] failed to write discovery file", error);
         }
     }
 
@@ -6579,7 +6579,7 @@ public class ProbeMod extends Mod {
                 }
             }
         } catch (IOException error) {
-            Log.err("[ai-probe] client failed", error);
+            Log.err("[mindustry-agent] client failed", error);
         }
     }
 
@@ -6614,7 +6614,7 @@ public class ProbeMod extends Mod {
                     out.flush();
                 }
             } catch (IOException error) {
-                Log.err("[ai-probe] write failed", error);
+                Log.err("[mindustry-agent] write failed", error);
             }
         }
     }

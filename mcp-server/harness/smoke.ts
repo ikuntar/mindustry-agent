@@ -17,7 +17,7 @@ const transport = new StdioClientTransport({
   stderr: "inherit",
 });
 
-const client = new Client({ name: "mindustry-ai-smoke", version: "0.1.0" });
+const client = new Client({ name: "mindustry-agent-smoke", version: "0.1.0" });
 
 function parse(result: unknown): any {
   const content = (result as { content?: { type: string; text?: string }[] }).content ?? [];

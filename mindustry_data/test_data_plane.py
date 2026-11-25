@@ -14,7 +14,7 @@ from mindustry_data import EventDataset, MapDataset, open_dataset
 def _discovery():
     path = os.environ.get(
         "MINDUSTRY_DATA_DISCOVERY",
-        os.path.join(tempfile.gettempdir(), "mindustry-ai-probe", "bridge-info.json"),
+        os.path.join(tempfile.gettempdir(), "mindustry-agent-probe", "bridge-info.json"),
     )
     with open(path, encoding="utf-8") as handle:
         return json.load(handle)
