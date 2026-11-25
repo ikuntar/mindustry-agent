@@ -469,6 +469,7 @@ command: move | stop | attack | repair | rebuild | assist | mine | enterPayload 
 ---
 
 本指南是游戏知识层；拿到 sessionToken 后可读 `GET /docs/API-DATA-CONTRACT.md`、
-`GET /docs/SESSION-API.md`、`GET /docs/MCP-PROTOCOL.md`（仓库内同名文档也会打进
-mod jar），工具名和输入 schema 以 `GET /tools` 为准；精确数值永远以实时
+`GET /docs/SESSION-API.md`、`GET /docs/MCP-PROTOCOL.md`、
+`GET /docs/LOGIC-PROCESSOR-GUIDE.md`（仓库内同名文档也会打进 mod jar），工具名和输入
+schema 以 `GET /tools` 为准；精确数值永远以实时
 `/content`、`/capabilities`、`/context` 为准。

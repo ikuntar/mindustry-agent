@@ -136,6 +136,9 @@ if (flatTree.status !== 200 || !flatTree.body?.total || flatTree.body.nodes?.[0]
 const docs = await call("/docs/API-DATA-CONTRACT.md", { headers: auth });
 console.log("docs", docs.status, String(docs.body).slice(0, 20));
 if (docs.status !== 200 || !String(docs.body).includes("API 数据契约")) process.exit(1);
+const logicDocs = await call("/docs/LOGIC-PROCESSOR-GUIDE.md", { headers: auth });
+console.log("logic docs", logicDocs.status, String(logicDocs.body).slice(0, 20));
+if (logicDocs.status !== 200 || !String(logicDocs.body).includes("Mindustry 逻辑处理器指南")) process.exit(1);
 const page1 = await call("/actions", { method: "POST", headers: auth, body: JSON.stringify({ kind: "get_area", x: 1032, y: 440, radius: 6, maxTiles: 5 }) });
 const next = page1.body?.coverage?.next;
 if (page1.status !== 200 || !next) process.exit(1);
@@ -155,7 +158,7 @@ const plan = await call("/actions", {
 console.log("session action gate", forbidden.status, plan.status, plan.body.message ?? plan.body.code);
 const context = await call("/context?detail=summary", { headers: auth });
 console.log("context", context.status, context.body.map, context.body.assistant?.x, context.body.assistant?.y);
-const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime", "waveTimer", "captured", "power", "time", "second", "server", "contentCounts"];
+const contextFields = ["mission", "objectives", "tutorial", "rules", "wavetime", "waveTimer", "captured", "power", "time", "second", "server", "contentCounts", "logic"];
 const missingContextFields = contextFields.filter((key) => !(key in (context.body ?? {})));
 console.log("context fields", missingContextFields.join(",") || "none");
 if (context.status !== 200 || missingContextFields.length > 0) process.exit(1);

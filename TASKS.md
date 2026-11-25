@@ -170,7 +170,8 @@
 - [x] 科技树数据补充：ore 方块通过 `drillSpeeds[]` 暴露 floor→item/hardness/速度；item hardness 与 Separator chance/weight 已补；`drillSpeeds.presentInWorld` 区分当前地图是否出现
 - [ ] 放置/运行时关系：ore/liquid floor 的静态 drop 映射、电力/传送带拓扑、payload 接受关系仍是运行时或未结构化字段
 - [x] Logic sensor 对齐（实体层）：`get_unit` 返回 `entity+unit`、`get_tile` 返回 `entity+building`、`query_area detail:"full"`；字段走 `Senseable.sense/LAccess`，unsupported 省略，不暴露 `@client*`/links/ipt/settable
-- [x] Logic 全局量（常用）：context 增加 `time/second/minute/waveSeconds/server/client/contentCounts`；剩余 `@thisx/@thisy/@links/@ipt` 仅在控制逻辑处理器时需要
+- [x] Logic 全局量（常用）：context 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；剩余 `@thisx/@thisy/@links/@ipt` 仅在控制逻辑处理器时需要
+- [x] Logic processor 指南：`docs/LOGIC-PROCESSOR-GUIDE.md`，含全局变量/sensor/control/radar/ucontrol/memory/display/特权指令/API 名字映射；打包到 `/docs/LOGIC-PROCESSOR-GUIDE.md`
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）
 - [x] issue #34 余项：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明已完成

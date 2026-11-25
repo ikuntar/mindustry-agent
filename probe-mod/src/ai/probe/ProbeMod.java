@@ -4316,6 +4316,17 @@ public class ProbeMod extends Mod {
                         .put("units", Vars.content.units().size)
                         .put("items", Vars.content.items().size)
                         .put("liquids", Vars.content.liquids().size))
+                .put("logic", Jval.newObject()
+                        .put("time", Vars.state.tick / 60.0 * 1000.0)
+                        .put("tick", Vars.state.tick)
+                        .put("second", Vars.state.tick / 60f)
+                        .put("minute", Vars.state.tick / 3600f)
+                        .put("waveNumber", Vars.state.wave)
+                        .put("waveTime", Vars.state.wavetime / 60f)
+                        .put("mapw", Vars.world.width())
+                        .put("maph", Vars.world.height())
+                        .put("server", Vars.net.server() || !Vars.net.active())
+                        .put("client", Vars.net.client()))
                 .put("team", team.id)
                 .put("teamName", team.name)
                 .put("paused", Vars.state.isPaused())
@@ -4743,7 +4754,7 @@ public class ProbeMod extends Mod {
                 String doc = path.substring("/docs/".length());
                 String resource;
                 switch (doc) {
-                    case "SESSION-API.md", "API-DATA-CONTRACT.md", "MCP-PROTOCOL.md", "REALITY-CHECK.md" -> resource = "/ai/probe/docs/" + doc;
+                    case "SESSION-API.md", "API-DATA-CONTRACT.md", "MCP-PROTOCOL.md", "REALITY-CHECK.md", "LOGIC-PROCESSOR-GUIDE.md" -> resource = "/ai/probe/docs/" + doc;
                     default -> resource = null;
                 }
                 String text = resource == null ? null : readResourceText(resource);

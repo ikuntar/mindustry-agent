@@ -17,7 +17,7 @@ cp "$ROOT/mod.json" "$ROOT/build/classes/"
 mkdir -p "$ROOT/build/classes/ai/probe"
 mkdir -p "$ROOT/build/classes/ai/probe/docs"
 cp "$ROOT/../docs/GAME-GUIDE.md" "$ROOT/build/classes/ai/probe/game-guide.md"
-for doc in SESSION-API.md API-DATA-CONTRACT.md MCP-PROTOCOL.md REALITY-CHECK.md; do
+for doc in SESSION-API.md API-DATA-CONTRACT.md MCP-PROTOCOL.md REALITY-CHECK.md LOGIC-PROCESSOR-GUIDE.md; do
   if [[ -f "$ROOT/../docs/$doc" ]]; then
     cp "$ROOT/../docs/$doc" "$ROOT/build/classes/ai/probe/docs/$doc"
   fi

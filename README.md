@@ -14,6 +14,8 @@ mindustry-ai/
 │   ├── PLAYER-PARITY.md              ← 玩家能力对齐：已确认修正、缺口、待拍板项
 │   ├── MCP-PROTOCOL.md               ← MCP 工具、动作生命周期、事件、权限矩阵
 │   ├── GAME-GUIDE.md                 ← 完整游戏知识指南（/guide 的实际内容）
+│   ├── LOGIC-PROCESSOR-GUIDE.md      ← 游戏内逻辑处理器用法 + API 字段映射
+│   ├── API-DATA-CONTRACT.md          ← 实体/字段/枚举/错误码字段级契约
 │   ├── SESSION-API.md                ← 单 mod + 一次性 session prompt + HTTP API 设计
 │   ├── HARNESS-INTEGRATION.md        ← Claude Code/Desktop、Codex、OpenCode、Hermes 接入
 │   ├── REMOTE-DATA-PLANE.md          ← 远程只读数据面：DatasetRef、HTTP range、客户端代码分析

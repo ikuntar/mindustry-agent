@@ -45,6 +45,7 @@
   map, worldWidth, worldHeight,
   wave, wavetime, waveSeconds, waveTimer, enemies,
   contentCounts{blocks,units,items,liquids},
+  logic{time,tick,second,minute,waveNumber,waveTime,mapw,maph,server,client},
   team, teamName, paused, gameOver, won, captured, campaign, sector, winWave,
   mission, objectives[], tutorial, rules{},
   power[], eventsSince, eventsPending, eventSummary{total,byType},
@@ -60,6 +61,8 @@
 `time` 是游戏内时间毫秒（`tick / 60 * 1000`，对应逻辑 `@time`）；`timeMs` 是 wall clock，
 不能混用。`second/minute` 是游戏内秒/分；`waveSeconds` 是 `wavetime / 60`（对应逻辑
 `@waveTime`）；`contentCounts` 是已加载内容类型数量，不是地图上的实体数量。
+`logic` 是把常用 `GlobalVars` 用逻辑处理器名字再投影一次，方便从 logic 迁移；例如
+`logic.waveNumber`、`logic.waveTime`、`logic.mapw/maph`。
 
 ### 3.1 `assistant`
 
