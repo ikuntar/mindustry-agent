@@ -68,11 +68,17 @@ fi
 umask 077
 TMP_DIR="$(mktemp -d)"
 ASKPASS="${TMP_DIR}/askpass.sh"
+CURL_CONFIG="${TMP_DIR}/curl.conf"
 RESPONSE="${TMP_DIR}/response.json"
 cleanup() {
     rm -rf "${TMP_DIR}"
 }
 trap cleanup EXIT
+
+# Keep the token out of curl's argv (which is visible in ps). The config file
+# is mode 700 inside the temporary directory and is deleted on exit.
+printf 'header = "Authorization: Bearer %s"\n' "${PAT}" > "${CURL_CONFIG}"
+chmod 600 "${CURL_CONFIG}"
 
 cat > "${ASKPASS}" <<'EOF'
 #!/bin/sh
@@ -86,7 +92,7 @@ chmod 700 "${ASKPASS}"
 
 api() {
     curl --silent --show-error --fail-with-body \
-        --header "Authorization: Bearer ${PAT}" \
+        --config "${CURL_CONFIG}" \
         --header 'Accept: application/vnd.github+json' \
         --header 'X-GitHub-Api-Version: 2022-11-28' \
         "$@"
@@ -115,7 +121,7 @@ PY
 printf 'Creating %s/%s (%s)...\n' "${LOGIN}" "${REPO_NAME}" "${VISIBILITY}" >&2
 HTTP_CODE="$(curl --silent --show-error --output "${RESPONSE}" --write-out '%{http_code}' \
     --request POST \
-    --header "Authorization: Bearer ${PAT}" \
+    --config "${CURL_CONFIG}" \
     --header 'Accept: application/vnd.github+json' \
     --header 'X-GitHub-Api-Version: 2022-11-28' \
     --header 'Content-Type: application/json' \
