@@ -338,6 +338,9 @@ public class ProbeMod extends Mod {
         sessionPort = configuredSessionPort();
         sessionBind = configuredSessionBind();
         startSessionServer();
+        // startSocket() writes discovery before the session settings are known;
+        // rewrite it now so clients see the actual session port and bind.
+        if (EXPOSE_SESSION) writeDiscovery();
         Log.info("[mindustry-agent] listening on 127.0.0.1:" + PORT);
         Log.info("[mindustry-agent] data plane on 127.0.0.1:" + DATA_PORT + "/data");
         Log.info("[mindustry-agent] session API on " + sessionBind + ":" + sessionPort);
@@ -6207,7 +6210,7 @@ public class ProbeMod extends Mod {
                 + "Bootstrap token: " + sessionBootstrapToken + "\n\n"
                 + "Use: GET /guide and GET /tools first. POST /session with the bootstrap token to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.\n"
                 + "Action policy: there is no default retreat, idle targeting, or auto-fire. Move/attack/follow/build/mine only on an explicit action; do not repeat a failed action without reading its error.\n"
-                + "The bootstrap token is single-use; sessionToken survives world reloads; dataToken expires.\n";
+                + "The bootstrap token is single-use; a world load rotates it (copy the new prompt); sessionToken survives world reloads; dataToken expires.\n";
     }
 
     private void showSessionDialog() {

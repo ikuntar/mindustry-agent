@@ -10,6 +10,8 @@
   refresh, and editable/copyable session prompt.
 - Shorten the generated session prompt to state what the API is and the minimum
   handshake/usage steps; detailed rules remain in `/guide`.
+- Rewrite discovery after the session port/bind are resolved; previously the
+  first discovery write advertised the default port until a world load.
 - Make world-load bootstrap rotation unconditional; the old bootstrap is always
   invalid after a map load, while a live sessionToken survives.
 - Expose `dropZoneRadius`, `enemyCoreBuildRadius`, and `polygonCoreProtection` in

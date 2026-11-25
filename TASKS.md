@@ -172,7 +172,7 @@
 - [x] Logic sensor 对齐（实体层）：`get_unit` 返回 `entity+unit`、`get_tile` 返回 `entity+building`、`query_area detail:"full"`；字段走 `Senseable.sense/LAccess`，unsupported 省略，不暴露 `@client*`/links/ipt/settable
 - [x] Logic 全局量（常用）：context 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；剩余 `@thisx/@thisy/@links/@ipt` 仅在控制逻辑处理器时需要
 - [x] Logic processor 指南：`docs/LOGIC-PROCESSOR-GUIDE.md`，含全局变量/sensor/control/radar/ucontrol/memory/display/特权指令/API 名字映射；打包到 `/docs/LOGIC-PROCESSOR-GUIDE.md`
-- [x] 敌方固定出生点：`get_spawns` 读取 `WaveSpawner.getSpawns()`，返回 tile/world 坐标、waveTeam、dropZoneRadius、show/hideSpawns 与 fog 可见性；session smoke 验证 200/数组
+- [x] 敌方固定出生点：`get_spawns` 读取 `WaveSpawner.getSpawns()`，返回 tile/world 坐标、waveTeam、`dropZoneRadius`/`dropZoneRadiusTiles`、`enemyCoreBuildRadius`、`polygonCoreProtection`、show/hideSpawns 与 fog 可见性；`get_tile.spawnZone.inside` 标记出生/空投区；session smoke 验证字段
 - [x] Release prep（0.3.0）：默认 session bind 改为 loopback；测试辅助 op 默认关闭；增加 GPL-3.0、SECURITY、CI、`fetch-mindustry.sh`、`release.sh`、README 重写与发布校验
 - [x] 游戏内设置：Settings -> Mindustry Agent / session 弹窗 Settings；端口+LAN 实时 rebind、刷新 bootstrap token、编辑/重置/复制 session prompt
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
@@ -185,7 +185,7 @@
 - [x] 暂停硬门控：`/actions` 写 op 返回 `game_paused`，只读 op 放行；暂停期间不自动重生
 - [x] session `/actions` 按 35 个 `/tools` 名字白名单；内部 debug op 只能走本地 probe token，`get_capabilities` 实测 403
 - [x] session `build_plan` 展开为 `build`/`deconstruct`，不再返回 Unknown op
-- [x] world reload 保留 sessionToken；bootstrap 仅在已使用后轮换
+- [x] world reload：保留 sessionToken；bootstrap 每次 world load 无条件轮换，旧 bootstrap 失效；新 token 写入 discovery/游戏内 prompt；启动时在端口解析后重写 discovery
 - [x] build/build_plan 不再把“已入队”当“已落地”：campaign 未解锁返回 `block_locked`，build op 运行到目标 tile 出现；计划被引擎丢弃 `build_dropped`；Ground Zero fixture 显式 unlock
 - [x] 动作状态一致性审计：`deconstruct`/`repair`/`mine` 不再假成功；`configure` 回读；`stop`/`cancel` 清理全部目标；助手换体/死亡旧 op 失败 `assistant_gone`；`command_units` 目标不存在失败
 - [x] HTTP 会话入口加固：`/context` query 白名单、`/mcp` tools/call 白名单、`build_plan` MCP 路径；畸形请求 400、socket 关闭、accept 异常继续、连接上限/header 上限、chunked 拒绝

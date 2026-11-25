@@ -155,7 +155,7 @@ Bootstrap token: ***
 
 Use: GET /guide and GET /tools first. POST /session with the bootstrap token to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.
 Action policy: there is no default retreat, idle targeting, or auto-fire. Move/attack/follow/build/mine only on an explicit action; do not repeat a failed action without reading its error.
-The bootstrap token is single-use; sessionToken survives world reloads; dataToken expires.
+The bootstrap token is single-use; a world load rotates it (copy the new prompt); sessionToken survives world reloads; dataToken expires.
 ```
 
 `GET /guide` 和 `GET /tools` 接受未使用的 bootstrap token；后续动作必须换成

@@ -170,6 +170,8 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - Logic sensor 实体层（2026-11-24）：`get_unit` 返回 `entity+unit`，`get_tile` 有建筑时返回 `entity+building`，`query_area` 默认摘要、`detail:"full"` 才附加完整对象；字段走 `Senseable.sense/senseObject(LAccess)`，unsupported 省略；smoke 断言 `unit.shooting` 与 `building.totalItems` 可读。
 - Logic 指南与全局量（2026-11-24）：新增 `docs/LOGIC-PROCESSOR-GUIDE.md`，打包到 jar 的 `/docs/LOGIC-PROCESSOR-GUIDE.md`；`context` 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；smoke 验证 docs 200 与 context 字段。
 - 固定出生点（2026-11-24）：新增 `get_spawns`，数据来自 `WaveSpawner.getSpawns()` 的 `Blocks.spawn` 覆盖层；Ground Zero smoke 返回 `count=1`、`showSpawns=false`、`hideSpawns=true`，`spawns` 为数组。Ground Zero 的 minimap 默认隐藏出生点，但 API 在无雾时仍返回固定地图点；有雾时只返回可见点（除非 `hideSpawns=false`）。
+- 出生点建造保护（2026-11-25）：`get_spawns` 增加 `dropZoneRadiusTiles`、`enemyCoreBuildRadius`、`polygonCoreProtection`；`get_tile` 增加 `spawnZone{known,radius,inside,...}`；`placeReason` 在敌方核心保护范围内返回 `enemy_core_build_radius`。session smoke 验证 `enemyCoreBuildRadius=400`、`spawnZone.known=true`。
+- 默认动作与 bootstrap（2026-11-25）：初始 session prompt 和三个 MCP task prompt 增加显式动作策略；world load 无条件轮换 bootstrap，保留 sessionToken；旧 bootstrap 返回 401，新 bootstrap 在 discovery/游戏内 prompt 中更新。
 - Release prep（2026-11-25）：mod 升到 `0.3.0`；默认 session bind 改为 `127.0.0.1`；测试辅助 op 默认关闭（`PROBE_ENABLE_DEBUG_OPS=1` 才开启）；新增 GPL-3.0、CI、`fetch-mindustry.sh`、`release.sh`。`session-api-smoke` 在 Ground Zero 全绿；关闭 debug 后 raw `give` 返回 `debug_disabled`，`hello` 正常。
 
 
