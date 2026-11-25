@@ -171,11 +171,14 @@ freeCapacity` 是总容量。旧版本把 `getBatteryCapacity()` 的“剩余可
 { modeName, fog, staticFog, mission, waveTimer, waveSending, waves, winWave,
   buildSpeedMultiplier, deconstructRefundMultiplier, buildCostMultiplier,
   blockHealthMultiplier, unitBuildSpeedMultiplier,
+  dropZoneRadius, enemyCoreBuildRadius, polygonCoreProtection,
   objectives[], objectiveFlags[], researched[],
   sector?: { id, name, preset, captureWave, wasCaptured } }
 ```
 
 `fog/staticFog` 是只读规则；`wasCaptured` 是战役区域状态。
+`dropZoneRadius` 是出生/空投区半径，`enemyCoreBuildRadius` 是敌方核心禁止建造半径；
+`polygonCoreProtection=true` 时实际约束可能是最近核心保护，需用 `get_tile` 预检。
 campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptured`。
 
 ## 4. tile 结构
@@ -186,12 +189,16 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 { x, y, discovered, hidden,
   floor, overlay, liquid, drop, dropHardness, block, team, solid,
   canPlace?, placeReason?,
+  spawnZone?: { known, radius, radiusTiles, inside, distance, nearestSpawn?, note? },
   health?, maxHealth?, rotation?, efficiency?, progress?, warmup?, enabled?,
   items?, ammoTotal?, config?
 }
 ```
 
 `get_area` 的 `tiles[]` 使用相同字段（不含 `canPlace` 预览，除非单独调用 `get_tile`）。
+`spawnZone` 来自最近的固定出生点；`inside=true` 表示在敌人出生/空投区，波次开始时
+该区域内的建筑会被清除，不要在这里规划永久建筑。`known=false` 表示迷雾/无出生点，
+不能据此判断安全。
 隐藏态只保证 `x/y/discovered/hidden`，其余字段不可用于决策。
 
 - `block`：内容名，空气为 `air`，隐藏为 `hidden`；
@@ -273,6 +280,9 @@ building: {
   fog,
   waveTeam, waveTeamName,
   dropZoneRadius,
+  dropZoneRadiusTiles,
+  enemyCoreBuildRadius,
+  polygonCoreProtection,
   unit: "tile",
   source: "WaveSpawner.getSpawns"
 }
@@ -280,6 +290,17 @@ building: {
 
 数据来源是 `WaveSpawner.getSpawns()` 中 `overlay == Blocks.spawn` 的固定地图出生点，
 不是当前敌人位置，也不是随机刷怪点。
+
+建造保护字段：
+
+- `dropZoneRadius`：出生点/空投区半径（世界单位）；用于判断单位和出生点附近的行为。
+- `enemyCoreBuildRadius`：敌方核心的禁止建造半径（世界单位）；`Build.validPlace`
+  在敌方核心保护圈内会拒绝放置。
+- `polygonCoreProtection`：地图是否使用多边形/最近核心保护模式；此时限制可能不是
+  简单的圆形半径，仍需用 `get_tile` 的 `canPlace/placeReason` 验证。
+
+`get_tile` 传 `block/rotation` 做预检时，若放置因敌方核心保护圈失败，`placeReason`
+会返回 `enemy_core_build_radius`；其他地形/占用原因仍优先返回 `liquid/solid/occupied`。
 
 可见性：
 

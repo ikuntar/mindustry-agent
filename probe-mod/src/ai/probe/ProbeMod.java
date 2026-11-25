@@ -9,6 +9,7 @@ import arc.scene.ui.CheckBox;
 import arc.scene.ui.Label;
 import arc.scene.ui.TextArea;
 import arc.scene.ui.TextField;
+import arc.math.Mathf;
 import arc.math.geom.Point2;
 import arc.math.geom.Position;
 import arc.math.geom.Vec2;
@@ -443,13 +444,13 @@ public class ProbeMod extends Mod {
         }
         mapRevision = 0;
         lastMapCaptureTick = -1;
-        if (sessionBootstrapUsed) {
-            // A live session keeps working across world reloads; rotate the
-            // one-time bootstrap so a new harness can still start a new session.
-            sessionBootstrapToken = UUID.randomUUID().toString();
-            sessionBootstrapUsed = false;
-        }
-        if (EXPOSE_SESSION) writeDiscovery();
+        // A world load always rotates the one-time bootstrap. A live session
+        // token intentionally survives; this prevents a stale prompt from
+        // being reused after switching maps.
+        sessionBootstrapToken = UUID.randomUUID().toString();
+        sessionBootstrapUsed = false;
+        writeDiscovery();
+        Log.info("[mindustry-agent] bootstrap token rotated after world load");
         Log.info("[mindustry-agent] world loaded, waiting for requests");
     }
 
@@ -708,11 +709,52 @@ public class ProbeMod extends Mod {
         }
     }
 
-    private String placementReason(Tile tile, Block block) {
+    private Jval spawnZoneJson(float worldX, float worldY) {
+        if (Vars.spawner == null || Vars.state.rules == null) {
+            return Jval.newObject().put("known", false);
+        }
+        boolean shown = !Vars.state.rules.hideSpawns;
+        Tile nearest = null;
+        float nearestDistance = Float.MAX_VALUE;
+        for (Tile spawn : Vars.spawner.getSpawns()) {
+            if (spawn == null) continue;
+            boolean exposed = !fogActive() || shown || tileVisible(spawn.x, spawn.y);
+            if (!exposed) continue;
+            float distance = Mathf.dst(worldX, worldY, spawn.worldx(), spawn.worldy());
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = spawn;
+            }
+        }
+        if (nearest == null) {
+            return Jval.newObject().put("known", false);
+        }
+        float radius = Vars.state.rules.dropZoneRadius;
+        Jval result = Jval.newObject()
+                .put("known", true)
+                .put("radius", radius)
+                .put("radiusTiles", radius / Vars.tilesize)
+                .put("inside", nearestDistance <= radius)
+                .put("distance", nearestDistance)
+                .put("nearestSpawn", Jval.newObject()
+                        .put("x", nearest.x)
+                        .put("y", nearest.y)
+                        .put("worldX", nearest.worldx())
+                        .put("worldY", nearest.worldy()));
+        if (nearestDistance <= radius) {
+            result.put("note", "blocks in the enemy spawn/drop zone are destroyed at the start of a wave");
+        }
+        return result;
+    }
+
+    private String placementReason(Tile tile, Block block, Team team) {
         if (tile == null) return "out_of_bounds";
         if (tile.floor() != null && tile.floor().liquidDrop != null) return "liquid";
         if (tile.build != null) return tile.block() == block ? "replaceable" : "occupied";
         if (tile.block() != null && !tile.block().name.equals("air")) return tile.block().solid ? "solid" : "occupied";
+        if (team != null && Vars.state.teams.anyEnemyCoresWithinBuildRadius(team, tile.worldx(), tile.worldy())) {
+            return "enemy_core_build_radius";
+        }
         return "invalid_placement";
     }
 
@@ -1607,7 +1649,8 @@ public class ProbeMod extends Mod {
             }
             data.put("block", tile.block().name)
                     .put("team", tile.team().id)
-                    .put("solid", tile.block().solid);
+                    .put("solid", tile.block().solid)
+                    .put("spawnZone", spawnZoneJson(tile.worldx(), tile.worldy()));
             String queriedBlock = request.getString("block", "");
             if (!queriedBlock.isEmpty()) {
                 Block placement = Vars.content.block(queriedBlock);
@@ -1618,7 +1661,7 @@ public class ProbeMod extends Mod {
                 int rotation = request.getInt("rotation", 0);
                 boolean canPlace = Build.validPlace(placement, assistant != null ? assistant.team : tile.team(), x, y, rotation);
                 data.put("canPlace", canPlace)
-                        .put("placeReason", canPlace ? "" : placementReason(tile, placement));
+                        .put("placeReason", canPlace ? "" : placementReason(tile, placement, assistant != null ? assistant.team : tile.team()));
             }
             if (tile.build != null) {
                 data.put("health", tile.build.health);
@@ -1695,6 +1738,9 @@ public class ProbeMod extends Mod {
                     .put("waveTeam", Vars.state.rules.waveTeam == null ? -1 : Vars.state.rules.waveTeam.id)
                     .put("waveTeamName", Vars.state.rules.waveTeam == null ? "" : Vars.state.rules.waveTeam.name)
                     .put("dropZoneRadius", Vars.state.rules.dropZoneRadius)
+                    .put("dropZoneRadiusTiles", Vars.state.rules.dropZoneRadius / Vars.tilesize)
+                    .put("enemyCoreBuildRadius", Vars.state.rules.enemyCoreBuildRadius)
+                    .put("polygonCoreProtection", Vars.state.rules.polygonCoreProtection)
                     .put("unit", "tile")
                     .put("source", "WaveSpawner.getSpawns")
                     .put("coordinateNote", "x/y are tile coordinates; worldX/worldY are pixels"));
@@ -4381,6 +4427,9 @@ public class ProbeMod extends Mod {
                 .put("buildCostMultiplier", rules.buildCostMultiplier)
                 .put("blockHealthMultiplier", rules.blockHealthMultiplier)
                 .put("unitBuildSpeedMultiplier", rules.unitBuildSpeedMultiplier)
+                .put("dropZoneRadius", rules.dropZoneRadius)
+                .put("enemyCoreBuildRadius", rules.enemyCoreBuildRadius)
+                .put("polygonCoreProtection", rules.polygonCoreProtection)
                 .put("objectives", objectivesJson())
                 .put("objectiveFlags", objectiveFlagsJson())
                 .put("researched", researchedJson());
@@ -5832,24 +5881,40 @@ public class ProbeMod extends Mod {
                         .put("description", "Mine a resource and deposit it into a core."));
     }
 
+    private String actionPolicy() {
+        return "Action policy: the assistant has no default retreat, idle target selection, or auto-fire. "
+                + "Movement, attack, follow, build, and mine happen only through explicit actions; "
+                + "check the current context and poll results instead of assuming or repeating an action.\n\n";
+    }
+
     private String promptText(String name) {
         if ("play-session".equals(name)) {
             return "You are playing Mindustry as the AI assistant in a live game.\n"
-                    + "Start with get_context({detail:\"summary\"}), then inspect only what you need.\n"
-                    + "Use actions and poll get_action_result until done/failed.\n"
-                    + "Do not attack your own team. Large map/event data goes to /data and files, not context.\n\n"
+                    + "Goal: choose and execute one useful next action, then verify the result.\n"
+                    + "1. Call get_context({detail:\"summary\"}) first; use get_area, get_tile, or query_area only for bounded details.\n"
+                    + "2. Use GET /tools for action names and units; never invent a tool or target.\n"
+                    + "3. Write actions are asynchronous: poll get_action_result until done/failed.\n"
+                    + "4. Re-read context after an action; do not repeat a failed action without reading its error.\n"
+                    + "5. Do not attack your own team. Large map/event data goes to /data and files, not context.\n\n"
+                    + actionPolicy()
                     + gameGuide();
         }
         if ("defend-core".equals(name)) {
-            return "Defend the team core. Read context, identify hostile units or buildings near the core, "
-                    + "move the assistant into range, attack the highest threat, and re-check context.\n"
-                    + "Do not attack your own team. Report what you defended and what remains.\n\n"
+            return "Defend the team core from nearby threats.\n"
+                    + "1. Read context and identify the team core and hostile units/buildings near it.\n"
+                    + "2. Pick the highest threat that the assistant can reach; do not attack allies.\n"
+                    + "3. Move only if needed, then issue an explicit attack and poll the action.\n"
+                    + "4. Re-read context and report what was defended and what remains.\n\n"
+                    + actionPolicy()
                     + gameGuide();
         }
         if ("mine-and-deposit".equals(name)) {
-            return "Mine a resource and deposit it into a core. Read context, find a reachable resource tile, "
-                    + "call mine, wait for done, move to a same-team core, call deposit, and verify the result.\n"
-                    + "Do not attack your own team.\n\n"
+            return "Mine a resource and deposit it into a same-team core.\n"
+                    + "1. Read context and find a reachable resource tile; verify range before acting.\n"
+                    + "2. Call mine, poll until done, and verify the assistant actually holds the item.\n"
+                    + "3. Move to a same-team core, call deposit, and verify the core inventory changed.\n"
+                    + "4. Do not attack your own team; do not assume a failed action succeeded.\n\n"
+                    + actionPolicy()
                     + gameGuide();
         }
         return null;
@@ -5894,7 +5959,7 @@ public class ProbeMod extends Mod {
                                         .put("y", property("integer").put("description", "tile y")))),
                         Jval.newArray().add("x").add("y").add("radius"))));
         tools.add(tool("get_tile",
-                "Read one tile in tile coordinates, including terrain/floor/liquid, block, team, drop, health, rotation, items and config. Pass block/rotation to preflight placement (canPlace/placeReason).",
+                "Read one tile in tile coordinates, including terrain/floor/liquid, block, team, drop, health, rotation, items, config, and nearby spawn/drop-zone status. Pass block/rotation to preflight placement (canPlace/placeReason).",
                 inputSchema(Jval.newObject()
                         .put("x", property("integer").put("description", "tile x"))
                         .put("y", property("integer").put("description", "tile y"))
@@ -5902,7 +5967,7 @@ public class ProbeMod extends Mod {
                         .put("rotation", property("integer")),
                         Jval.newArray().add("x").add("y"))));
         tools.add(tool("get_spawns",
-                "Read fixed wave spawn points from WaveSpawner. Returns tile x/y and worldX/worldY, wave team, dropZoneRadius, showSpawns and per-point visibility. With fog enabled, hidden points are omitted unless rules.hideSpawns is false (minimap exposes them).",
+                "Read fixed wave spawn points from WaveSpawner. Returns tile x/y and worldX/worldY, wave team, dropZoneRadius, enemyCoreBuildRadius, polygonCoreProtection, showSpawns and per-point visibility. With fog enabled, hidden points are omitted unless rules.hideSpawns is false (minimap exposes them).",
                 inputSchema(Jval.newObject(), Jval.newArray())));
         tools.add(tool("query_area",
                 "Read units and buildings within a radius around world coordinates in pixels (8 px per tile). includeUnits/includeBuildings default true; includeEnemies defaults false, so pass includeEnemies=true when searching for enemies. Each row has entity; detail=full adds the unit/building sensor object.",
@@ -6141,6 +6206,7 @@ public class ProbeMod extends Mod {
                 + "Endpoint: " + endpoint + "\n"
                 + "Bootstrap token: " + sessionBootstrapToken + "\n\n"
                 + "Use: GET /guide and GET /tools first. POST /session with the bootstrap token to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.\n"
+                + "Action policy: there is no default retreat, idle targeting, or auto-fire. Move/attack/follow/build/mine only on an explicit action; do not repeat a failed action without reading its error.\n"
                 + "The bootstrap token is single-use; sessionToken survives world reloads; dataToken expires.\n";
     }
 

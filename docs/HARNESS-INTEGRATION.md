@@ -184,6 +184,10 @@ Loop:
 
 You are the assistant unit, not the human player. Use possess/release and
 respawn only through their tools. This server does not plan long-term goals.
+
+Action policy: the assistant has no default retreat, idle targeting, or auto-fire.
+Movement, attack, follow, build, and mine happen only through explicit actions;
+do not assume an action because a previous one was requested.
 ```
 
 ## 工具使用约定

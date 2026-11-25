@@ -175,15 +175,18 @@ const sensorTile = await call("/actions", {
   headers: auth,
   body: JSON.stringify({ kind: "get_tile", x: Math.floor((core?.x ?? context.body.assistant?.x ?? 0) / 8), y: Math.floor((core?.y ?? context.body.assistant?.y ?? 0) / 8) }),
 });
-console.log("sensor tile", sensorTile.status, sensorTile.body?.entity?.kind, sensorTile.body?.building?.totalItems);
-if (sensorTile.status !== 200 || sensorTile.body?.entity?.kind !== "building" || sensorTile.body?.building?.totalItems === undefined) process.exit(1);
+console.log("sensor tile", sensorTile.status, sensorTile.body?.entity?.kind, sensorTile.body?.building?.totalItems, sensorTile.body?.spawnZone?.known);
+if (sensorTile.status !== 200 || sensorTile.body?.entity?.kind !== "building" || sensorTile.body?.building?.totalItems === undefined
+    || typeof sensorTile.body?.spawnZone?.known !== "boolean") process.exit(1);
 const spawnPoints = await call("/actions", {
   method: "POST",
   headers: auth,
   body: JSON.stringify({ kind: "get_spawns" }),
 });
-console.log("spawns", spawnPoints.status, spawnPoints.body?.count, spawnPoints.body?.showSpawns, spawnPoints.body?.hideSpawns, spawnPoints.body?.spawns?.[0]);
-if (spawnPoints.status !== 200 || !Array.isArray(spawnPoints.body?.spawns)) process.exit(1);
+console.log("spawns", spawnPoints.status, spawnPoints.body?.count, spawnPoints.body?.showSpawns, spawnPoints.body?.hideSpawns, spawnPoints.body?.enemyCoreBuildRadius, spawnPoints.body?.spawns?.[0]);
+if (spawnPoints.status !== 200 || !Array.isArray(spawnPoints.body?.spawns)
+    || typeof spawnPoints.body?.enemyCoreBuildRadius !== "number"
+    || typeof spawnPoints.body?.polygonCoreProtection !== "boolean") process.exit(1);
 
 const badPlan = await call("/actions", {
   method: "POST",

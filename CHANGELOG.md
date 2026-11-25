@@ -10,6 +10,12 @@
   refresh, and editable/copyable session prompt.
 - Shorten the generated session prompt to state what the API is and the minimum
   handshake/usage steps; detailed rules remain in `/guide`.
+- Make world-load bootstrap rotation unconditional; the old bootstrap is always
+  invalid after a map load, while a live sessionToken survives.
+- Expose `dropZoneRadius`, `enemyCoreBuildRadius`, and `polygonCoreProtection` in
+  rules/spawn data; `get_tile` preflight now reports `enemy_core_build_radius`.
+- Add an explicit action-policy line to the initial and MCP task prompts so a
+  harness does not infer default movement, targeting, or auto-fire.
 - Keep the Java package `ai.probe` and repository folder `probe-mod` for now;
   neither is part of the user-facing mod identity.
 

@@ -154,6 +154,7 @@ Endpoint: http://192.0.2.10:47600
 Bootstrap token: ***
 
 Use: GET /guide and GET /tools first. POST /session with the bootstrap token to get a sessionToken; use it for /context, /actions, and /events/wait. Actions are asynchronous: poll /actions/{opId}. Use the returned dataToken only for /data.
+Action policy: there is no default retreat, idle targeting, or auto-fire. Move/attack/follow/build/mine only on an explicit action; do not repeat a failed action without reading its error.
 The bootstrap token is single-use; sessionToken survives world reloads; dataToken expires.
 ```
 
@@ -429,7 +430,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 ## 10. 生命周期
 
 - `init()`：启动 socket、数据面、HTTP session server；端口冲突时目前只记录错误，不递增重试。
-- world load：保留已有 `sessionToken`，清空 ops/events；若 bootstrap 已被使用则轮换一次给新会话；客户端显示弹窗。
+- world load：保留已有 `sessionToken`，清空 ops/events；bootstrap 每次 world load 轮换（旧 bootstrap 立即失效），客户端显示新弹窗。
 - world unload / game exit：当前进程退出后端口关闭、token 失效；显式关闭和删除 discovery 仍待补。
 - 进程崩溃：端口关闭，token 自然失效；不保证清理文件，但默认文件不保存 session token。
 - 重启：新 bootstrap token，不存在旧 token 复用。
