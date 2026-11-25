@@ -21,6 +21,24 @@ This builds `probe-mod/build/mindustry-agent.jar`, copies it to
 
 ## GitHub release
 
+### First publish: create the repository
+
+From the repository root:
+
+```bash
+scripts/publish-github.sh mindustry-agent
+```
+
+The script asks for a GitHub PAT with repository-creation permission, creates
+`<your-login>/mindustry-agent` (empty, no README), adds a `github` remote, and
+pushes the current branch. The PAT is read without echo and is not written to
+`.git/config` or `.git-credentials`; the existing Gitea `origin` is untouched.
+
+Use `scripts/publish-github.sh mindustry-agent --private` for a private repo.
+The script requires a classic PAT with `repo`, or a fine-grained PAT with
+Administration and Contents write access. It does not create a release or
+upload the jar.
+
 1. Update `probe-mod/mod.json` and `ProbeMod.VERSION` together.
 2. Update `CHANGELOG.md`.
 3. Commit and push.
