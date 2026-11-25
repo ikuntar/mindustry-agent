@@ -5,6 +5,10 @@ package ai.probe;
 import arc.Events;
 import arc.files.Fi;
 import arc.Core;
+import arc.scene.ui.CheckBox;
+import arc.scene.ui.Label;
+import arc.scene.ui.TextArea;
+import arc.scene.ui.TextField;
 import arc.math.geom.Point2;
 import arc.math.geom.Position;
 import arc.math.geom.Vec2;
@@ -131,8 +135,14 @@ import java.util.concurrent.Executors;
 public class ProbeMod extends Mod {
     private static final int PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_PORT", "46500"));
     private static final int DATA_PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_DATA_PORT", "46501"));
-    private static final int SESSION_PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_SESSION_PORT", "47600"));
-    private static final String SESSION_BIND = System.getenv().getOrDefault("PROBE_SESSION_BIND", "127.0.0.1");
+    private static final int SESSION_PORT_DEFAULT = 47600;
+    private static final String SESSION_BIND_DEFAULT = "127.0.0.1";
+    private static final String SESSION_PORT_SETTING = "ai-probe.session-port";
+    private static final String SESSION_LAN_SETTING = "ai-probe.session-lan";
+    private volatile int sessionPort = SESSION_PORT_DEFAULT;
+    private volatile String sessionBind = SESSION_BIND_DEFAULT;
+    private volatile HttpServer sessionServer;
+    private volatile boolean settingsRegistered;
     private static final boolean EXPOSE_SESSION = "1".equals(System.getenv("PROBE_EXPOSE_SESSION"));
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
@@ -251,6 +261,7 @@ public class ProbeMod extends Mod {
         if (!Vars.headless) {
             Events.on(EventType.WorldLoadEvent.class, event -> showSessionDialog());
             Events.on(EventType.ClientLoadEvent.class, event -> copyAssistantTypeVisuals());
+            Events.on(EventType.ClientLoadEvent.class, event -> registerSettings());
         }
         if (!Vars.headless && "1".equals(System.getenv("PROBE_TEST_AUTOLOAD"))) {
             Events.on(EventType.ClientLoadEvent.class, event -> Time.run(90f, () -> {
@@ -323,10 +334,12 @@ public class ProbeMod extends Mod {
         });
         startSocket();
         startDataServer();
+        sessionPort = configuredSessionPort();
+        sessionBind = configuredSessionBind();
         startSessionServer();
         Log.info("[ai-probe] listening on 127.0.0.1:" + PORT);
         Log.info("[ai-probe] data plane on 127.0.0.1:" + DATA_PORT + "/data");
-        Log.info("[ai-probe] session API on " + SESSION_BIND + ":" + SESSION_PORT);
+        Log.info("[ai-probe] session API on " + sessionBind + ":" + sessionPort);
     }
 
     private void addEvent(String type, Jval data) {
@@ -4681,21 +4694,67 @@ public class ProbeMod extends Mod {
         }
     }
 
-    private void startSessionServer() {
+    private int configuredSessionPort() {
+        String env = System.getenv("PROBE_SESSION_PORT");
+        if (env != null) {
+            try {
+                int value = Integer.parseInt(env);
+                if (value >= 1024 && value <= 65535) return value;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        int saved = Core.settings == null ? SESSION_PORT_DEFAULT : Core.settings.getInt(SESSION_PORT_SETTING, SESSION_PORT_DEFAULT);
+        return saved >= 1024 && saved <= 65535 ? saved : SESSION_PORT_DEFAULT;
+    }
+
+    private String configuredSessionBind() {
+        String env = System.getenv("PROBE_SESSION_BIND");
+        if (env != null && !env.trim().isEmpty()) return env.trim();
+        boolean lan = Core.settings != null && Core.settings.getBool(SESSION_LAN_SETTING, false);
+        return lan ? "0.0.0.0" : SESSION_BIND_DEFAULT;
+    }
+
+    private boolean startSessionServer() {
         try {
-            HttpServer server = HttpServer.create(new InetSocketAddress(SESSION_BIND, SESSION_PORT), 0);
+            HttpServer server = HttpServer.create(new InetSocketAddress(sessionBind, sessionPort), 0);
             server.createContext("/", this::handleSession);
             server.createContext("/data", this::handleData);
             server.createContext("/mcp", this::handleMcp);
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
-            Log.info("[ai-probe] session API listening on " + SESSION_BIND + ":" + SESSION_PORT);
+            sessionServer = server;
+            Log.info("[ai-probe] session API listening on " + sessionBind + ":" + sessionPort);
             for (String url : lanSessionUrls()) {
                 Log.info("[ai-probe] session LAN URL: " + url);
             }
+            return true;
         } catch (IOException error) {
             Log.err("[ai-probe] session API failed", error);
+            return false;
         }
+    }
+
+    private boolean applySessionSettings(int port, boolean lan) {
+        if (port < 1024 || port > 65535) return false;
+        int previousPort = sessionPort;
+        String previousBind = sessionBind;
+        HttpServer previousServer = sessionServer;
+        sessionServer = null;
+        if (previousServer != null) previousServer.stop();
+        sessionPort = port;
+        sessionBind = lan ? "0.0.0.0" : SESSION_BIND_DEFAULT;
+        if (Core.settings != null) {
+            Core.settings.put(SESSION_PORT_SETTING, port);
+            Core.settings.put(SESSION_LAN_SETTING, lan);
+        }
+        if (!startSessionServer()) {
+            sessionPort = previousPort;
+            sessionBind = previousBind;
+            startSessionServer();
+            return false;
+        }
+        if (EXPOSE_SESSION) writeDiscovery();
+        return true;
     }
 
     private java.util.List<String> lanSessionUrls() {
@@ -4710,12 +4769,12 @@ public class ProbeMod extends Mod {
                     InetAddress address = addresses.nextElement();
                     if (address.isLoopbackAddress() || address.isLinkLocalAddress()) continue;
                     if (address.getAddress().length != 4) continue;
-                    urls.add("http://" + address.getHostAddress() + ":" + SESSION_PORT);
+                    urls.add("http://" + address.getHostAddress() + ":" + sessionPort);
                 }
             }
         } catch (SocketException ignored) {
         }
-        if (urls.isEmpty()) urls.add("http://127.0.0.1:" + SESSION_PORT);
+        if (urls.isEmpty()) urls.add("http://127.0.0.1:" + sessionPort);
         return urls;
     }
 
@@ -6069,8 +6128,8 @@ public class ProbeMod extends Mod {
     }
 
     private String preferredSessionUrl() {
-        if (!"0.0.0.0".equals(SESSION_BIND)) {
-            return "http://" + SESSION_BIND + ":" + SESSION_PORT;
+        if (!"0.0.0.0".equals(sessionBind)) {
+            return "http://" + sessionBind + ":" + sessionPort;
         }
         return lanSessionUrls().get(0);
     }
@@ -6082,8 +6141,8 @@ public class ProbeMod extends Mod {
                 + "Bootstrap token: " + sessionBootstrapToken + "\n\n"
                 + "Use this game API for this session only.\n"
                 + "0. Read GET /guide first: it is the complete Mindustry primer, not just API notes. The bootstrap token is accepted read-only for /guide and /tools.\n"
-                + "1. POST /session with Authorization: Bearer (bootstrap token from above).\n"
-                + "2. Use the returned sessionToken as Authorization: Bearer (session token).\n"
+                + "1. POST /session with Authorization: Bearer " + sessionBootstrapToken + " (the bootstrap token above).\n"
+                + "2. Use the returned sessionToken as Authorization: Bearer <sessionToken returned by step 1>.\n"
                 + "3. GET /tools for the action names, required fields, and units.\n"
                 + "4. GET /context?detail=summary for the current state.\n"
                 + "5. POST /actions with {\"kind\":\"move_to\",\"x\":...,\"y\":...}; x/y are world pixels, not tiles. Poll GET /actions/{opId}.\n"
@@ -6099,11 +6158,77 @@ public class ProbeMod extends Mod {
         Core.app.post(() -> {
             BaseDialog dialog = new BaseDialog("Mindustry AI");
             dialog.cont.add("Copy this prompt into a new harness session:").left().row();
+            Label endpoint = new Label(preferredSessionUrl());
+            dialog.cont.add(endpoint).left().row();
             dialog.cont.add(sessionPrompt()).wrap().width(560f).left().padTop(8f).row();
-            dialog.buttons.defaults().size(200f, 54f).pad(4f);
-            dialog.buttons.button("Copy session prompt", () -> {
+            dialog.buttons.defaults().size(180f, 54f).pad(4f);
+            dialog.buttons.button("Settings", this::showSettingsDialog);
+            dialog.buttons.button("Copy prompt", () -> {
                 Core.app.setClipboardText(sessionPrompt());
                 dialog.hide();
+            });
+            dialog.buttons.button("Close", dialog::hide);
+            dialog.show();
+        });
+    }
+
+    private void registerSettings() {
+        if (Vars.headless || settingsRegistered || Vars.ui == null || Vars.ui.settings == null) return;
+        settingsRegistered = true;
+        Vars.ui.settings.addCategory("AI Probe", table -> {
+            table.add("AI Probe session API").left().row();
+            table.add("Change the port, LAN binding, and session prompt in game.").left().wrap().row();
+            table.button("Open AI Probe settings", this::showSettingsDialog).size(280f, 50f).left().row();
+        });
+    }
+
+    private void showSettingsDialog() {
+        if (Vars.headless) return;
+        Core.app.post(() -> {
+            BaseDialog dialog = new BaseDialog("AI Probe settings");
+            TextField port = new TextField(String.valueOf(sessionPort));
+            CheckBox lan = new CheckBox("Bind to LAN (0.0.0.0)");
+            lan.setChecked("0.0.0.0".equals(sessionBind));
+            Label applyStatus = new Label("");
+            TextArea prompt = new TextArea(sessionPrompt());
+            prompt.setPrefRows(10);
+
+            dialog.cont.add("Session API").left().row();
+            dialog.cont.table(t -> {
+                t.add("Port").left();
+                t.add(port).width(140f).row();
+                t.add(lan).left().colspan(2).row();
+                t.add(applyStatus).colspan(2).left().row();
+                t.button("Apply and rebind", () -> {
+                    int value;
+                    try {
+                        value = Integer.parseInt(port.getText().trim());
+                    } catch (NumberFormatException error) {
+                        applyStatus.setText("Port must be 1024..65535");
+                        return;
+                    }
+                    boolean ok = applySessionSettings(value, lan.isChecked());
+                    applyStatus.setText(ok
+                            ? "Listening on " + sessionBind + ":" + sessionPort
+                            : "Rebind failed; check the game log");
+                    prompt.setText(sessionPrompt());
+                }).size(240f, 50f);
+                t.button("Refresh token", () -> {
+                    sessionBootstrapToken = UUID.randomUUID().toString();
+                    sessionBootstrapUsed = false;
+                    if (EXPOSE_SESSION) writeDiscovery();
+                    applyStatus.setText("Bootstrap token refreshed");
+                    prompt.setText(sessionPrompt());
+                }).size(220f, 50f);
+            }).left().row();
+
+            dialog.cont.add("Session prompt").left().padTop(8f).row();
+            dialog.cont.add(prompt).width(680f).height(220f).left().row();
+            dialog.buttons.defaults().size(200f, 54f).pad(4f);
+            dialog.buttons.button("Reset prompt", () -> prompt.setText(sessionPrompt()));
+            dialog.buttons.button("Copy prompt", () -> {
+                Core.app.setClipboardText(prompt.getText());
+                applyStatus.setText("Prompt copied");
             });
             dialog.buttons.button("Close", dialog::hide);
             dialog.show();
@@ -6396,8 +6521,8 @@ public class ProbeMod extends Mod {
                     .put("dataTokenExpires", dataTokenExpires)
                     .put("dataRateLimit", dataRateLimit)
                     .put("dataBaseUrl", dataBaseUrl)
-                    .put("sessionPort", SESSION_PORT)
-                    .put("sessionBind", SESSION_BIND)
+                    .put("sessionPort", sessionPort)
+                    .put("sessionBind", sessionBind)
                     .put("sessionBootstrapToken", EXPOSE_SESSION ? sessionBootstrapToken : "")
                     .put("pid", currentPid())
                     .toString(Jval.Jformat.plain);

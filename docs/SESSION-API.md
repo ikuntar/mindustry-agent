@@ -82,6 +82,21 @@ EndpointInfo:
 - token 不写日志；错误信息不回显 Authorization。
 - 测试辅助 op 默认关闭，只有 `PROBE_ENABLE_DEBUG_OPS=1` 才启用；不要在可被不可信客户端访问的服务器上开启。
 
+### 3.1 游戏内设置
+
+客户端非 headless 模式会在 `Settings -> AI Probe` 注册设置入口；世界加载弹窗也有
+`Settings` 按钮。设置面板可以：
+
+- 修改 session 端口（1024–65535）并立即停止/重启 HTTP server
+- 勾选 LAN bind（`0.0.0.0`）；默认仍是 loopback
+- 刷新一次性 bootstrap token
+- 编辑、重置、复制 session prompt；编辑只影响复制文本，不改变 API 行为
+
+端口和 LAN 选项保存到 Mindustry settings（`ai-probe.session-port`、
+`ai-probe.session-lan`）。`PROBE_SESSION_PORT` / `PROBE_SESSION_BIND` 环境变量在进程
+启动时优先，覆盖保存值。rebind 不会改变已有 sessionToken、dataToken 或游戏状态；
+客户端需要连接新 endpoint。若端口被占用，面板显示失败并恢复旧端口。
+
 ## 4. 一次性握手与 session token
 
 每局启动生成 **bootstrap token**：

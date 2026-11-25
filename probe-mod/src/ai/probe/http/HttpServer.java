@@ -55,10 +55,25 @@ public final class HttpServer {
         accept.start();
     }
 
+    /** Stop accepting connections and close the listening socket. */
+    public void stop(){
+        running = false;
+        ServerSocket current = server;
+        server = null;
+        if(current != null){
+            try{
+                current.close();
+            }catch(IOException ignored){
+            }
+        }
+    }
+
     private void acceptLoop() {
         while (running) {
             try {
-                Socket socket = server.accept();
+                ServerSocket listener = server;
+                if (listener == null) return;
+                Socket socket = listener.accept();
                 if (!permits.tryAcquire()) {
                     closeQuietly(socket);
                     continue;

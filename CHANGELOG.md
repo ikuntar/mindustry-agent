@@ -16,5 +16,7 @@
   requires `PROBE_SESSION_BIND=0.0.0.0`.
 - Disable test/debug operations unless `PROBE_ENABLE_DEBUG_OPS=1`; fixture
   scripts opt in explicitly.
+- Add an in-game settings panel for session port/LAN binding, bootstrap-token
+  refresh, and editable/copyable session prompt.
 - Add GPL-3.0 license, security policy, CI, reproducible Mindustry fetch, and
   local release/checksum scripts.

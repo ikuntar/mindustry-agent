@@ -103,6 +103,17 @@ The session token is separate from the raw probe token and the read-only data to
 
 Read [docs/SESSION-API.md](docs/SESSION-API.md) for endpoints and [docs/API-DATA-CONTRACT.md](docs/API-DATA-CONTRACT.md) for returned fields.
 
+### In-game settings
+
+Open `Settings -> AI Probe`, or use the `Settings` button in the session dialog:
+
+- change the session port (1024–65535) and rebind the HTTP server immediately
+- opt into LAN binding with the `0.0.0.0` checkbox
+- refresh the one-time bootstrap token
+- edit, copy, and reset the session prompt text
+
+The port and LAN choice are persisted in Mindustry's settings. `PROBE_SESSION_PORT` and `PROBE_SESSION_BIND` still override the saved values on process start. Rebinding does not change the existing session token or game state; clients must reconnect to the new endpoint. Edits to the prompt text affect only the copied text, not the API behavior.
+
 ## MCP
 
 The Node package provides the MCP/stdio development surface:

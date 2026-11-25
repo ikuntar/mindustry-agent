@@ -174,6 +174,7 @@
 - [x] Logic processor 指南：`docs/LOGIC-PROCESSOR-GUIDE.md`，含全局变量/sensor/control/radar/ucontrol/memory/display/特权指令/API 名字映射；打包到 `/docs/LOGIC-PROCESSOR-GUIDE.md`
 - [x] 敌方固定出生点：`get_spawns` 读取 `WaveSpawner.getSpawns()`，返回 tile/world 坐标、waveTeam、dropZoneRadius、show/hideSpawns 与 fog 可见性；session smoke 验证 200/数组
 - [x] Release prep（0.2.0）：默认 session bind 改为 loopback；测试辅助 op 默认关闭；增加 GPL-3.0、SECURITY、CI、`fetch-mindustry.sh`、`release.sh`、README 重写与发布校验
+- [x] 游戏内设置：Settings -> AI Probe / session 弹窗 Settings；端口+LAN 实时 rebind、刷新 bootstrap token、编辑/重置/复制 session prompt
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [x] 正式构建默认关闭 raw debug op（give/spawn_enemy/set_floor 等）；`PROBE_ENABLE_DEBUG_OPS=1` 仅用于测试
 - [x] issue #34 余项：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明已完成
