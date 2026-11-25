@@ -82,7 +82,7 @@ if (guideBuild.status !== 200 || !guideText.includes("get_config_schema") || gui
 
 const tools = await call("/tools", { headers: auth });
 const expectedTools = [
-  "get_context", "get_area", "get_tile", "query_area", "get_unit", "list_unit_types",
+  "get_context", "get_area", "get_tile", "get_spawns", "query_area", "get_unit", "list_unit_types",
   "move_to", "attack", "mine", "build_plan", "withdraw", "deposit", "configure",
   "deconstruct", "repair", "set_stance", "release", "follow", "research",
   "get_action_result", "cancel", "stop", "possess", "respawn", "pause", "resume", "command_units",
@@ -177,6 +177,13 @@ const sensorTile = await call("/actions", {
 });
 console.log("sensor tile", sensorTile.status, sensorTile.body?.entity?.kind, sensorTile.body?.building?.totalItems);
 if (sensorTile.status !== 200 || sensorTile.body?.entity?.kind !== "building" || sensorTile.body?.building?.totalItems === undefined) process.exit(1);
+const spawnPoints = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_spawns" }),
+});
+console.log("spawns", spawnPoints.status, spawnPoints.body?.count, spawnPoints.body?.showSpawns, spawnPoints.body?.hideSpawns, spawnPoints.body?.spawns?.[0]);
+if (spawnPoints.status !== 200 || !Array.isArray(spawnPoints.body?.spawns)) process.exit(1);
 
 const badPlan = await call("/actions", {
   method: "POST",
@@ -347,7 +354,7 @@ console.log("data token rotation", oldData.status, freshData.status);
 if (context.status !== 200 || action.status !== 200 || result.status !== 200 || guide.status !== 200) {
   process.exit(1);
 }
-if (tools.status !== 200 || tools.body.tools?.length !== 34) process.exit(1);
+if (tools.status !== 200 || tools.body.tools?.length !== 35) process.exit(1);
 if (forbidden.status !== 403 || plan.status !== 400 || !String(plan.body.message ?? "").includes("no placements")) process.exit(1);
 if (map.status !== 200 || range.status !== 206 || rangeBytes.length !== 16) process.exit(1);
 if (conditionalMap.status !== 304) process.exit(1);

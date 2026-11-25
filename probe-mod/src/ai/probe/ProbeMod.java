@@ -1629,6 +1629,56 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if ("get_spawns".equals(op)) {
+            if (Vars.spawner == null || Vars.state.rules == null) {
+                replyError(command, "not_ready", "World is not loaded");
+                return;
+            }
+            Seq<Tile> spawnTiles = Vars.spawner.getSpawns();
+            boolean spawnsShown = !Vars.state.rules.hideSpawns;
+            Jval spawns = Jval.newArray();
+            int hidden = 0;
+            for (Tile tile : spawnTiles) {
+                if (tile == null) continue;
+                boolean discovered = tileDiscovered(tile.x, tile.y);
+                boolean visible = tileVisible(tile.x, tile.y);
+                boolean exposed = !fogActive() || spawnsShown || visible;
+                if (!exposed) {
+                    hidden++;
+                    continue;
+                }
+                spawns.add(Jval.newObject()
+                        .put("x", tile.x)
+                        .put("y", tile.y)
+                        .put("tileX", tile.x)
+                        .put("tileY", tile.y)
+                        .put("worldX", tile.worldx())
+                        .put("worldY", tile.worldy())
+                        .put("team", Vars.state.rules.waveTeam == null ? -1 : Vars.state.rules.waveTeam.id)
+                        .put("teamName", Vars.state.rules.waveTeam == null ? "" : Vars.state.rules.waveTeam.name)
+                        .put("overlay", tile.overlay() == null ? "" : tile.overlay().name)
+                        .put("discovered", discovered)
+                        .put("visible", visible)
+                        .put("hidden", !visible));
+            }
+            reply(command, Jval.newObject()
+                    .put("spawns", spawns)
+                    .put("count", spawns.asArray().size)
+                    .put("returned", spawns.asArray().size)
+                    .put("total", spawnTiles.size)
+                    .put("hidden", hidden)
+                    .put("showSpawns", spawnsShown)
+                    .put("hideSpawns", Vars.state.rules.hideSpawns)
+                    .put("fog", fogActive())
+                    .put("waveTeam", Vars.state.rules.waveTeam == null ? -1 : Vars.state.rules.waveTeam.id)
+                    .put("waveTeamName", Vars.state.rules.waveTeam == null ? "" : Vars.state.rules.waveTeam.name)
+                    .put("dropZoneRadius", Vars.state.rules.dropZoneRadius)
+                    .put("unit", "tile")
+                    .put("source", "WaveSpawner.getSpawns")
+                    .put("coordinateNote", "x/y are tile coordinates; worldX/worldY are pixels"));
+            return;
+        }
+
         if ("get_capabilities".equals(op)) {
             if (assistant == null) {
                 replyError(command, "no_assistant", "Assistant is not spawned");
@@ -3862,6 +3912,7 @@ public class ProbeMod extends Mod {
             case "get_events":
             case "get_tile":
             case "get_unit":
+            case "get_spawns":
             case "list_unit_types":
             case "query_area":
             case "get_action_result":
@@ -5356,6 +5407,7 @@ public class ProbeMod extends Mod {
             case "get_context":
             case "get_area":
             case "get_tile":
+            case "get_spawns":
             case "query_area":
             case "get_unit":
             case "list_unit_types":
@@ -5751,6 +5803,9 @@ public class ProbeMod extends Mod {
                         .put("block", property("string").put("description", "optional block to preflight"))
                         .put("rotation", property("integer")),
                         Jval.newArray().add("x").add("y"))));
+        tools.add(tool("get_spawns",
+                "Read fixed wave spawn points from WaveSpawner. Returns tile x/y and worldX/worldY, wave team, dropZoneRadius, showSpawns and per-point visibility. With fog enabled, hidden points are omitted unless rules.hideSpawns is false (minimap exposes them).",
+                inputSchema(Jval.newObject(), Jval.newArray())));
         tools.add(tool("query_area",
                 "Read units and buildings within a radius around world coordinates in pixels (8 px per tile). includeUnits/includeBuildings default true; includeEnemies defaults false, so pass includeEnemies=true when searching for enemies. Each row has entity; detail=full adds the unit/building sensor object.",
                 inputSchema(Jval.newObject()

@@ -241,7 +241,7 @@ respawn(core = null):
 
 ### 写工具
 
-> 下表是完整目标/旧 Node MCP 的工具面；当前 mod session API 有 34 个；`command_units`/`possess`/`respawn`/`pause`/`resume`/`control_building`/工厂与科技树读工具/`boost`/payload 已进入正常工具面。缺口和实现顺序见 `docs/PLAYER-PARITY.md`。
+> 下表是完整目标/旧 Node MCP 的工具面；当前 mod session API 有 35 个；`command_units`/`possess`/`respawn`/`pause`/`resume`/`control_building`/工厂与科技树读工具/`boost`/payload 已进入正常工具面。缺口和实现顺序见 `docs/PLAYER-PARITY.md`。
 
 
 | 工具 | 作用 |

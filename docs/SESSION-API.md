@@ -159,7 +159,7 @@ MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
 
 ### 控制面（小 JSON）
 
-`GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。`get_unit`/`get_tile` 额外提供 `entity` + `unit`/`building` 的 `LAccess` 传感器字段；`query_area` 默认摘要，`detail:"full"` 才附加完整传感器对象。
+`GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。`get_unit`/`get_tile` 额外提供 `entity` + `unit`/`building` 的 `LAccess` 传感器字段；`query_area` 默认摘要，`detail:"full"` 才附加完整传感器对象。`get_spawns` 读取 `WaveSpawner.getSpawns()` 的固定波次出生点：`x/y` 是 tile 坐标，`worldX/worldY` 是像素；带 `waveTeam`、`dropZoneRadius`、`showSpawns/hideSpawns` 和每个点的可见性。迷雾开启时默认只返回可见点，除非规则本身在 minimap 暴露出生点。
 
 `/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`、`fog`、`staticFog`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。`context.power` 只汇总助手当前队伍的电力网络（每条带 `team`）；`TimerObjective` 的 `current=-1`、`progressAvailable=false`，用 `display` 读取游戏给出的倒计时文本。
 
@@ -223,7 +223,7 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
   500；根分支查询仍可传 `content`。`content` 只接受有 TechNode 的方块/单位；物品没有
   独立 tech node，物品层级要用 `parameters.inputs/outputs` 和产出方块的 tech depth 推导。
 
-会话 `/actions` 只允许 `/tools` 暴露的 34 个名字；内部调试 op 仍只走本地 probe
+会话 `/actions` 只允许 `/tools` 暴露的 35 个名字；内部调试 op 仍只走本地 probe
 socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
 返回 `{status,data:{results,allowPartial}}`；失败时可能没有 `opId`（不返回空字符串）。
 它按顺序逐块执行，不是原子事务；`allowPartial=false` 只表示遇到首个失败就停止，
@@ -349,7 +349,7 @@ POST /mcp   MCP Streamable HTTP
 - `initialize`：返回 `protocolVersion=2024-11-05`、`serverInfo=mindustry-ai`、
   `Mcp-Session-Id`
 - `notifications/initialized`：202，无 body
-- `tools/list`：34 个核心工具
+- `tools/list`：35 个核心工具
 - `tools/call`：复用现有游戏动作队列，返回 MCP text content
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -369,7 +369,7 @@ POST /mcp   MCP Streamable HTTP
 - 许多 host 不支持热重载，首次配置后要重启。
 - 本项目的推荐流程是 session prompt，不依赖 MCP 配置。
 - MCP 和 REST 共享同一份工具 schema 与游戏动作队列，避免行为漂移。
-- 当前暴露 34 个核心工具（27 个基础 + `get_config_schema`/`get_tech_tree`/`control_building`/`release_building`/`boost`/`pickup_payload`/`drop_payload`），其余内部调试 op 不搬。
+- 当前暴露 35 个核心工具（27 个基础 + `get_config_schema`/`get_tech_tree`/`control_building`/`release_building`/`boost`/`pickup_payload`/`drop_payload` + `get_spawns`），其余内部调试 op 不搬。
 
 ## 9. 弹窗设计
 
@@ -452,13 +452,13 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/actions/{opId}`：动作状态轮询
 - `/guide`：完整游戏知识指南；`?topic=build|economy` 追加主题
 - `/docs/{name}`：session 后可读 `SESSION-API.md`、`API-DATA-CONTRACT.md`、`MCP-PROTOCOL.md`、`REALITY-CHECK.md`、`LOGIC-PROCESSOR-GUIDE.md`；只接受固定文件名，路径穿越/其他文件返回 404
-- `/tools`：34 个核心工具的 JSON Schema（get_context/get_area/get_tile/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/possess/respawn/pause/resume/command_units/control_building/release_building/boost/pickup_payload/drop_payload/get_config_schema/get_tech_tree/follow/get_action_result/cancel/stop）
+- `/tools`：35 个核心工具的 JSON Schema（get_context/get_area/get_tile/get_spawns/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/possess/respawn/pause/resume/command_units/control_building/release_building/boost/pickup_payload/drop_payload/get_config_schema/get_tech_tree/follow/get_action_result/cancel/stop）
 - LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
 
 待完成：
 
-- 34 个核心工具的 schema 已接入 `/tools`，错误码随动作读写回
+- 35 个核心工具的 schema 已接入 `/tools`，错误码随动作读写回
 - `/data/map` + Range、`/data/events` NDJSON 迁移进 mod
 - session token 失效/刷新按钮
 - 弹窗/UX
@@ -491,7 +491,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 部分完成：
 
 - `POST /mcp` 的 `initialize`、`notifications/initialized`、`tools/list`、`tools/call`、`ping`
-- 34 个核心工具与 REST 共用 `toolsJson()` schema
+- 35 个核心工具与 REST 共用 `toolsJson()` schema
 - `Mcp-Session-Id`
 - `resources/list` / `resources/read`：`mindustry://guide`
 - `prompts/list` / `prompts/get`：`play-session`、`defend-core`、`mine-and-deposit`
@@ -566,7 +566,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。
 - `GET /actions/{opId}`：入队 `get_action_result`
 - `GET /`：控制面/数据面端点索引
 - `GET /guide`：完整游戏知识指南（`docs/GAME-GUIDE.md` 打进 mod jar）
-- `GET /tools`：34 个核心工具 JSON Schema
+- `GET /tools`：35 个核心工具 JSON Schema
 - `GET /events/wait`：长轮询事件；支持 `since`、`timeoutMs`、`types`、`limit`
 - `game_pause` / `game_resume` / `wave_start` / `wave_end` 事件 + `context.paused`
 - `POST /mcp`：最小 MCP Streamable HTTP 子集（initialize/tools/list/tools/call/ping）

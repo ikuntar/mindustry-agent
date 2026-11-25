@@ -182,6 +182,10 @@ Serpulo 常见物品：
   `/content.parameters.itemCapacity`，不要把“炮塔有弹药”当成默认事实。
 - 墙壁用于阻挡地面单位，但不能阻挡飞行单位；不要把墙当成万能防御。
 - 敌人从地图边缘/波次生成点进攻，目标是核心和建筑。
+- 固定波次出生点用 `get_spawns` 读取：`x/y` 是 tile，`worldX/worldY` 是世界像素，
+  带 `waveTeam`、`dropZoneRadius`、`showSpawns/hideSpawns` 和逐点可见性。它是地图
+  固定出生点，不是当前敌人位置；要判断附近有没有敌人，再用 `query_area`（可传像素
+  `worldX/worldY`）。迷雾下只返回可见点，除非该局 minimap 规则暴露出生点。
 - 波次之间有准备时间；`get_context` 的 `wave`、`wavetime`、`waveTimer`、`enemies`
   和 `/events/wait` 的 `game_pause`/`game_resume`/`wave_start`/`wave_end` 事件可用于观察。
   事件日志最多保留 512 条；`unit_damage`/`build_damage` 另有 192 条上限，关键事件

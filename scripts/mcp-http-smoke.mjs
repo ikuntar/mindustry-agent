@@ -54,7 +54,7 @@ const listed = await post("/mcp", { jsonrpc: "2.0", id: 2, method: "tools/list" 
 });
 const tools = listed.body.result?.tools ?? [];
 console.log("tools/list", listed.status, tools.length);
-if (listed.status !== 200 || tools.length !== 34) process.exit(1);
+if (listed.status !== 200 || tools.length !== 35) process.exit(1);
 
 const contextCall = await post("/mcp", {
   jsonrpc: "2.0",

@@ -143,7 +143,7 @@
 - [x] 弹窗 UI 视觉实测：Xvfb 自动加载 Fortress，截图显示 endpoint/token/6 步说明和 Copy/Close 按钮
 - [ ] `Copy session prompt` 剪贴板内容断言
 - [ ] 桌面客户端/真机人工点击验收
-- [x] 34 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
+- [x] 35 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
 - [x] issue #25：guide 引用的 `get_tile/query_area/deconstruct/repair/set_stance/release/follow` 已纳入 session `/tools`；`wavetime/waveTimer` 已加入 context
 - [x] issue #26：活跃 op 达到 `MAX_OPS=256` 时返回 `op_capacity`（HTTP 503），不再无上限增长
 - [x] issue #27：`GET /` 端点索引；build topic 修正；SESSION-API 补 drop_id 编码
@@ -172,6 +172,7 @@
 - [x] Logic sensor 对齐（实体层）：`get_unit` 返回 `entity+unit`、`get_tile` 返回 `entity+building`、`query_area detail:"full"`；字段走 `Senseable.sense/LAccess`，unsupported 省略，不暴露 `@client*`/links/ipt/settable
 - [x] Logic 全局量（常用）：context 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；剩余 `@thisx/@thisy/@links/@ipt` 仅在控制逻辑处理器时需要
 - [x] Logic processor 指南：`docs/LOGIC-PROCESSOR-GUIDE.md`，含全局变量/sensor/control/radar/ucontrol/memory/display/特权指令/API 名字映射；打包到 `/docs/LOGIC-PROCESSOR-GUIDE.md`
+- [x] 敌方固定出生点：`get_spawns` 读取 `WaveSpawner.getSpawns()`，返回 tile/world 坐标、waveTeam、dropZoneRadius、show/hideSpawns 与 fog 可见性；session smoke 验证 200/数组
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）
 - [x] issue #34 余项：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明已完成
@@ -180,7 +181,7 @@
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt
 - [x] session/context 带 `version`，用于识别旧 jar
 - [x] 暂停硬门控：`/actions` 写 op 返回 `game_paused`，只读 op 放行；暂停期间不自动重生
-- [x] session `/actions` 按 34 个 `/tools` 名字白名单；内部 debug op 只能走本地 probe token，`get_capabilities` 实测 403
+- [x] session `/actions` 按 35 个 `/tools` 名字白名单；内部 debug op 只能走本地 probe token，`get_capabilities` 实测 403
 - [x] session `build_plan` 展开为 `build`/`deconstruct`，不再返回 Unknown op
 - [x] world reload 保留 sessionToken；bootstrap 仅在已使用后轮换
 - [x] build/build_plan 不再把“已入队”当“已落地”：campaign 未解锁返回 `block_locked`，build op 运行到目标 tile 出现；计划被引擎丢弃 `build_dropped`；Ground Zero fixture 显式 unlock
@@ -194,7 +195,7 @@
 - [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON；data token 可读，session token 不越权；旧 `46501` 数据面保留
 - [x] `/data` data token 轮换：`POST /session/data-token`，旧 token 立即 401
 - [ ] `/data` Parquet 事件
-- [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；34 个核心工具
+- [x] 可选 MCP Streamable HTTP `/mcp` 最小子集：initialize/tools/list/tools/call/ping；35 个核心工具
 - [x] MCP SDK 冒烟：`mcp-server/harness/mcp-http-smoke.ts`，官方 client connect/list/call/resources/prompts 通过
 - [x] MCP `resources/list` / `resources/read`：`mindustry://guide`
 - [x] `/guide` 改为完整游戏知识指南

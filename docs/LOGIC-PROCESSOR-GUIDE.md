@@ -524,6 +524,7 @@ get_tile.entity.*    building 的同一套通用字段
 差异：
 
 - API 的 `entity.x/y` 是世界像素；逻辑的 `@x/@y` 是 tile 坐标。
+- API 用 `get_spawns` 读固定波次出生点；逻辑处理器用 `ulocate spawn` 查找离单位最近的出生点；API 的 `spawns[].x/y` 是 tile，`worldX/worldY` 是像素。
 - API 用 `get_area`/`query_area` 做空间搜索；逻辑用 `radar`/`uradar`/`ulocate`，但 API 受 fog/team 过滤。
 - API 的 `move_to`/`attack`/`configure` 是显式动作；逻辑的 `ucontrol`/`control` 是处理器程序内的写操作。两者权限模型不同。
 - API 没有 `@client*`、`@links`、`@ipt`、处理器内存内容，也没有任意 settable 字段；不要假设所有 `LAccess` 都能通过 API 读/写。

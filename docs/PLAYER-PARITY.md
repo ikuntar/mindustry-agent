@@ -8,10 +8,10 @@
 
 ## 1. 入口与现状
 
-正常 AI 入口是 mod 内 session API（以及 `/mcp` 的同一套工具），当前 34 个：
+正常 AI 入口是 mod 内 session API（以及 `/mcp` 的同一套工具），当前 35 个：
 
 ```text
-get_context, get_area, get_tile, query_area, get_unit, list_unit_types,
+get_context, get_area, get_tile, get_spawns, query_area, get_unit, list_unit_types,
 move_to, attack, mine, build_plan, withdraw, deposit, configure, research,
 deconstruct, repair, set_stance, release, follow,
 get_action_result, cancel, stop, possess, respawn, pause, resume, command_units,
@@ -20,7 +20,7 @@ get_config_schema, get_tech_tree, control_building, release_building, boost, pic
 
 另有 `/content`、`/capabilities`、`/guide`、`/events/wait`、`/data` 等读接口。
 
-旧 Node MCP 27 工具和 raw probe 调试面保留测试入口；本文列出的 34 个工具才是
+旧 Node MCP 27 工具和 raw probe 调试面保留测试入口；本文列出的 35 个工具才是
 产品 session 契约。旧调试入口不等于正式权限，`possess`/`respawn`/`pause`/
 `resume`/`command_units` 等已进入 session。
 

@@ -250,6 +250,47 @@ building: {
 `entity.x/y` 保持 API 的世界像素坐标。`get_tile` 的 legacy `rotation` 是度数，`unit.shooting/boosting/mining/solid/dead` 等是逻辑风格 0/1 数值。
 不暴露 `@client*`、`@links`、`@ipt` 或任意 settable 字段；所有读取仍受 team/fog 过滤。
 
+### 4.0.1 `get_spawns`（固定波次出生点）
+
+`POST /actions {"kind":"get_spawns"}`，无参数；只读。
+
+返回：
+
+```text
+{
+  spawns: [{
+    x, y,                    // tile 坐标
+    tileX, tileY,            // 同上，便于对照 get_tile
+    worldX, worldY,          // 世界像素
+    team, teamName,          // 通常是 waveTeam
+    overlay,                 // 通常为 "spawn"
+    discovered, visible,
+    hidden
+  }],
+  count, returned, total, hidden,
+  showSpawns, hideSpawns,
+  fog,
+  waveTeam, waveTeamName,
+  dropZoneRadius,
+  unit: "tile",
+  source: "WaveSpawner.getSpawns"
+}
+```
+
+数据来源是 `WaveSpawner.getSpawns()` 中 `overlay == Blocks.spawn` 的固定地图出生点，
+不是当前敌人位置，也不是随机刷怪点。
+
+可见性：
+
+- fog 关闭：返回全部固定出生点；`showSpawns`/`hideSpawns` 只反映 minimap 规则。
+- fog 开启：默认只返回 `visible=true` 的点；若规则没有隐藏 minimap 出生点
+  （`hideSpawns=false`），则这些点对玩家可见，仍可返回并带 `visible` 标记。
+- `hidden` 是被省略的不可见点数；不返回其坐标。
+- 出生点被敌人核心替换/地图编辑变化时以当前 `WaveSpawner` 内容为准。
+
+`get_spawns` 的 `x/y` 是 tile；调用 `query_area` 时要把 `worldX/worldY` 用于像素参数，
+或自己乘 8。出生点周围的 `dropZoneRadius` 是世界单位。
+
 ### 4.1 `config` 形状
 
 `get_tile.config` 是只读视图：
