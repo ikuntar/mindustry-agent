@@ -33,6 +33,8 @@ The script asks for a GitHub PAT with repository-creation permission, creates
 `<your-login>/mindustry-agent` (empty, no README), adds a `github` remote, and
 pushes the current branch. The PAT is read without echo and is not written to
 `.git/config` or `.git-credentials`; the existing Gitea `origin` is untouched.
+The push uses an isolated git config so a stale global `gh-proxy.com` rewrite or
+local proxy setting cannot break the upload.
 
 Use `scripts/publish-github.sh mindustry-agent --private` for a private repo.
 The script requires a classic PAT with `repo`, or a fine-grained PAT with

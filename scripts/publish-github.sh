@@ -159,6 +159,12 @@ else
 fi
 
 printf 'Pushing %s to github (%s)...\n' "${BRANCH}" "${REMOTE_URL}" >&2
+# This machine has a global url.*.insteadOf rewrite to gh-proxy.com and an
+# http(s).proxy pointing at 127.0.0.1:7897. Either can be stale. Push with an
+# isolated git config so a dead local proxy does not break the publish; the
+# remote itself is still the clean https://github.com URL.
+GIT_CONFIG_GLOBAL=/dev/null \
+GIT_CONFIG_SYSTEM=/dev/null \
 GITHUB_PAT="${PAT}" \
 GIT_ASKPASS="${ASKPASS}" \
 GIT_TERMINAL_PROMPT=0 \
