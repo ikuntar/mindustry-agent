@@ -85,8 +85,8 @@ ProbeMod.java:3530  getDeclaredField + setAccessible
 `startSocket()` 绑定 `127.0.0.1`（`ProbeMod.java:5498`）。存在测试辅助 op：
 `give`、`spawn_enemy`、`spawn_ally`、`set_floor`、`kill_assistant`、`set_paused`、
 `set_possession_allowed` 等。它们**不在** session `/actions` 白名单和 MCP `/tools` 中；
-但本机进程只要连上 127.0.0.1 并满足 token 配置，仍可调用。默认 `PROBE_REQUIRE_AUTH`
-未开启时尤其要避免把测试构建当正式服务暴露。
+默认由 `PROBE_ENABLE_DEBUG_OPS` 关闭，只有显式设为 `1` 才启用。本机进程只要连上
+127.0.0.1 并满足 token 配置，仍可调用；不要把测试构建当正式服务暴露。
 
 ### F7 已修复：session prompt 的损坏占位符
 
@@ -103,8 +103,8 @@ ProbeMod.java:3530  getDeclaredField + setAccessible
 
 ## 4. 权限与数据面
 
-- 控制面 session 默认 `0.0.0.0`；`PROBE_EXPOSE_SESSION=1` 只控制 discovery 写入/提示，
-  **不**改变 bind。需要仅本机时显式设置 `PROBE_SESSION_BIND=127.0.0.1`。所有数据/动作端点
+- 控制面 session 默认只绑定 `127.0.0.1`；`PROBE_EXPOSE_SESSION=1` 只控制 discovery 写入/提示，
+  **不**改变 bind。需要局域网访问时显式设置 `PROBE_SESSION_BIND=0.0.0.0`，并自行承担网络暴露风险。所有数据/动作端点
   要 `sessionToken`，`/data` 要独立 `dataToken`（默认 1h，可轮换）。
 - 数据面同时监听 `127.0.0.1:DATA_PORT`；session server 也挂 `/data`，因此开启 LAN 时
   地图/事件会暴露给持有 data token 的局域网客户端。
@@ -119,11 +119,11 @@ ProbeMod.java:3530  getDeclaredField + setAccessible
 node scripts/session-api-smoke.mjs            PASS
 ```
 
-本轮修复没有新增工具，工具面仍为 34 个。
+本轮修复没有新增工具，工具面仍为 35 个。
 
 ## 6. 待办/待拍板
 
 - [ ] 决定 F4 的可见性语义：玩家等价（队伍/视野过滤）还是显式全图感知。
 - [ ] 若要彻底无反射，替换 `UnitType` 构造期 `getFields()` 为显式复制。
-- [ ] 正式构建默认关闭 raw debug op，或仅在 `PROBE_TEST=1` 下注册。
+- [x] 正式构建默认关闭 raw debug op；只有 `PROBE_ENABLE_DEBUG_OPS=1` 才启用。
 - [ ] issue #34：`/guide` fallback 可观测性、`get_area` cursor 分页仍未完成。

@@ -18,7 +18,7 @@ cd "$SERVER_DIR"
 (
   printf 'host fortress\n'
   sleep 60
-) | timeout 70 java -jar server-release.jar > "$SERVER_LOG" 2>&1 &
+) | PROBE_ENABLE_DEBUG_OPS=1 timeout 70 java -jar server-release.jar > "$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
 for _ in $(seq 1 30); do

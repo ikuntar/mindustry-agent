@@ -1,134 +1,178 @@
 # mindustry-ai
 
-目标：做一个 Mindustry × AI 的版本。当前阶段：MCP 工具面可用，正在补主流 harness 接入。
+An experimental co-op AI assistant for [Mindustry](https://github.com/Anuken/Mindustry), exposed as a mod, a local session API, and MCP tools.
 
-## 目录
+The assistant is a normal in-game body: it can be possessed, respawn from cores, build, mine, fight, and follow explicit instructions. The harness owns the goal loop; this project does not ship an autonomous long-running planner.
 
-```
-mindustry-ai/
-├── README.md
-├── TASKS.md                          ← 实施清单（M0-M4）
-├── docs/
-│   ├── bek-mindustryx-ai-bridge.md   ← BEK-Group/MindustryX 的 AI 通道拆解（参考实现）
-│   ├── ASSISTANT-DESIGN.md           ← 助手总体设计：身体/附身/权限/团队/验收
-│   ├── PLAYER-PARITY.md              ← 玩家能力对齐：已确认修正、缺口、待拍板项
-│   ├── MCP-PROTOCOL.md               ← MCP 工具、动作生命周期、事件、权限矩阵
-│   ├── GAME-GUIDE.md                 ← 完整游戏知识指南（/guide 的实际内容）
-│   ├── LOGIC-PROCESSOR-GUIDE.md      ← 游戏内逻辑处理器用法 + API 字段映射
-│   ├── API-DATA-CONTRACT.md          ← 实体/字段/枚举/错误码字段级契约
-│   ├── SESSION-API.md                ← 单 mod + 一次性 session prompt + HTTP API 设计
-│   ├── HARNESS-INTEGRATION.md        ← Claude Code/Desktop、Codex、OpenCode、Hermes 接入
-│   ├── REMOTE-DATA-PLANE.md          ← 远程只读数据面：DatasetRef、HTTP range、客户端代码分析
-│   ├── OPEN-QUESTIONS.md             ← 待拍板项与默认建议
-│   └── REALITY-CHECK.md              ← v160.8 真实 jar 的 API/启动核对
-├── mcp-server/                       ← MCP 工具接口（当前 MockGameAdapter）
-├── mindustry_data/                   ← 只读数据面客户端 SDK + smoke tests
-├── probe-mod/                        ← 最小真实游戏探针（Java mod + socket + client）
-└── refs/
-    └── MindustryX-Ai/                ← 参考实现，浅克隆 main @89e3d71 (2026-05-23)
+> Status: technical preview. The API and mod are usable for experiments, but this is not a finished consumer mod. Read [Security](#security) before exposing it to a network.
+
+## What is included
+
+- `probe-mod/` — Mindustry Java mod and the in-game session/data API
+- `mcp-server/` — MCP server implementation and a mock adapter for protocol tests
+- `mindustry_data/` — read-only map/event data-plane client
+- `docs/` — game guide, API contract, logic-processor guide, harness integration, and design notes
+- `scripts/` — local build, server, smoke-test, and release helpers
+
+There are two related tool surfaces:
+
+```text
+session API: 35 tools exposed by the mod at /tools and /mcp
+Node MCP:    the separate mcp-server package (mock/stdio development surface)
 ```
 
-## 参考实现速览
+The session API is the product path used by the in-game assistant. The Node MCP package is useful for protocol testing and host integration.
 
-`BEK-Group/MindustryX` = MindustryX（承接 Anuken/Mindustry 的 patch 层分支）+ 本地 AI 桥。
+## Requirements
 
-- 桥：`src/mindustryX/features/ai/`，7 个文件 ~1762 行，TCP 127.0.0.1:46491，TLV 帧
-- 能力：6 个读操作 + 9 个写操作 + mmap 事件环 + 无渲染构建
-- 对接：`DeterMination-Wind/Mindustry-MCP`（TypeScript MCP server，把桥包成 LLM 工具）
-- 详情见 `docs/bek-mindustryx-ai-bridge.md`
+- Mindustry 160.x. The build and tests are pinned to v160.8.
+- Java 17+ for building the mod.
+- Node.js 20+ for the MCP server and smoke tests.
+- Android universal builds additionally need Android SDK build-tools (`d8`) and `android.jar`.
+- A desktop client or dedicated server; the dedicated server has no campaign UI, so campaign fixtures are loaded explicitly.
 
-## 状态
+## Install the mod
 
-- [x] 拉取参考实现（不初始化 submodule 也能读 AI 代码；要编译才需要 `work/` `Arc/`）
-- [x] 路线定为：局内 co-op 助手（mod + 本地执行层），不是独立 AI 客户端
-- [x] 设计落档：`docs/ASSISTANT-DESIGN.md`、`docs/MCP-PROTOCOL.md`、`docs/REMOTE-DATA-PLANE.md`、`TASKS.md`
-- [x] MCP 接口脚手架 + MockGameAdapter（`mcp-server/`）
-- [x] MCP server 27 个工具、stdio 入口、Mock/MCP 测试、stdio harness（`npm test` 16/16）
-- [x] Probe mod：真实 v160.8 服务端加载、get_context/move_to/build/get_tile 跑通
-- [x] ProbeGameAdapter：MCP 27 工具中的 context/capabilities/content/map_summary/get_area/query_area/move/build/attack/mine/follow/withdraw/deposit/configure/command_units/set_stance/stop/possess/release/respawn/deconstruct/repair/cancel/get_action_log 接真实游戏
-- [x] 真实动作验证：核心取放、sorter 配置、指挥 dagger、holdPosition stance、附身/释放、sand 挖矿、死亡重生、攻击容器、deconstruct、repair
-- [x] `get_events`：真实事件环已接，MCP 能读到 unit/build/damage 事件
-- [x] `get_events` 摘要模式：`summary=true` 返回 `byType` 计数 + `ref`，高频事件不占页
-- [x] probe 传输层：发现文件、token、`hello` 版本握手；`PROBE_REQUIRE_AUTH=1` 可启用鉴权；`PROBE_REQUIRE_WRITER=1` 启用 writer lease
-- [x] 远程只读数据面：probe raw-v1 地图/NDJSON 事件、地图 chunk + Range、事件分页、token TTL、`rotate_data_token`、`mindustry_data` SDK、`get_map_summary`
-- [ ] Parquet 事件、revision 淘汰压测、远端 baseUrl 配置
-- [ ] 真实 Mindustry mod adapter 生产化（多客户端写互斥已实现 lease，token 轮换已做；重连已做）
-- [ ] follow 持续语义、cancel opId 定向取消、事件过滤/合并
-- [ ] 助手本地反射控制器（寻路/索敌/建造/撤退）
-- [x] 固定地图端到端验收：`Fortress` + `scripts/run-fixed-scenario.sh`，校验上下文/事件增量/移动/多块建造/事件摘要/跟随/附身/释放/指定核心重生/无核心恢复/绕障移动与攻击接近/自动防御/低血撤退/炮塔+传送带供弹防守；真实本地 LLM 固定移动任务已跑通
-- [x] 主流 MCP host 接入：`scripts/mindustry-mcp` 包装器 + `scripts/start-game-server.sh` + `docs/HARNESS-INTEGRATION.md`（Claude Code/Desktop、Codex、OpenCode、omp、Hermes）；真实 probe 下 host-smoke 通过（27 tools、move done）
-- [x] 单 mod + session API：mod 内 `/session` 一次性 bootstrap、`/context`、`/actions`、`/actions/{opId}`、`/guide`、`/tools`（35 个核心 schema）、`/events/wait` 长轮询、LAN 绑定已实现并通过 `scripts/session-api-smoke.mjs`；客户端弹窗已在 Xvfb + Fortress 自动加载下视觉验收，剪贴板断言未做
-- [x] 会话动作面加固：35 个工具白名单、暂停写门控 `game_paused`、`build_plan` 展开、world reload 保留 sessionToken；build op 只有方块真正落地才 `done`，campaign 未解锁 `block_locked`，计划丢弃 `build_dropped`
-- [x] HTTP/命令队列加固：query/工具入口白名单、畸形请求 400 并关 socket、连接/header 上限、accept 异常继续、命令超时取消（503 `not_executed` / 504 `execution_unknown`），`eventSeq`/`mapRevision` volatile、Host 不回显
-- [x] session server `/data`：地图 raw/chunk/Range、manifest、事件 NDJSON 已挂载；`If-None-Match` 返回 304；`session-api-smoke` 把地图写入 `/tmp/mindustry-session-map.bin` 并验证 Range 206；实际 `curl -o` 已验证；`POST /session/data-token` 可轮换 data token
-- [x] 可选 MCP `/mcp`：initialize/tools/list/tools/call/ping + guide resources + 3 个 prompts，`mcp-http-smoke` 通过；官方 MCP SDK connect/list/call/resources/prompts 通过；REST 仍是主路径
-- [x] 可移植 HTTP server：`ai.probe.http` ServerSocket 实现，桌面 `/session`、`/data`、`/mcp` 回归通过
-- [x] Android 决策：默认 PC host + 手机 client；已生成 JVM+dex 通用 mod jar
-- [x] 通用 mod jar：`probe-mod/build-universal.sh` 生成同时含 `classes/` 与 `classes.dex` 的 jar；桌面回归通过
-- [x] Android 模拟器加载验收：F-Droid `8-fdroid-160.7` 与 official `8-official-160.8` 均通过游戏内导入加载 `ai-probe`，session API 监听 `47600`；真机仍需验收、phone-hosted 未做
-- [x] omp 对话验收：真实 Fortress 中 `omp -p` 读取 27 工具、`get_context` 与 `move_to→done`，助手 `(928,584)→(942.2,584)`
-- [x] Ground Zero campaign-like：omp 连续观察 35 次到 `wave=10`，`winWave=10`、`won=false`；证明可玩到终点波次，正式战役结算仍需客户端 campaign 或 mod 支持
-- [x] omp 上手速度：冷启动+首次真实 context 约 13.0s；热启动约 8.7s；连续 35 次 context 约 254s（约 7.3s/次）
-- [ ] 在真实 Claude Code/Codex/OpenCode host UI 中做人工双 client 验收
+Download `ai-probe-<version>.jar` from the [GitHub Releases page](https://github.com/kuutar/mindustry-ai/releases) and place it in the game's mods directory:
 
-## mod 构建（PC + Android）
+```text
+Linux:   ~/.local/share/Mindustry/mods/
+Windows: %APPDATA%/Mindustry/mods/
+macOS:   ~/Library/Application Support/Mindustry/mods/
+```
+
+On Android, use the game's importer instead of copying into `Android/data`:
+
+```text
+Mods -> Import Mod -> Import File -> choose the jar/zip
+```
+
+The universal jar contains both JVM classes and `classes.dex`; desktop and Android use different parts of the same archive.
+
+The jar is intentionally a probe/assistant mod, not a standalone client. Start Mindustry, load a map, then use the session prompt shown by the mod to connect a harness.
+
+## Run from source
+
+Fetch the pinned upstream server jar, then build:
 
 ```bash
-# 桌面 jar
+scripts/fetch-mindustry.sh
 probe-mod/build.sh
+```
 
-# 同时含 JVM classes 与 Android classes.dex 的通用 jar
+For the universal desktop + Android jar:
+
+```bash
 probe-mod/build-universal.sh
 ```
 
-通用 jar 的 PC 路径已回归；Android 加载已在 F-Droid `8-fdroid-160.7`
-模拟器上通过。
+Start a local dedicated server with the probe installed:
 
-### Android 安装
+```bash
+scripts/start-game-server.sh
+node scripts/session-api-smoke.mjs   # consumes one bootstrap token
+scripts/stop-game-server.sh
+```
 
-必须在游戏里导入，不能把文件直接拖进 `/Android/data/...`：
+Use `scripts/start-ground-zero-server.sh` for the campaign-like fixture.
 
-1. 把通用包放在手机 `Download`（直接下载 `.zip` 优先，部分文件选择器对
-   `.jar` 的 MIME 识别不稳定）。下载后确认文件大小是 `172,203` 字节；`0` 字节
-   表示下载失败或被分享链接限额截断，游戏会显示 `未找到模组`。
-2. Mindustry → `Mods` → `+ Import Mod` → `Import File` → 文件选择器里点左上角
-   三条横线 → `Downloads` → 选择该 zip（默认可能停在 `Recent`，文件不会出现）。
-3. 看到 `Restart Required` 后完全退出并重启游戏，在 Mods 列表确认 `AI Probe`。
+> Restart the test server after a smoke test. The bootstrap token is one-time; a second session without a restart returns 401 by design.
 
-Android 11+ 的 scoped storage 会让文件管理器“复制成功”但游戏看不到
-`Android/data/io.anuke.mindustry/files/mods` 里的文件；模拟器已复现
-`No mods found!`，把文件改成应用 UID 后同一 jar 才能加载。因此手机端不要用
-手动复制 `Android/data` 的方式，走游戏内导入即可。
+## Session API
 
-## MCP 快速开始
+The mod starts an authenticated HTTP control plane:
+
+```text
+POST /session       one-time bootstrap -> sessionToken
+GET  /context       bounded game context
+GET  /guide         game knowledge guide
+GET  /tools         35 tool schemas
+POST /actions       {kind: ...} -> opId
+GET  /actions/{id}  poll action status
+GET  /events/wait   bounded long-poll
+GET  /data/...      read-only map/event data plane
+```
+
+By default the session server binds to `127.0.0.1:47600`. LAN access is an explicit opt-in:
+
+```bash
+PROBE_SESSION_BIND=0.0.0.0 scripts/start-game-server.sh
+```
+
+The session token is separate from the raw probe token and the read-only data token. Do not put any token in a public issue, screenshot, or chat message.
+
+Read [docs/SESSION-API.md](docs/SESSION-API.md) for endpoints and [docs/API-DATA-CONTRACT.md](docs/API-DATA-CONTRACT.md) for returned fields.
+
+## MCP
+
+The Node package provides the MCP/stdio development surface:
 
 ```bash
 cd mcp-server
-npm install
+npm ci
 npm run build
-npm test        # MockGameAdapter + MCP 工具测试
-npm run host-smoke # 通过 scripts/mindustry-mcp 启动的通用 MCP host 冒烟（mock）
-npm run harness # stdio harness（构建后运行）
-../scripts/run-fixed-scenario.sh # 启动 Fortress 固定地图 + 场景断言
-LLM_MOCK=1 MINDUSTRY_AI_ADAPTER=mock npm run llm-harness # 无凭证工具循环 dry run
-node harness/mock-openai-server.mjs # 另一个终端：本地 mock OpenAI endpoint
-MINDUSTRY_AI_ADAPTER=mock LLM_BASE_URL=http://127.0.0.1:18080/v1 npm run llm-harness
-# 真实游戏 MCP host 启动（服务端和 probe 已运行）
-../scripts/start-game-server.sh
-../scripts/mindustry-mcp --check
-MINDUSTRY_AI_ADAPTER=probe npm run host-smoke  # 通过 wrapper 走真实 probe
-node ../scripts/session-api-smoke.mjs  # mod 内 session API：一次性 bootstrap、context、move、poll、guide
-# omp 对话（独立游戏目录，不污染代码会话）
-scripts/omp-mindustry -p --no-session --max-time 120 'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
-../scripts/stop-game-server.sh
-# 主流 host 配置（Claude Code/Desktop、Codex、OpenCode、Hermes）
-cat docs/HARNESS-INTEGRATION.md
+npm test
 ```
 
-## 备注
+Launch the wrapper after a game/probe server is running:
 
-- `refs/MindustryX-Ai/` 是本地参考克隆，已加入 `.gitignore`，不随本项目提交。
-- 本机 git 全局配置把 github.com 重写到 gh-proxy.com 且挂了 127.0.0.1:7897 代理，
-  直连可用。拉 GitHub 时用：
-  `git -c http.proxy= -c https.proxy= -c url.https://github.com/.insteadOf= clone ...`
-- GitHub PAT 曾以明文出现在会话中，跑完这轮应吊销重发。
+```bash
+scripts/mindustry-mcp --check
+MINDUSTRY_AI_ADAPTER=probe npm run host-smoke
+```
+
+The default adapter is the mock. Set `MINDUSTRY_AI_ADAPTER=probe` to connect to a real game through the probe discovery file.
+
+See [docs/HARNESS-INTEGRATION.md](docs/HARNESS-INTEGRATION.md) for Claude Code/Desktop, Codex, OpenCode, omp, and Hermes configuration.
+
+## Security
+
+This project exposes game control, not just telemetry.
+
+- The session API defaults to loopback. Exposing it to a LAN is your responsibility; use a firewall and a trusted network.
+- Debug/test operations (`give`, `spawn_enemy`, `set_floor`, `kill_assistant`, and related helpers) are disabled by default. Set `PROBE_ENABLE_DEBUG_OPS=1` only for local fixtures. The repository's `scripts/start-*.sh` test fixtures opt in explicitly; the release jar does not.
+- Do not expose the raw probe socket or the session API to the public internet.
+- Use the assistant only in single-player or on servers where automation is permitted. It is not a license to bypass server rules or anti-cheat.
+- See [SECURITY.md](SECURITY.md) for the threat model and reporting process.
+
+## Development
+
+```bash
+# Node tests (mock adapter + MCP protocol)
+cd mcp-server && npm ci && npm test
+
+# Java compile
+scripts/fetch-mindustry.sh
+probe-mod/build.sh
+
+# Release artifact + checksum (local; no upload)
+scripts/release.sh
+```
+
+Fixed-map and real-game tests are documented in [docs/REALITY-CHECK.md](docs/REALITY-CHECK.md). The one-time bootstrap means tests that create a session must restart the server between runs.
+
+## Documentation
+
+- [GAME-GUIDE.md](docs/GAME-GUIDE.md) — game primer for an AI harness
+- [SESSION-API.md](docs/SESSION-API.md) — mod HTTP/MCP surface
+- [API-DATA-CONTRACT.md](docs/API-DATA-CONTRACT.md) — field-level response contract
+- [LOGIC-PROCESSOR-GUIDE.md](docs/LOGIC-PROCESSOR-GUIDE.md) — in-game logic processor usage and API name mapping
+- [MCP-PROTOCOL.md](docs/MCP-PROTOCOL.md) — MCP tools and action lifecycle
+- [HARNESS-INTEGRATION.md](docs/HARNESS-INTEGRATION.md) — host configuration
+- [PLAYER-PARITY.md](docs/PLAYER-PARITY.md) — implemented player abilities and remaining gaps
+- [REALITY-CHECK.md](docs/REALITY-CHECK.md) — real-game verification notes
+- [RELEASING.md](docs/RELEASING.md) — build, tag, and attach the release artifact
+
+## Known limitations
+
+- The project is a technical preview; APIs may change before 1.0.
+- The dedicated server does not have campaign UI; campaign-like fixtures load sector rules explicitly.
+- Phone-hosted game sessions and full real-device Android validation are not complete.
+- Some long-running/campaign scenarios and cross-sector logistics are outside the current scope.
+- The Java mod is a large single source file and is being kept deliberately small enough to audit before the API stabilizes.
+
+## License
+
+GPL-3.0-only. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Mindustry is a separate GPLv3 project by Anuken and contributors. This repository does not distribute the Mindustry jar; `scripts/fetch-mindustry.sh` downloads the pinned upstream release.

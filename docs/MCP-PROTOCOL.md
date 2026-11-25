@@ -349,7 +349,7 @@ deconstruct 等到目标消失，mine 等到携带量增加，configure 等到 c
 - 真实 `configure`：`build.configured(assistantUnit, value)`；逻辑代码校验。
 - 真实 `command_units`：直接操作 `CommandAI`；不从 `InputHandler.commandUnits(Vars.player, ...)` 走。
 - 真实 `possess/release/respawn`：状态机按 `docs/ASSISTANT-DESIGN.md`。
-- 助手 `AssistantController`：本地寻路/索敌/开火/建造/撤退。
+- 助手 `AssistantController`：本地显式寻路/攻击/建造执行；不默认索敌、开火或撤退。
 - 事件：`Events` + 轮询补足（波次、核心受击、资源阈值等）。
 - 鉴权、限流、动作日志、停机开关。
 

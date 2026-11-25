@@ -65,7 +65,7 @@
 - [x] 数据面速率限制：`PROBE_DATA_RATE_LIMIT_PER_SEC`（默认 120），超限返回 429 + `Retry-After: 1`；固定场景用 limit=10，实测 9 个 200、2 个 429
 - [x] 数据面鉴权/TTL/路径白名单：token、410 过期、GET/HEAD only
 - [x] `get_context.eventsSince` 返回真实事件序号
-- [ ] `AssistantController`：本地反射层（寻路/索敌/开火/建造推进/撤退）
+- [ ] `AssistantController`：本地执行层（寻路/建造推进/卡住重试；不默认索敌或撤退）
 - [x] `move_to` 基础 BFS 寻路：地面单位绕过 solid tile；Fortress 场景用 5 个 container 做墙，助手到达墙后目标（`1089,588` vs `1084,588`）；follow/attack 的接近移动共用该路径，attack 绕障接近已在固定场景验证
 - [x] 基础自动索敌/开火：已移除默认自动索敌；`attack` 是显式动作。旧的自动瞄准实测仅作历史记录。
 - [x] 低血撤退：已移除；助手默认无低血自动撤退/空闲自动索敌，显式动作才移动/攻击/跟随；死亡后从核心自动重生（与玩家一致）。
@@ -78,7 +78,7 @@
 - [x] Ground Zero campaign-like 实测：专用服载入内嵌 sector 地图、设置 sector/winWave/资源；omp 连续观察 35 次到 `wave=10`，核心存活，但 `won=false`，专用服自动切图
 - [ ] 真正的战役第一关正式结算（需要客户端 host campaign 或 probe mod 补 objectives/sector 结算）
 - [ ] 在真实 Claude Code/Codex/OpenCode host UI 中连真实游戏做人工双 client 验收（omp 已实测）
-- [ ] 本地反射控制器：建造推进、卡住重试、撤退完成后的回归
+- [ ] 本地执行层：建造推进、卡住重试、显式撤退动作的回归
 - [x] 助手身体从核心生成；`spawnedByCore=false` + `isHome` 跟踪（v160.8 非 Player 会 despawn）
 - [x] 死亡/重生：`Player.deathDelay`、任意核心的显式 `respawn {coreId}`、无核心失败与核心恢复后自动重生均已实测；核心被拆/重建路径已覆盖
 - [x] 多核心 fixture：probe 调试 op `spawn_ally_core` 创建同队核心；Fortress 场景已验证从第二个核心重生（home body id 变化、坐标在第二个核心附近）
@@ -173,8 +173,9 @@
 - [x] Logic 全局量（常用）：context 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；剩余 `@thisx/@thisy/@links/@ipt` 仅在控制逻辑处理器时需要
 - [x] Logic processor 指南：`docs/LOGIC-PROCESSOR-GUIDE.md`，含全局变量/sensor/control/radar/ucontrol/memory/display/特权指令/API 名字映射；打包到 `/docs/LOGIC-PROCESSOR-GUIDE.md`
 - [x] 敌方固定出生点：`get_spawns` 读取 `WaveSpawner.getSpawns()`，返回 tile/world 坐标、waveTeam、dropZoneRadius、show/hideSpawns 与 fog 可见性；session smoke 验证 200/数组
+- [x] Release prep（0.2.0）：默认 session bind 改为 loopback；测试辅助 op 默认关闭；增加 GPL-3.0、SECURITY、CI、`fetch-mindustry.sh`、`release.sh`、README 重写与发布校验
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
-- [ ] 正式构建关闭 raw debug op（give/spawn_enemy/set_floor 等）
+- [x] 正式构建默认关闭 raw debug op（give/spawn_enemy/set_floor 等）；`PROBE_ENABLE_DEBUG_OPS=1` 仅用于测试
 - [x] issue #34 余项：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明已完成
 - [x] session prompt 先给出 `GET /tools`，再给动作示例
 - [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过

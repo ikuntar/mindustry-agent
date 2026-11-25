@@ -17,6 +17,24 @@ refs/
 probe-seed.json
 probe-seed.err
 artifacts/
+release/
 __pycache__/
 *.pyc
 .DS_Store
+
+# local credentials and machine-specific files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials*
+secrets*
+local.properties
+.idea/
+.vscode/
+.gradle/

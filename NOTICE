@@ -1,0 +1,12 @@
+mindustry-ai
+Copyright (C) 2026 kuutar
+
+This project is licensed under the GNU General Public License, version 3
+(GPL-3.0-only). See LICENSE.
+
+Mindustry is a separate project by Anuken and contributors, licensed under the
+GNU General Public License v3. This repository does not distribute Mindustry
+itself; scripts fetch the pinned upstream server jar from the official release.
+MindustryX-Ai is a reference implementation; see docs/bek-mindustryx-ai-bridge.md
+for attribution and do not copy GPL-covered source without preserving its
+license and notices.

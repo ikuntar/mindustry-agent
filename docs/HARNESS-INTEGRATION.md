@@ -241,7 +241,7 @@ scripts/mindustry-mcp --check
 命令形态：
 
 ```bash
-omp -p --no-session --max-time 90 --cwd /home/kuutar/project/mindustry-ai \
+omp -p --no-session --max-time 90 --cwd /ABS/PATH/mindustry-ai \
   'Use mindustry MCP get_context detail="full" ...'
 ```
 

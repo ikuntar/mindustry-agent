@@ -51,7 +51,7 @@ harness（omp 等）
 目标默认：
 
 ```text
-bind: 0.0.0.0
+bind: 127.0.0.1
 port: 47600
 auth: Bearer token
 ```
@@ -63,7 +63,7 @@ auth: Bearer token
 ```text
 EndpointInfo:
   loopbackUrl: http://127.0.0.1:47600
-  lanUrls: [http://192.168.1.23:47600, ...]
+  lanUrls: [http://192.0.2.10:47600, ...]
   protocolVersion: 1
   toolCount: 10
   guideVersion: 2
@@ -73,12 +73,14 @@ EndpointInfo:
 
 安全约束：
 
-- 所有请求必须带 token，不允许匿名 LAN 访问。
+- 默认只绑定 `127.0.0.1`；局域网需要显式 `PROBE_SESSION_BIND=0.0.0.0`。
+- 所有请求必须带 token，不允许匿名访问。
 - token 不放进 URL query。
 - 默认不自动做公网端口映射。
 - 关闭游戏后端口关闭，所有 token 失效。
 - 不支持无 TLS 的公网直接暴露；不可信网络要求 WireGuard/Tailscale 等隧道。
 - token 不写日志；错误信息不回显 Authorization。
+- 测试辅助 op 默认关闭，只有 `PROBE_ENABLE_DEBUG_OPS=1` 才启用；不要在可被不可信客户端访问的服务器上开启。
 
 ## 4. 一次性握手与 session token
 
@@ -133,7 +135,7 @@ Content-Type: application/json
 ```text
 Mindustry AI session
 
-Endpoint: http://192.168.1.23:47600
+Endpoint: http://192.0.2.10:47600
 Bootstrap token: ***
 
 Do this for this game session only:
@@ -145,7 +147,7 @@ Do this for this game session only:
    this game is running.
 
 If your host supports shell, use curl. If your host supports MCP, the optional
-MCP endpoint is http://192.168.1.23:47600/mcp with the same token.
+MCP endpoint is http://192.0.2.10:47600/mcp with the same token.
 ```
 
 要点：
@@ -223,8 +225,8 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
   500；根分支查询仍可传 `content`。`content` 只接受有 TechNode 的方块/单位；物品没有
   独立 tech node，物品层级要用 `parameters.inputs/outputs` 和产出方块的 tech depth 推导。
 
-会话 `/actions` 只允许 `/tools` 暴露的 35 个名字；内部调试 op 仍只走本地 probe
-socket/token。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
+会话 `/actions` 只允许 `/tools` 暴露的 35 个名字；内部调试 op 只走本地 probe
+socket/token，且默认由 `PROBE_ENABLE_DEBUG_OPS` 关闭。`build_plan` 在 session 层展开为多个 `build`/`deconstruct` 调用，
 返回 `{status,data:{results,allowPartial}}`；失败时可能没有 `opId`（不返回空字符串）。
 它按顺序逐块执行，不是原子事务；`allowPartial=false` 只表示遇到首个失败就停止，
 失败前的成功块已经生效。每个 `data.results[]` 项带 `x/y/block`，失败项的错误也在
@@ -296,7 +298,7 @@ GET /data/events/{revision}/page/{cursor}
 ```bash
 curl -fsS -H "Authorization: Bearer ***" \
   -o /tmp/map.mnd \
-  "http://192.168.1.23:47600/data/map/latest"
+  "http://192.0.2.10:47600/data/map/latest"
 ```
 
 大结果不要进模型上下文；由 shell/脚本读取后只返回摘要。
@@ -453,7 +455,7 @@ DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 SDL_VIDEODRIVER=x11 \
 - `/guide`：完整游戏知识指南；`?topic=build|economy` 追加主题
 - `/docs/{name}`：session 后可读 `SESSION-API.md`、`API-DATA-CONTRACT.md`、`MCP-PROTOCOL.md`、`REALITY-CHECK.md`、`LOGIC-PROCESSOR-GUIDE.md`；只接受固定文件名，路径穿越/其他文件返回 404
 - `/tools`：35 个核心工具的 JSON Schema（get_context/get_area/get_tile/get_spawns/query_area/get_unit/list_unit_types/move_to/attack/mine/build_plan/withdraw/deposit/configure/research/deconstruct/repair/set_stance/release/possess/respawn/pause/resume/command_units/control_building/release_building/boost/pickup_payload/drop_payload/get_config_schema/get_tech_tree/follow/get_action_result/cancel/stop）
-- LAN 绑定 `0.0.0.0:47600`，Bearer 鉴权
+- 默认绑定 `127.0.0.1:47600`；设置 `PROBE_SESSION_BIND=0.0.0.0` 才开放局域网，Bearer 鉴权
 - 通用动作路由：REST 层不复制游戏逻辑，直接复用 `ProbeMod.handle`
 
 待完成：
@@ -555,7 +557,7 @@ hosted 世界仅在离线、必须由手机拥有世界时才做。
 
 已实现：
 
-- `startSessionServer()`：`HttpServer` 绑定 `PROBE_SESSION_BIND`（默认 `0.0.0.0`）
+- `startSessionServer()`：`HttpServer` 绑定 `PROBE_SESSION_BIND`（默认 `127.0.0.1`；局域网需显式 `0.0.0.0`）
   和 `PROBE_SESSION_PORT`（默认 `47600`）
 - `POST /session`：校验一次性 `bootstrapToken`，返回 `sessionToken`；
   `bootstrapToken` 只能成功使用一次

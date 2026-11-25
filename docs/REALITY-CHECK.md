@@ -170,6 +170,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - Logic sensor 实体层（2026-11-24）：`get_unit` 返回 `entity+unit`，`get_tile` 有建筑时返回 `entity+building`，`query_area` 默认摘要、`detail:"full"` 才附加完整对象；字段走 `Senseable.sense/senseObject(LAccess)`，unsupported 省略；smoke 断言 `unit.shooting` 与 `building.totalItems` 可读。
 - Logic 指南与全局量（2026-11-24）：新增 `docs/LOGIC-PROCESSOR-GUIDE.md`，打包到 jar 的 `/docs/LOGIC-PROCESSOR-GUIDE.md`；`context` 增加 `time/second/minute/waveSeconds/server/client/contentCounts` 和 `logic{...}` 别名；smoke 验证 docs 200 与 context 字段。
 - 固定出生点（2026-11-24）：新增 `get_spawns`，数据来自 `WaveSpawner.getSpawns()` 的 `Blocks.spawn` 覆盖层；Ground Zero smoke 返回 `count=1`、`showSpawns=false`、`hideSpawns=true`，`spawns` 为数组。Ground Zero 的 minimap 默认隐藏出生点，但 API 在无雾时仍返回固定地图点；有雾时只返回可见点（除非 `hideSpawns=false`）。
+- Release prep（2026-11-25）：mod 升到 `0.2.0`；默认 session bind 改为 `127.0.0.1`；测试辅助 op 默认关闭（`PROBE_ENABLE_DEBUG_OPS=1` 才开启）；新增 GPL-3.0、CI、`fetch-mindustry.sh`、`release.sh`。`session-api-smoke` 在 Ground Zero 全绿；关闭 debug 后 raw `give` 返回 `debug_disabled`，`hello` 正常。
 
 
 - v160.8 上，设计依赖的关键 API 都存在，签名与设计一致；`UnitController` 自定义控制器、`Build.beginPlace`、核心重生、玩家权限入口都可接。

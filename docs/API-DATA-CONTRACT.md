@@ -1,6 +1,7 @@
 # API 数据契约（实体结构、字段与枚举）
 
-状态：2026-11-24，Mindustry v160.8 / AI Probe 0.1.1。  
+状态：2026-11-25，Mindustry v160.8 / AI Probe 0.2.0。
+
 用途：给 harness 和 LLM 一个**字段级**参考；实际字段随版本可能增加，客户端按字段名读取，
 不要把 JSON 顺序、数组长度或未列出的字段当成稳定契约。
 
@@ -325,7 +326,7 @@ building: {
 
 ## 4.1 `get_content`（核心数据库的只读镜像）
 
-`GET /content?type=blocks|units|items|liquids&query=&limit=` 返回内容列表。v0.1.1 起
+`GET /content?type=blocks|units|items|liquids&query=&limit=` 返回内容列表。v0.2.0 起
 `blocks[]`/`units[]`/`items[]`/`liquids[]` 的每一项都带 `meta`，来自游戏
 `UnlockableContent` / 核心数据库使用的同一套字段：
 
@@ -432,7 +433,7 @@ parameters: {
 和 `dpsEstimate` 是游戏公式的估算值；`mirror`/`alternate` 还可能导致镜像双武器。
 `dpsEstimate` 不含目标护甲、命中率、buff、地形和单位速度，只能用于横向比较。
 
-这些都是 `v0.1.1` 的常用参数；核心数据库 UI 还会显示更多 `StatValue`（例如状态效果、
+这些都是 `v0.2.0` 的常用参数；核心数据库 UI 还会显示更多 `StatValue`（例如状态效果、
 液体消耗、建造范围等），那些尚未全部 JSON 化。精确运行态优先用 `get_tile`、
 `get_capabilities`、`/context.power`。
 
@@ -564,7 +565,7 @@ HTTP 层：
   loadUnits | loadBlocks | unloadPayload | loopPayload`
 - build target：`{x,y}`（tile）或 `{target:{buildingId|x,y}}`（动作接口）
 
-## 10. 迷雾契约（v0.1.1）
+## 10. 迷雾契约（v0.2.0）
 
 当 `rules.fog=true` 时：
 

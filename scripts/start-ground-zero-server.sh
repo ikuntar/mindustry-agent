@@ -34,7 +34,7 @@ cd "$SERVER_DIR"
   sleep 2
   printf 'js Vars.state.rules.sector = SectorPresets.groundZero.sector; Vars.state.rules.winWave = SectorPresets.groundZero.captureWave; Vars.state.rules.waveTimer = true; Vars.state.rules.waveSpacing = 30; Vars.state.rules.initialWaveSpacing = 10; let core = Vars.state.teams.get(Team.sharded).core(); if (core != null) { core.items.add(Items.copper, 150); core.items.add(Items.lead, 50); } let bs = Vars.content.blocks(); for (let i = 0; i < bs.size; i++) { bs.get(i).unlock(); } "groundZero campaign rules, blocks unlocked for fixture"\n'
   sleep 86400
-) | PROBE_REQUIRE_AUTH=1 PROBE_EXPOSE_SESSION=1 PROBE_DATA_RATE_LIMIT_PER_SEC=120 \
+) | PROBE_REQUIRE_AUTH=1 PROBE_EXPOSE_SESSION=1 PROBE_ENABLE_DEBUG_OPS="${PROBE_ENABLE_DEBUG_OPS:-1}" PROBE_DATA_RATE_LIMIT_PER_SEC=120 \
   setsid java -jar server-release.jar > "$LOG" 2>&1 &
 SERVER_PID=$!
 disown "$SERVER_PID" 2>/dev/null || true

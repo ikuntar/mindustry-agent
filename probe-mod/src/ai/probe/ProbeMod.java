@@ -1,5 +1,7 @@
 package ai.probe;
 
+// SPDX-License-Identifier: GPL-3.0-only
+
 import arc.Events;
 import arc.files.Fi;
 import arc.Core;
@@ -130,11 +132,12 @@ public class ProbeMod extends Mod {
     private static final int PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_PORT", "46500"));
     private static final int DATA_PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_DATA_PORT", "46501"));
     private static final int SESSION_PORT = Integer.parseInt(System.getenv().getOrDefault("PROBE_SESSION_PORT", "47600"));
-    private static final String SESSION_BIND = System.getenv().getOrDefault("PROBE_SESSION_BIND", "0.0.0.0");
+    private static final String SESSION_BIND = System.getenv().getOrDefault("PROBE_SESSION_BIND", "127.0.0.1");
     private static final boolean EXPOSE_SESSION = "1".equals(System.getenv("PROBE_EXPOSE_SESSION"));
+    private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.1.1";
+    private static final String VERSION = "0.2.0";
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
     private static final int MAX_OPS = 256;
@@ -1105,6 +1108,12 @@ public class ProbeMod extends Mod {
 
         if (requireAuth && !"hello".equals(op) && !token.equals(request.getString("token", ""))) {
             replyError(command, "unauthorized", "Missing or invalid probe token");
+            return;
+        }
+
+        if (isDebugOp(op) && !DEBUG_OPS) {
+            replyError(command, "debug_disabled",
+                    "Debug ops are disabled by default; set PROBE_ENABLE_DEBUG_OPS=1 only for test fixtures");
             return;
         }
 
@@ -3919,6 +3928,36 @@ public class ProbeMod extends Mod {
             case "get_action_log":
             case "get_config_schema":
             case "get_tech_tree":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private boolean isDebugOp(String op) {
+        switch (op) {
+            case "set_require_writer":
+            case "set_writes_enabled":
+            case "set_paused":
+            case "get_build_state":
+            case "spawn_ally":
+            case "set_type_player_controllable":
+            case "set_possession_allowed":
+            case "set_pause_disabled":
+            case "start_wave":
+            case "set_core_items":
+            case "give":
+            case "remove_unit":
+            case "kill_assistant":
+            case "set_health":
+            case "destroy_core":
+            case "spawn_ally_building":
+            case "spawn_enemy_building":
+            case "spawn_ally_core":
+            case "set_floor":
+            case "damage_building":
+            case "emit_event":
+            case "spawn_enemy":
                 return true;
             default:
                 return false;

@@ -2,9 +2,10 @@
   "name": "ai-probe",
   "displayName": "AI Probe",
   "author": "kuutar",
-  "description": "Minimal local socket probe for the Mindustry AI assistant.",
-  "version": "0.1.1",
+  "description": "AI co-op assistant probe for Mindustry: local session API, MCP tools, and a universal desktop/Android mod jar.",
+  "version": "0.2.0",
   "minGameVersion": "160",
   "main": "ai.probe.ProbeMod",
+  "repo": "https://github.com/kuutar/mindustry-ai",
   "java": true
 }
