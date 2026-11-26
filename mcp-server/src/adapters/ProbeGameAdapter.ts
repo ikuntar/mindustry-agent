@@ -61,7 +61,7 @@ export interface ProbeAdapterOptions {
  * Real-game adapter for probe-mod.
  *
  * Connects to the local probe socket, performs a `hello` protocol handshake,
- * and maps the 24 MCP tools to real game operations where the probe supports
+ * and maps the 27 MCP tools to real game operations where the probe supports
  * them. Unsupported operations fail explicitly rather than pretending to work.
  */
 export class ProbeGameAdapter implements GameAdapter {

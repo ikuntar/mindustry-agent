@@ -1,6 +1,11 @@
 # v160.8 现实核对
 
 日期：2026-11-19
+
+> 历史记录说明：文中出现的 27/34 等数字是当时测试快照的工具数，不代表当前版本。
+> 当前 mod session API 为 35 个工具，Node MCP 为 27 个工具；以
+> `docs/SESSION-API.md`、`docs/PLAYER-PARITY.md` 和 `mcp-server/README.md` 为准。
+
 目标：验证“官方 Mindustry + 自己的 mod”这条路在真实游戏 jar 上成立，而不是只在 MockGameAdapter 里成立。
 
 ## 下载与运行环境

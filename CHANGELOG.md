@@ -1,5 +1,7 @@
 # Changelog
 
+[English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
+
 ## 0.3.0
 
 - Rename the project, mod id, display name, discovery directory, and release

@@ -126,4 +126,4 @@ node scripts/session-api-smoke.mjs            PASS
 - [ ] 决定 F4 的可见性语义：玩家等价（队伍/视野过滤）还是显式全图感知。
 - [ ] 若要彻底无反射，替换 `UnitType` 构造期 `getFields()` 为显式复制。
 - [x] 正式构建默认关闭 raw debug op；只有 `PROBE_ENABLE_DEBUG_OPS=1` 才启用。
-- [ ] issue #34：`/guide` fallback 可观测性、`get_area` cursor 分页仍未完成。
+- [x] issue #34：`/guide` fallback 可观测性、`get_area` cursor 分页已实现；session smoke 验证 cursor 续读首格不重叠。

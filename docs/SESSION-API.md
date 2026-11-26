@@ -1,6 +1,6 @@
 # 单 Mod + 会话 API 设计
 
-状态：Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-21）。
+状态：0.3.0，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-25）。
 `probe-mod` 内已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、
 `/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
 `POST /mcp` 的最小 MCP Streamable HTTP 子集；HTTP server 已改成 `ai.probe.http`
@@ -172,7 +172,7 @@ sessionToken。需要重新接入时，在 UI 设置里 `Refresh token`，再复
 
 ### 控制面（小 JSON）
 
-`GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。`get_unit`/`get_tile` 额外提供 `entity` + `unit`/`building` 的 `LAccess` 传感器字段；`query_area` 默认摘要，`detail:"full"` 才附加完整传感器对象。`get_spawns` 读取 `WaveSpawner.getSpawns()` 的固定波次出生点：`x/y` 是 tile 坐标，`worldX/worldY` 是像素；带 `waveTeam`、`dropZoneRadius`、`showSpawns/hideSpawns` 和每个点的可见性。迷雾开启时默认只返回可见点，除非规则本身在 minimap 暴露出生点。
+`GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。`get_unit`/`get_tile` 额外提供 `entity` + `unit`/`building` 的 `LAccess` 传感器字段；`query_area` 默认摘要，`detail:"full"` 才附加完整传感器对象。`get_spawns` 读取 `WaveSpawner.getSpawns()` 的固定波次出生点：`x/y` 是 tile 坐标，`worldX/worldY` 是像素；带 `waveTeam`、`dropZoneRadius`/`dropZoneRadiusTiles`、`enemyCoreBuildRadius`、`polygonCoreProtection`、`showSpawns/hideSpawns` 和每个点的可见性。`get_tile.spawnZone` 给出 `known/radius/radiusTiles/inside/distance/nearestSpawn`，`inside=true` 表示该格位于出生/空投区；建造预检失败时 `placeReason` 可能是 `enemy_core_build_radius`。迷雾开启时默认只返回可见点，除非规则本身在 minimap 暴露出生点。
 
 `/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`、`fog`、`staticFog`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。`context.power` 只汇总助手当前队伍的电力网络（每条带 `team`）；`TimerObjective` 的 `current=-1`、`progressAvailable=false`，用 `display` 读取游戏给出的倒计时文本。
 

@@ -1,5 +1,7 @@
 # Releasing
 
+[English](RELEASING.md) | [简体中文](RELEASING.zh-CN.md)
+
 The mod is distributed as a universal jar and as source on GitHub. The release
 artifact is not committed to the repository.
 

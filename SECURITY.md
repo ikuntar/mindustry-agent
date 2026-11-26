@@ -1,11 +1,13 @@
 # Security
 
+[English](SECURITY.md) | [简体中文](SECURITY.zh-CN.md)
+
 `mindustry-agent` exposes a local game-control API. Treat the session token and
 the raw probe token as credentials for controlling a running game.
 
 ## Supported versions
 
-Security fixes are applied to the latest `0.2.x` mod version. Older jars and
+Security fixes are applied to the latest `0.3.x` mod version. Older jars and
 unreleased snapshots are not supported.
 
 ## Reporting

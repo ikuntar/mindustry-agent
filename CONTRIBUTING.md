@@ -1,5 +1,7 @@
 # Contributing
 
+[English](CONTRIBUTING.md) | [简体中文](CONTRIBUTING.zh-CN.md)
+
 This is an experimental Mindustry mod and harness project. Small, verifiable
 changes are preferred over broad refactors.
 
@@ -13,6 +15,7 @@ changes are preferred over broad refactors.
    ```
 2. Build the mod:
    ```bash
+   cd ..
    scripts/fetch-mindustry.sh
    probe-mod/build.sh
    ```

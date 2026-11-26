@@ -1,5 +1,7 @@
 # Mindustry Agent MCP server
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 MCP tool interface for the in-game co-op assistant. The MCP host owns goals and
 the agent loop; this server exposes a stateless game tool surface.
 

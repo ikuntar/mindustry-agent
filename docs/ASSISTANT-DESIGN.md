@@ -1,6 +1,6 @@
 # Mindustry Agent 助手设计
 
-状态：设计稿，2026-11-18
+状态：设计稿，2026-11-18；实现状态更新 2026-11-25（0.3.0）。
 定位：单机/本地对局里的 AI co-op 助手，不是独立 AI 客户端。
 目标版本：官方 Mindustry v160.8（服务端 jar 已做 API 核对，见 `docs/REALITY-CHECK.md`）。
 交互：先做 MCP 工具接口；游戏内聊天框/对话框暂不做，后续用 harness 测试。
@@ -77,7 +77,7 @@ LLM
 ### 当前实现状态
 
 - `mcp-server/`：MCP 接口脚手架 + `MockGameAdapter`（模拟世界，用于协议和 harness 测试）。
-- 真实 Mindustry mod adapter 尚未实现；MCP server 通过本地 socket 连接 mod 的边界已预留。
+- 真实 Mindustry mod adapter 已实现（`ProbeGameAdapter`）；MCP server 通过本地 socket 连接 mod，边界已落地。当前 Node MCP 有 27 个工具，session API 有 35 个工具。
 
 ---
 

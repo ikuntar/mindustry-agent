@@ -1,10 +1,14 @@
 # mindustry-agent
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 An experimental co-op AI assistant for [Mindustry](https://github.com/Anuken/Mindustry), exposed as a mod, a local session API, and MCP tools.
 
 The assistant is a normal in-game body: it can be possessed, respawn from cores, build, mine, fight, and follow explicit instructions. The harness owns the goal loop; this project does not ship an autonomous long-running planner.
 
 > Status: technical preview. The API and mod are usable for experiments, but this is not a finished consumer mod. Read [Security](#security) before exposing it to a network.
+
+Current public release: `0.3.0` ([GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.3.0)).
 
 ## What is included
 
@@ -95,6 +99,12 @@ GET  /events/wait   bounded long-poll
 GET  /data/...      read-only map/event data plane
 ```
 
+The bootstrap token is sent in the request header:
+
+```http
+Authorization: Bearer <bootstrap>
+```
+
 By default the session server binds to `127.0.0.1:47600`. LAN access is an explicit opt-in:
 
 ```bash
@@ -174,6 +184,7 @@ Fixed-map and real-game tests are documented in [docs/REALITY-CHECK.md](docs/REA
 - [HARNESS-INTEGRATION.md](docs/HARNESS-INTEGRATION.md) — host configuration
 - [PLAYER-PARITY.md](docs/PLAYER-PARITY.md) — implemented player abilities and remaining gaps
 - [REALITY-CHECK.md](docs/REALITY-CHECK.md) — real-game verification notes
+- [DOC-AUDIT.md](docs/DOC-AUDIT.md) — documentation consistency audit and Chinese-version map
 - [RELEASING.md](docs/RELEASING.md) — build, tag, and attach the release artifact
 
 ## Known limitations

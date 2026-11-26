@@ -39,7 +39,7 @@
       +---------- DatasetRef / revision ----------+
 ```
 
-- MCP 控制面：现有 27 个工具，新增/调整读工具返回 `ref`。
+- MCP 控制面：Node MCP 当前 27 个工具；mod session API 当前 35 个工具。新增/调整读工具返回 `ref`。
 - 数据面：只读 HTTP(S)，可和 MCP gateway 同进程，也可独立部署。
 - 快照写入：游戏侧在 tick/地图变化窗口生成 revision；客户端永远不写。
 - UI 可以直接使用同一数据面，不经过 MCP，也不经过 LLM。

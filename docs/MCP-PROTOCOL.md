@@ -1,7 +1,10 @@
 # MCP 工具协议
 
-状态：v0.1 设计稿，2026-11-18
-适用范围：`mcp-server/` 对外暴露的 MCP 工具；当前由 `MockGameAdapter` 实现，真实 Mindustry mod adapter 后续替换。
+状态：Node MCP 实现说明，2026-11-25，`mindustry-agent` 0.3.0。
+适用范围：`mcp-server/` 对外暴露的 MCP 工具。当前同时有 `MockGameAdapter`（协议测试）和
+`ProbeGameAdapter`（真实 v160.8 + probe mod）；Node MCP 当前 27 个工具，mod session API
+当前 35 个工具。本文描述 Node MCP 的协议和动作语义；session API 的完整工具面见
+`docs/SESSION-API.md`。
 
 ---
 
@@ -18,14 +21,15 @@ MCP server（Node/TypeScript）
 ```
 
 - MCP server 默认 stdio，由 host 启动。
-- MCP server 与游戏 mod 的传输尚未实现；契约要求：
-  - 只监听 `127.0.0.1`；
-  - 发现文件 `mindustryx-ai-bridge/bridge-info.json`：`{host, port, token, version, pid}`；
-  - 握手：`hello {protocolVersion, clientVersion}` → `welcome {gameVersion, toolVersion}`；
-  - 断线重连；游戏读档后 session 重建。
+- `ProbeGameAdapter` 已通过本地 TCP 连接 probe mod；发现文件为
+  `mindustry-agent-probe/bridge-info.json`，包含 `port`、`token`、`protocol`、
+  `version`、`dataPort`、`dataToken` 等字段。
+- 握手：`hello {token}` → `{protocol, requireWriter, ...}`；需要写权限时再
+  `claim_writer` 取得 writer token；断线自动重连并重新握手。
 - MCP server 不进入游戏渲染线程；所有动作进 mod 的队列，由游戏线程按预算执行。
 
-当前实现：`MockGameAdapter` 在内存里模拟世界，用于协议、工具和 harness 测试。
+当前实现：`MockGameAdapter` 在内存里模拟世界，用于协议、工具和 harness 测试；
+`ProbeGameAdapter` 连接真实游戏。未支持的 op 会显式失败，不会假装成功。
 
 ---
 
@@ -107,7 +111,8 @@ MCP server（Node/TypeScript）
 状态：`queued | running | done | failed | cancelled`。
 `waitMs` 最大 5000；不要用工具调用等待长建造。
 
-幂等：写工具支持 `requestId`（建议由 host 生成）用于去重；`build_plan` 用 `planId`。当前 v0.1 尚未在 mock 中实现 requestId 去重，协议保留。
+幂等：所有工具接受可选 `idempotencyKey`；同一个 key 的成功结果在 MCP 进程内复用，
+不会重复执行动作。`build_plan` 使用同一个机制，计划内容由 host 自己保证稳定。
 
 ---
 
@@ -327,31 +332,21 @@ deconstruct 等到目标消失，mine 等到携带量增加，configure 等到 c
 
 ---
 
-## 8. 真实 adapter 待实现清单
+## 8. Probe adapter 状态与剩余项
 
-当前进度：
+当前 `ProbeGameAdapter` 已接入 Node MCP 的 27 个工具，包括 context、capabilities、
+content、map/event 数据面、局部区域查询、配置 schema、移动/攻击/跟随/采矿/停止、
+建造/拆除/修理、取物/存物、配置、指挥/姿态、附身/释放/重生、动作结果与取消。
 
-- 已实现 `ProbeGameAdapter`：`get_context` / `get_capabilities` / `get_area` / `query_area` / `get_content` / `move_to` / `build_plan` / `withdraw` / `deposit` / `configure` / `command_units` / `set_stance` / `stop` / `attack` / `mine` / `follow` / `possess` / `release` / `respawn` / `deconstruct` / `repair` / `cancel`；`get_content` 从游戏内容读取。、
-- `get_events` 已接真实事件环；大体积地图/事件不通过 MCP 工具结果传输，见 `docs/REMOTE-DATA-PLANE.md`。
-`unit_destroy`/`unit_create`/`block_destroy`/`block_build_end`/`build_damage`/`unit_damage`，支持 `since/limit/next/dropped`；高频 `build_damage` 会占满页。
-- `attack` / `follow` 已接入口。`attack` 支持单位/建筑/坐标三种目标：建筑实测 `targetHealth 220→0`，坐标实测 done/inRange；单位目标未独立验收。`follow` 仍缺稳定验收。
-- `respawn` 已实测死亡后核心重生。
-- 其余动作（`deconstruct`/`repair`/`cancel` 之外）仍有 probe 未实现项；不是假成功。
-- 已验证 `query_area` 能读回真实 `conveyor`/`sorter`；`withdraw`/`deposit` 的 copper 5 与 `get_context` 携带量一致；`configure` sorter 成功；`command_units` 的 dagger 位移；`set_stance` holdPosition 成功。
-- 已验证附身/释放：home body despawn、目标 dagger 接管、release 后新 alpha 在核心生成；`isHome/possessing` 读回正确；`respawn` 死亡后 id 211→212、health 150。`mine` 实测 sand 1，`attack` 实测 220→0。
+真实游戏验证、逐项验收和剩余缺口以以下文档为准：
 
-待实现：
-- 重连、多客户端互斥、token 轮换（重连/心跳已有 fake probe 单测）。
-- 游戏线程动作队列 + 每帧预算；LLM 调用离线程（probe 已有每帧 50 条上限，正式 adapter 还需要更细预算/背压）。
-- `get_context` 的真实数据（单位/建筑/核心/资源/波次）；`get_content` 仍静态。
-- 真实 `build_plan`：逐块 `Build.validPlace` + `Build.beginPlace(assistantUnit, ...)` + 物品/时间；不允许 `constructFinish`。
-- 真实 `withdraw/deposit`：`interactable` + 220 范围 + `maxAccepted`；不用 `Vars.player`。
-- 真实 `configure`：`build.configured(assistantUnit, value)`；逻辑代码校验。
-- 真实 `command_units`：直接操作 `CommandAI`；不从 `InputHandler.commandUnits(Vars.player, ...)` 走。
-- 真实 `possess/release/respawn`：状态机按 `docs/ASSISTANT-DESIGN.md`。
-- 助手 `AssistantController`：本地显式寻路/攻击/建造执行；不默认索敌、开火或撤退。
-- 事件：`Events` + 轮询补足（波次、核心受击、资源阈值等）。
-- 鉴权、限流、动作日志、停机开关。
+- `docs/REALITY-CHECK.md`：真实 v160.8 测试记录（历史工具数已在页首说明）
+- `docs/PLAYER-PARITY.md`：当前 mod session API 的 35 个工具和玩家能力对齐
+- `docs/SESSION-API.md`：session REST/MCP 入口的完整契约
+
+仍属于工程边界的事项：多客户端互斥、完整重连/心跳矩阵、精细的每帧动作预算与背压、
+跨 sector/长期战役场景。不要把“Node MCP 有 27 个工具”误写成“session API 只有 27 个”；
+后者当前是 35 个。
 
 ---
 
