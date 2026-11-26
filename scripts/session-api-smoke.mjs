@@ -139,10 +139,10 @@ if (docs.status !== 200 || !String(docs.body).includes("API 数据契约")) proc
 const logicDocs = await call("/docs/LOGIC-PROCESSOR-GUIDE.md", { headers: auth });
 console.log("logic docs", logicDocs.status, String(logicDocs.body).slice(0, 20));
 if (logicDocs.status !== 200 || !String(logicDocs.body).includes("Mindustry 逻辑处理器指南")) process.exit(1);
-const page1 = await call("/actions", { method: "POST", headers: auth, body: JSON.stringify({ kind: "get_area", x: 1032, y: 440, radius: 6, maxTiles: 5 }) });
+const page1 = await call("/actions", { method: "POST", headers: auth, body: JSON.stringify({ kind: "get_area", x: 129, y: 55, radius: 6, maxTiles: 5 }) });
 const next = page1.body?.coverage?.next;
 if (page1.status !== 200 || !next) process.exit(1);
-const page2 = await call("/actions", { method: "POST", headers: auth, body: JSON.stringify({ kind: "get_area", x: 1032, y: 440, radius: 6, maxTiles: 5, cursor: next }) });
+const page2 = await call("/actions", { method: "POST", headers: auth, body: JSON.stringify({ kind: "get_area", x: 129, y: 55, radius: 6, maxTiles: 5, cursor: next }) });
 console.log("area cursor", page1.body?.tiles?.length, next, page2.body?.tiles?.[0]);
 if (page2.status !== 200 || !page2.body?.tiles?.length) process.exit(1);
 const forbidden = await call("/actions", {
@@ -173,7 +173,7 @@ const core = context.body.cores?.[0];
 const sensorTile = await call("/actions", {
   method: "POST",
   headers: auth,
-  body: JSON.stringify({ kind: "get_tile", x: Math.floor((core?.x ?? context.body.assistant?.x ?? 0) / 8), y: Math.floor((core?.y ?? context.body.assistant?.y ?? 0) / 8) }),
+  body: JSON.stringify({ kind: "get_tile", x: Math.floor(core?.x ?? context.body.assistant?.x ?? 0), y: Math.floor(core?.y ?? context.body.assistant?.y ?? 0) }),
 });
 console.log("sensor tile", sensorTile.status, sensorTile.body?.entity?.kind, sensorTile.body?.building?.totalItems, sensorTile.body?.spawnZone?.known);
 if (sensorTile.status !== 200 || sensorTile.body?.entity?.kind !== "building" || sensorTile.body?.building?.totalItems === undefined
@@ -200,7 +200,7 @@ if (badPlan.status !== 200 || badPlan.body?.status !== "failed" || "opId" in (ba
 const tile = await call("/actions", {
   method: "POST",
   headers: auth,
-  body: JSON.stringify({ kind: "get_tile", x: Math.floor(Number(context.body.assistant?.x ?? 0) / 8), y: Math.floor(Number(context.body.assistant?.y ?? 0) / 8), block: "conveyor", rotation: 0 }),
+  body: JSON.stringify({ kind: "get_tile", x: Math.floor(Number(context.body.assistant?.x ?? 0)), y: Math.floor(Number(context.body.assistant?.y ?? 0)), block: "conveyor", rotation: 0 }),
 });
 console.log("tile terrain/preflight", tile.status, Boolean(tile.body.floor), "canPlace" in (tile.body ?? {}));
 if (tile.status !== 200 || !("floor" in (tile.body ?? {})) || !("canPlace" in (tile.body ?? {}))) process.exit(1);
@@ -225,9 +225,9 @@ const cappedArea = await call("/actions", {
   body: JSON.stringify({ kind: "query_area", x: Number(context.body.assistant?.x ?? 0), y: Number(context.body.assistant?.y ?? 0), radius: 1600 }),
 });
 console.log("query cap", cappedArea.status, cappedArea.body.radius, cappedArea.body.truncated?.radius);
-if (cappedArea.status !== 200 || cappedArea.body.radius > 256 || cappedArea.body.truncated?.radius !== true) process.exit(1);
+if (cappedArea.status !== 200 || cappedArea.body.radius > 32 || cappedArea.body.truncated?.radius !== true) process.exit(1);
 
-const targetX = Number(context.body.assistant?.x ?? 0) + 40;
+const targetX = Number(context.body.assistant?.x ?? 0) + 5;
 const targetY = Number(context.body.assistant?.y ?? 0);
 const action = await call("/actions", {
   method: "POST",
@@ -250,7 +250,7 @@ const timeoutMove = await call("/actions", {
   headers: auth,
   body: JSON.stringify({
     kind: "move_to",
-    x: Number(context.body.assistant?.x ?? 0) + 120,
+    x: Number(context.body.assistant?.x ?? 0) + 20,
     y: Number(context.body.assistant?.y ?? 0),
     timeoutTicks: 1,
   }),
@@ -286,7 +286,7 @@ const sessionPausedContext = await call("/context?detail=summary", { headers: au
 const pausedArea = await call("/actions", {
   method: "POST",
   headers: auth,
-  body: JSON.stringify({ kind: "get_area", x: 1032, y: 440, radius: 4, maxTiles: 8 }),
+  body: JSON.stringify({ kind: "get_area", x: 129, y: 55, radius: 4, maxTiles: 8 }),
 });
 const sessionResume = await call("/actions", {
   method: "POST",

@@ -73,7 +73,7 @@ const moveCall = await post("/mcp", {
   method: "tools/call",
   params: {
     name: "move_to",
-    arguments: { x: Number(context.assistant.x) + 24, y: Number(context.assistant.y) },
+    arguments: { x: Number(context.assistant.x) + 3, y: Number(context.assistant.y) },
   },
 }, token, { "mcp-session-id": sessionId });
 const move = JSON.parse(moveCall.body.result.content[0].text);

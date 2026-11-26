@@ -372,8 +372,8 @@ async function main(): Promise<void> {
   }
 
   const core = context.cores[0];
-  const baseX = Math.floor(core.x / 8);
-  const baseY = Math.floor(core.y / 8);
+  const baseX = Math.floor(core.x);
+  const baseY = Math.floor(core.y);
   const tileWindow = await tool("get_area", { x: core.x, y: core.y, radius: 2 });
   check("bounded area is available", tileWindow.tiles?.length === 25, String(tileWindow.tiles?.length));
   check("bounded area reports no truncation", tileWindow.truncated === false);
@@ -405,7 +405,7 @@ async function main(): Promise<void> {
   let turret: any;
   let turretArea: any;
   for (let attempt = 0; attempt < 20 && !turret; attempt++) {
-    turretArea = await tool("query_area", { x: core.x, y: core.y, radius: 96 });
+    turretArea = await tool("query_area", { x: core.x, y: core.y, radius: 12 });
     turret = turretArea.buildings?.find(
       (building: { block: string; tileX: number; tileY: number }) =>
         building.block === "duo" &&
@@ -431,7 +431,7 @@ async function main(): Promise<void> {
       continue;
     }
     for (let poll = 0; poll < 20 && !sorter; poll++) {
-      const area = await tool("query_area", { x: core.x, y: core.y, radius: 48 });
+      const area = await tool("query_area", { x: core.x, y: core.y, radius: 6 });
       sorter = area.buildings?.find(
         (building: { block: string; tileX: number; tileY: number }) =>
           building.block === "sorter" && building.tileX === tile.x && building.tileY === tile.y,
@@ -472,7 +472,7 @@ async function main(): Promise<void> {
       continue;
     }
     for (let poll = 0; poll < 20 && !switchBuilding; poll++) {
-      const area = await tool("query_area", { x: core.x, y: core.y, radius: 48 });
+      const area = await tool("query_area", { x: core.x, y: core.y, radius: 6 });
       switchBuilding = area.buildings?.find(
         (building: { block: string; tileX: number; tileY: number }) =>
           building.block === "switch" && building.tileX === tile.x && building.tileY === tile.y,
@@ -552,7 +552,7 @@ async function main(): Promise<void> {
       continue;
     }
     for (let poll = 0; poll < 20 && !feeder; poll++) {
-      const area = await tool("query_area", { x: core.x, y: core.y, radius: 96 });
+      const area = await tool("query_area", { x: core.x, y: core.y, radius: 12 });
       feeder = area.buildings?.find(
         (building: { block: string; tileX: number; tileY: number }) =>
           building.block === "conveyor" && building.tileX === tile.x && building.tileY === tile.y,
@@ -600,7 +600,7 @@ async function main(): Promise<void> {
     Number(turretDirectItems.ammoTotal ?? 0) > 0,
     JSON.stringify(turretDirectItems),
   );
-  const turretAmmoArea = await tool("query_area", { x: turret.x, y: turret.y, radius: 16 });
+  const turretAmmoArea = await tool("query_area", { x: turret.x, y: turret.y, radius: 2 });
   const queriedTurret = turretAmmoArea.buildings?.find(
     (building: { buildingId?: number; id?: number }) =>
       (building.buildingId ?? building.id) === (turret.buildingId ?? turret.id),
@@ -621,7 +621,7 @@ async function main(): Promise<void> {
     );
     if (upstreamBuild.ok) {
       await waitAction(upstreamBuild.data.opId);
-      const upstreamArea = await tool("query_area", { x: turret.x, y: turret.y, radius: 16 });
+      const upstreamArea = await tool("query_area", { x: turret.x, y: turret.y, radius: 2 });
       const upstreamConveyor = upstreamArea.buildings?.find(
         (building: { block: string; tileX: number; tileY: number }) =>
           building.block === "conveyor" && building.tileX === upstream.x && building.tileY === upstream.y,
@@ -741,7 +741,7 @@ async function main(): Promise<void> {
   check("build queued", placement, placementErrors.join("; "));
   check("multi-block build plan", multiBuilt, `multiBuilt=${multiBuilt}`);
   await waitAction(placement.opId);
-  const area = await tool("query_area", { x: core.x, y: core.y, radius: 96 });
+  const area = await tool("query_area", { x: core.x, y: core.y, radius: 12 });
   check(
     "all planned conveyors visible",
     placementTiles.every((tile) =>
@@ -878,8 +878,8 @@ async function main(): Promise<void> {
   check("respawn recovers after core recreated", recovered.assistant?.dead === false, JSON.stringify(recovered.assistant));
 
   // Route around a solid wall: direct movement would get stuck, BFS should detour.
-  const startX = Math.floor(recovered.assistant.x / 8);
-  const startY = Math.floor(recovered.assistant.y / 8);
+  const startX = Math.floor(recovered.assistant.x);
+  const startY = Math.floor(recovered.assistant.y);
   const wallX = startX + 6;
   let wallBlocks = 0;
   for (const dy of [-6, -3, 0, 3, 6]) {
@@ -902,8 +902,8 @@ async function main(): Promise<void> {
   );
 
   // Attack approach must use the same path around another wall.
-  const attackStartX = Math.floor(afterPath.assistant.x / 8);
-  const attackStartY = Math.floor(afterPath.assistant.y / 8);
+  const attackStartX = Math.floor(afterPath.assistant.x);
+  const attackStartY = Math.floor(afterPath.assistant.y);
   const attackWallX = attackStartX + 5;
   let attackWallBlocks = 0;
   for (const dy of [-4, -2, 0, 2, 4]) {

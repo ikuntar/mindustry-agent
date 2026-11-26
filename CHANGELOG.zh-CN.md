@@ -2,8 +2,10 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
-## Unreleased
+## 0.4.0
 
+- **破坏性变更：** 所有公开坐标和半径统一为 tile 单位；`move_to`、`get_area`、
+  `query_area`、攻击坐标、实体位置、出生点和规则半径不再返回世界像素，连续位置允许小数 tile。
 - `deconstruct` 接受游戏允许拆除的静态道具；`get_tile` 增加 `blockType`、
   `blockBreakable`、`destructible`、`alwaysReplace`。
 - `build_plan` 为传送带增加输出受阻/对空气/反向的 `warnings[]`。

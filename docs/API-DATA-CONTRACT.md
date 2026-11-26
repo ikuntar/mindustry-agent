@@ -1,15 +1,16 @@
 # API 数据契约（实体结构、字段与枚举）
 
-状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.3.1。
+状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.4.0。
 
 用途：给 harness 和 LLM 一个**字段级**参考；实际字段随版本可能增加，客户端按字段名读取，
 不要把 JSON 顺序、数组长度或未列出的字段当成稳定契约。
 
 ## 1. 通用约定
 
-- 坐标：
-  - `get_tile`、`build_plan`、`deconstruct`、`configure`、`mine` 使用 **tile** 坐标。
-  - `get_area`、`query_area`、`move_to`、`attack` 的 `x/y` 使用 **世界像素**（默认 8 px/tile）。
+- 坐标：**所有公开 JSON 坐标和半径统一为 tile 单位**。允许小数表示 tile 内部位置
+  （例如 `129.5` 是 tile 129 的中心）；内部引擎的 8 px/tile 换算不暴露给客户端。
+  - `get_tile`、`build_plan`、`deconstruct`、`configure`、`mine` 使用整数 tile 坐标。
+  - `get_area`、`query_area`、`move_to`、`attack` 的 `x/y` 和 `radius` 也都是 tile。
   - `get_area.coverage.next` 是 tile 坐标，并带 `unit:"tile"`；把它作为
     `get_area.cursor:{x,y}` 传回可从下一格继续 row-major 扫描。
 - `get_context.wavetime` 单位是 **tick**；秒数为 `wavetime/60`。
@@ -190,7 +191,7 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
   floor, overlay, liquid, drop, dropHardness, block, team,
   solid, breakable, replaceable,
   canPlace?, placeReason?,
-  spawnZone?: { known, radius, radiusTiles, inside, distance, nearestSpawn?, note? },
+  spawnZone?: { known, radius, inside, distance, nearestSpawn?, note? },
   health?, maxHealth?, rotation?, efficiency?, progress?, warmup?, enabled?,
   items?, ammoTotal?, config?
 }
@@ -259,8 +260,7 @@ building: {
 }
 ```
 
-这些值直接来自 `Senseable.sense(LAccess)` / `senseObject(LAccess)`；不支持该字段的对象会省略字段，而不是返回 0。`unit.x/y`、`mineX/Y`、`buildX/Y`、`shootX/Y` 是逻辑处理器的 tile 坐标；
-`entity.x/y` 保持 API 的世界像素坐标。`get_tile` 的 legacy `rotation` 是度数，`unit.shooting/boosting/mining/solid/dead` 等是逻辑风格 0/1 数值。
+这些值直接来自 `Senseable.sense(LAccess)` / `senseObject(LAccess)`；不支持该字段的对象会省略字段，而不是返回 0。`unit.x/y`、`mineX/Y`、`buildX/Y`、`shootX/Y` 和 `entity.x/y` 在本 API 中统一为 tile 坐标。`get_tile` 的 legacy `rotation` 是度数，`unit.shooting/boosting/mining/solid/dead` 等是逻辑风格 0/1 数值。
 不暴露 `@client*`、`@links`、`@ipt` 或任意 settable 字段；所有读取仍受 team/fog 过滤。
 
 ### 4.0.1 `get_spawns`（固定波次出生点）
@@ -273,8 +273,6 @@ building: {
 {
   spawns: [{
     x, y,                    // tile 坐标
-    tileX, tileY,            // 同上，便于对照 get_tile
-    worldX, worldY,          // 世界像素
     team, teamName,          // 通常是 waveTeam
     overlay,                 // 通常为 "spawn"
     discovered, visible,
@@ -284,9 +282,8 @@ building: {
   showSpawns, hideSpawns,
   fog,
   waveTeam, waveTeamName,
-  dropZoneRadius,
-  dropZoneRadiusTiles,
-  enemyCoreBuildRadius,
+  dropZoneRadius,           // tile
+  enemyCoreBuildRadius,     // tile
   polygonCoreProtection,
   unit: "tile",
   source: "WaveSpawner.getSpawns"
@@ -298,8 +295,8 @@ building: {
 
 建造保护字段：
 
-- `dropZoneRadius`：出生点/空投区半径（世界单位）；用于判断单位和出生点附近的行为。
-- `enemyCoreBuildRadius`：敌方核心的禁止建造半径（世界单位）；`Build.validPlace`
+- `dropZoneRadius`：出生点/空投区半径（tile）；用于判断单位和出生点附近的行为。
+- `enemyCoreBuildRadius`：敌方核心的禁止建造半径（tile）；`Build.validPlace`
   在敌方核心保护圈内会拒绝放置。
 - `polygonCoreProtection`：地图是否使用多边形/最近核心保护模式；此时限制可能不是
   简单的圆形半径，仍需用 `get_tile` 的 `canPlace/placeReason` 验证。
@@ -315,8 +312,8 @@ building: {
 - `hidden` 是被省略的不可见点数；不返回其坐标。
 - 出生点被敌人核心替换/地图编辑变化时以当前 `WaveSpawner` 内容为准。
 
-`get_spawns` 的 `x/y` 是 tile；调用 `query_area` 时要把 `worldX/worldY` 用于像素参数，
-或自己乘 8。出生点周围的 `dropZoneRadius` 是世界单位。
+`get_spawns` 的 `x/y`、`dropZoneRadius` 和 `enemyCoreBuildRadius` 都是 tile；
+直接传给 `query_area`/`get_area` 即可，不需要再乘 8。
 
 ### 4.1 `config` 形状
 
@@ -524,7 +521,7 @@ POST /actions {"op":"get_tech_tree","flat":true,"offset":0,"limit":500}
 ## 5. `query_area`
 
 ```text
-{ x, y, requestedRadius, requestedRadiusTiles, radius, radiusTiles,
+{ x, y, requestedRadius, radius,
   truncated:{radius,units,buildings},
   units[], buildings[] }
 ```
@@ -537,7 +534,9 @@ POST /actions {"op":"get_tech_tree","flat":true,"offset":0,"limit":500}
 ```
 
 `itemList` 是 `[{item,amount}]`。`includeUnits/includeBuildings` 默认 true；
-`includeEnemies` 默认 false；`radius` 上限 256 px，单位/建筑上限各 64 条。
+`includeEnemies` 默认 false；`radius` 上限 32 tile，单位/建筑上限各 64 条。
+`x/y`、`radius`、`units[].x/y`、`buildings[].x/y` 都是 tile；`tileX/tileY` 是
+便于对照的整数 tile。
 
 ## 6. action / op 结构
 

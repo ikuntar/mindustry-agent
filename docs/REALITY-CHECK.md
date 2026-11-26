@@ -204,3 +204,5 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - issue #31（2026-11-23）：新增直连 `GET /health`；`events/wait.paused` 直接读当前状态；`query_area` 半径上限 256px、units/buildings 各 64 条并返回 `truncated`。实测 session smoke：health 200、query cap 256、context fields 完整。
 - 崩溃（2026-11-23）：客户端 `ValidateException: Player attempted to control invalid unit`。日志与 `InputHandler.update` 实现显示：玩家死亡后原版会找 `type == controlledType && playerControllable && !dead` 的最近单位并自动 `unitControl`；助手若用普通 `alpha` 类型会被选中，而 `ProbeController` 不是 AI controller，服务端校验失败。
   修复：助手改为 mod 内的 `mindustry-agent-ai-alpha` 类型（从 alpha 复制外观/武器/采矿/建造参数，`playerControllable=false`、`useUnitCap=false`、hidden），因此不会被原版自动复活逻辑选中；同时保留 player/justSwitch 保护和 `playerTransitioning` 清理门控。
+
+- 坐标契约（2026-11-26，0.4.0）：所有公开动作、实体位置、区域查询和半径统一为 tile 单位；`move_to`/`attack`/`query_area` 不再接收世界像素，`get_spawns` 不再返回 `worldX/worldY`，引擎内部 8 px/tile 只在服务端换算。session smoke、MCP HTTP smoke 和真实 `move_to` 已按 tile 验收。

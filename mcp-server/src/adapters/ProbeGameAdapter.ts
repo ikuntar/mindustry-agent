@@ -271,8 +271,8 @@ export class ProbeGameAdapter implements GameAdapter {
       team: core.team ?? raw.team,
       x: core.x,
       y: core.y,
-      tileX: Math.floor(core.x / 8),
-      tileY: Math.floor(core.y / 8),
+      tileX: Math.floor(core.x),
+      tileY: Math.floor(core.y),
       health: core.health,
       maxHealth: core.maxHealth,
       core: true,
@@ -521,7 +521,7 @@ export class ProbeGameAdapter implements GameAdapter {
 
   // ---------------------------------------------------------------- actions
 
-  async moveTo(x: number, y: number, arriveRadius = 8, timeoutTicks?: number): Promise<ActionResult> {
+  async moveTo(x: number, y: number, arriveRadius = 1, timeoutTicks?: number): Promise<ActionResult> {
     return this.mapResult(await this.call("move_to", { x, y, arriveRadius, timeoutTicks }));
   }
 

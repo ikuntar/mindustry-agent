@@ -66,8 +66,8 @@ async function main(): Promise<void> {
 
   let planned: any;
   if (probeMode && core) {
-    const baseX = Math.floor(core.x / 8);
-    const baseY = Math.floor(core.y / 8);
+    const baseX = Math.floor(core.x);
+    const baseY = Math.floor(core.y);
     const offsets = [[4, 0], [-4, 0], [0, 4], [0, -4], [5, 0], [-5, 0], [0, 5], [0, -5], [4, 4], [-4, 4], [4, -4], [-4, -4]];
     for (const [dx, dy] of offsets) {
       const candidate = [{ block: "sorter", x: baseX + dx, y: baseY + dy }];

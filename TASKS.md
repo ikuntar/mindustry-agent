@@ -143,7 +143,8 @@
 - [x] 弹窗 UI 视觉实测：Xvfb 自动加载 Fortress，截图显示 endpoint/token/6 步说明和 Copy/Close 按钮
 - [ ] `Copy session prompt` 剪贴板内容断言
 - [ ] 桌面客户端/真机人工点击验收
-- [x] 35 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；`move_to`/`get_area` 明确世界像素，`mine`/`build`/`configure` 明确 tile
+- [x] 35 个核心工具的显式 schema/错误码表：`GET /tools` 返回 JSON Schema；所有公开坐标/半径统一为 tile
+- [x] 0.4.0 坐标契约：`move_to`/`attack`/`query_area`/`get_area`/`get_spawns`/context/entity 全部 tile；smoke 和 MCP HTTP smoke 通过
 - [x] issue #25：guide 引用的 `get_tile/query_area/deconstruct/repair/set_stance/release/follow` 已纳入 session `/tools`；`wavetime/waveTimer` 已加入 context
 - [x] issue #26：活跃 op 达到 `MAX_OPS=256` 时返回 `op_capacity`（HTTP 503），不再无上限增长
 - [x] issue #27：`GET /` 端点索引；build topic 修正；SESSION-API 补 drop_id 编码

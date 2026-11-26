@@ -1,6 +1,6 @@
 # 单 Mod + 会话 API 设计
 
-状态：0.3.1，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-26）。
+状态：0.4.0，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-26）。
 `probe-mod` 内已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、
 `/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
 `POST /mcp` 的最小 MCP Streamable HTTP 子集；HTTP server 已改成 `ai.probe.http`
@@ -172,7 +172,7 @@ sessionToken。需要重新接入时，在 UI 设置里 `Refresh token`，再复
 
 ### 控制面（小 JSON）
 
-`GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 256px，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。`get_unit`/`get_tile` 额外提供 `entity` + `unit`/`building` 的 `LAccess` 传感器字段；`query_area` 默认摘要，`detail:"full"` 才附加完整传感器对象。`get_spawns` 读取 `WaveSpawner.getSpawns()` 的固定波次出生点：`x/y` 是 tile 坐标，`worldX/worldY` 是像素；带 `waveTeam`、`dropZoneRadius`/`dropZoneRadiusTiles`、`enemyCoreBuildRadius`、`polygonCoreProtection`、`showSpawns/hideSpawns` 和每个点的可见性。`get_tile.spawnZone` 给出 `known/radius/radiusTiles/inside/distance/nearestSpawn`，`inside=true` 表示该格位于出生/空投区；建造预检失败时 `placeReason` 可能是 `enemy_core_build_radius`。迷雾开启时默认只返回可见点，除非规则本身在 minimap 暴露出生点。
+所有 `/actions` 和 `/context` 坐标都是 tile；引擎内部 8 px/tile 不暴露。`GET /health` 不经过命令队列，返回 `tick/paused/queueDepth/lastUpdateAgo/ops`，用于区分暂停与模拟线程卡住。`query_area` 的半径硬上限为 32 tile，单位和建筑各最多 64 条，超出时 `truncated` 标记；长查询不再能占满控制面。`get_unit`/`get_tile` 额外提供 `entity` + `unit`/`building` 的 `LAccess` 传感器字段；`query_area` 默认摘要，`detail:"full"` 才附加完整传感器对象。`get_spawns` 读取 `WaveSpawner.getSpawns()` 的固定波次出生点：`x/y`、`dropZoneRadius`、`enemyCoreBuildRadius` 都是 tile；带 `waveTeam`、`polygonCoreProtection`、`showSpawns/hideSpawns` 和每个点的可见性。`get_tile.spawnZone` 给出 `known/radius/inside/distance/nearestSpawn`（均为 tile），`inside=true` 表示该格位于出生/空投区；建造预检失败时 `placeReason` 可能是 `enemy_core_build_radius`。迷雾开启时默认只返回可见点，除非规则本身在 minimap 暴露出生点。
 
 `/context` 摘要包含 `wave`/`wavetime`/`waveTimer`、`mission`/`objectives`/`tutorial`、只读 `rules`（含 `winWave`、倍率、`sector.captureWave`、`fog`、`staticFog`）、`resourceCapacity`、`resourcesFull`、core `items`/`itemCapacity`，以及只列 `ProbeController` 的 `assistantBodies`。`context.power` 只汇总助手当前队伍的电力网络（每条带 `team`）；`TimerObjective` 的 `current=-1`、`progressAvailable=false`，用 `display` 读取游戏给出的倒计时文本。
 
@@ -251,15 +251,16 @@ socket/token，且默认由 `PROBE_ENABLE_DEBUG_OPS` 关闭。`build_plan` 在 s
 ```json
 {
   "kind": "move_to",
-  "x": 952,
-  "y": 584,
-  "arriveRadius": 12,
+  "x": 119,
+  "y": 73,
+  "arriveRadius": 1.5,
   "timeoutTicks": 600
 }
 ```
 
-`move_to` / `get_area` 的 `x/y` 是世界像素坐标（8 px = 1 tile），`mine`/`build`/
-`configure`/`deconstruct` 的 `x/y` 是 tile 坐标；`deconstruct` 也接受游戏允许拆除的静态道具，
+`move_to` / `get_area` / `query_area` / `attack` 的 `x/y` 以及所有 `radius` 都是
+**tile 单位**（单位位置可带小数）；`mine`/`build`/`configure`/`deconstruct` 用整数 tile。
+`deconstruct` 也接受游戏允许拆除的静态道具，
 是否允许以 `Build.validBreak` 为准；`get_area.coverage.next` 是 tile 坐标，
 可作为 `cursor:{x,y}` 传回继续分页；session prompt 和 `/tools` 都标了单位。
 
@@ -611,7 +612,7 @@ node scripts/mcp-http-smoke.mjs
 session 200 true
 reused bootstrap 401
 tools 200 26
-context 200 Fortress 928 584
+context 200 Fortress 116 73
 action 200 op-1
 result 200 done
 timeout data failed timeout false
@@ -631,7 +632,7 @@ session 200
 initialize 200 mindustry-agent 2024-11-05
 initialized notification 202
 tools/list 200 26
-tools/call get_context 200 Fortress 928 584
+tools/call get_context 200 Fortress 116 73
 tools/call move_to 200 op-1 running
 tools/call get_action_result done
 unknown method 200 -32601
@@ -645,7 +646,7 @@ sdk resources 1
 sdk guide true
 sdk prompts 3
 sdk prompt text true
-sdk context Fortress 928 584
+sdk context Fortress 116 73
 sdk move op-1 running
 ```
 

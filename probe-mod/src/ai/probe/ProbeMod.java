@@ -151,7 +151,7 @@ public class ProbeMod extends Mod {
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.3.1";
+    private static final String VERSION = "0.4.0";
     private static final int GUIDE_VERSION = 3;
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
@@ -287,8 +287,8 @@ public class ProbeMod extends Mod {
                         .put("unitId", event.unit.id)
                         .put("type", event.unit.type.name)
                         .put("team", event.unit.team.id)
-                        .put("x", event.unit.x)
-                        .put("y", event.unit.y));
+                        .put("x", tileOf(event.unit.x))
+                        .put("y", tileOf(event.unit.y)));
             }
         });
         Events.on(EventType.BlockDestroyEvent.class, event -> {
@@ -316,8 +316,8 @@ public class ProbeMod extends Mod {
                         .put("unitId", event.unit.id)
                         .put("type", event.unit.type.name)
                         .put("team", event.unit.team.id)
-                        .put("x", event.unit.x)
-                        .put("y", event.unit.y));
+                        .put("x", tileOf(event.unit.x))
+                        .put("y", tileOf(event.unit.y)));
             }
         });
         Events.on(EventType.BuildDamageEvent.class, event -> {
@@ -334,8 +334,8 @@ public class ProbeMod extends Mod {
                 addEvent("unit_damage", Jval.newObject()
                         .put("unitId", event.unit.id)
                         .put("health", event.unit.health)
-                        .put("x", event.unit.x)
-                        .put("y", event.unit.y));
+                        .put("x", tileOf(event.unit.x))
+                        .put("y", tileOf(event.unit.y)));
             }
         });
         startSocket();
@@ -572,8 +572,8 @@ public class ProbeMod extends Mod {
                         op.progress = 1f;
                         op.data = Jval.newObject()
                                 .put("kind", "position")
-                                .put("x", op.targetPosition.x)
-                                .put("y", op.targetPosition.y)
+                                .put("x", tileOf(op.targetPosition.x))
+                                .put("y", tileOf(op.targetPosition.y))
                                 .put("inRange", true);
                         controller.attackPosition = null;
                         assistant.isShooting = false;
@@ -744,15 +744,12 @@ public class ProbeMod extends Mod {
         float radius = Vars.state.rules.dropZoneRadius;
         Jval result = Jval.newObject()
                 .put("known", true)
-                .put("radius", radius)
-                .put("radiusTiles", radius / Vars.tilesize)
+                .put("radius", tileOf(radius))
                 .put("inside", nearestDistance <= radius)
-                .put("distance", nearestDistance)
+                .put("distance", tileOf(nearestDistance))
                 .put("nearestSpawn", Jval.newObject()
                         .put("x", nearest.x)
-                        .put("y", nearest.y)
-                        .put("worldX", nearest.worldx())
-                        .put("worldY", nearest.worldy()));
+                        .put("y", nearest.y));
         if (nearestDistance <= radius) {
             result.put("note", "blocks in the enemy spawn/drop zone are destroyed at the start of a wave");
         }
@@ -835,15 +832,15 @@ public class ProbeMod extends Mod {
             return Jval.newObject()
                     .put("block", building.block.name)
                     .put("id", building.id)
-                    .put("x", building.x)
-                    .put("y", building.y);
+                    .put("x", tileOf(building.x))
+                    .put("y", tileOf(building.y));
         }
         if (value instanceof Unit unit) {
             return Jval.newObject()
                     .put("type", unit.type.name)
                     .put("id", unit.id)
-                    .put("x", unit.x)
-                    .put("y", unit.y);
+                    .put("x", tileOf(unit.x))
+                    .put("y", tileOf(unit.y));
         }
         if (value instanceof Point2 point) {
             return Jval.newObject().put("x", point.x).put("y", point.y);
@@ -886,8 +883,8 @@ public class ProbeMod extends Mod {
                     .put("type", unit.type.name)
                     .put("name", unit.type.localizedName == null ? unit.type.name : unit.type.localizedName)
                     .put("team", unit.team.id)
-                    .put("x", unit.x)
-                    .put("y", unit.y)
+                    .put("x", tileOf(unit.x))
+                    .put("y", tileOf(unit.y))
                     .put("health", unit.health)
                     .put("maxHealth", unit.maxHealth)
                     .put("dead", unit.dead);
@@ -897,8 +894,8 @@ public class ProbeMod extends Mod {
                     .put("type", building.block.name)
                     .put("name", building.block.localizedName == null ? building.block.name : building.block.localizedName)
                     .put("team", building.team.id)
-                    .put("x", building.x)
-                    .put("y", building.y)
+                    .put("x", tileOf(building.x))
+                    .put("y", tileOf(building.y))
                     .put("health", building.health)
                     .put("maxHealth", building.maxHealth)
                     .put("dead", !building.isValid());
@@ -916,12 +913,10 @@ public class ProbeMod extends Mod {
         Jval result = Jval.newObject();
         putSensor(result, "health", unit, LAccess.health);
         putSensor(result, "maxHealth", unit, LAccess.maxHealth);
-        putSensor(result, "x", unit, LAccess.x);
-        putSensor(result, "y", unit, LAccess.y);
+        result.put("x", tileOf(unit.x)).put("y", tileOf(unit.y));
         putSensor(result, "velocityX", unit, LAccess.velocityX);
         putSensor(result, "velocityY", unit, LAccess.velocityY);
-        putSensor(result, "shootX", unit, LAccess.shootX);
-        putSensor(result, "shootY", unit, LAccess.shootY);
+        result.put("shootX", unit.aimX() / Vars.tilesize).put("shootY", unit.aimY() / Vars.tilesize);
         putSensor(result, "shooting", unit, LAccess.shooting);
         putSensor(result, "boosting", unit, LAccess.boosting);
         putSensor(result, "mining", unit, LAccess.mining);
@@ -1049,8 +1044,8 @@ public class ProbeMod extends Mod {
                         .put("type", payload instanceof UnitPayload ? "unit" : payload instanceof BuildPayload ? "block" : "payload")
                         .put("content", payload.content() == null ? "" : payload.content().name)
                         .put("size", payload.size())
-                        .put("x", payload.x())
-                        .put("y", payload.y()));
+                        .put("x", tileOf(payload.x()))
+                        .put("y", tileOf(payload.y())));
             }
         }
         return result;
@@ -1081,8 +1076,8 @@ public class ProbeMod extends Mod {
             if (pseudo != null) {
                 result.put("unitId", pseudo.id)
                         .put("unitType", pseudo.type == null ? "" : pseudo.type.name)
-                        .put("aimX", pseudo.aimX())
-                        .put("aimY", pseudo.aimY());
+                        .put("aimX", pseudo.aimX() / Vars.tilesize)
+                        .put("aimY", pseudo.aimY() / Vars.tilesize);
             }
         }
         return result;
@@ -1190,8 +1185,8 @@ public class ProbeMod extends Mod {
                 op.status = "done";
                 op.progress = 1f;
                 op.data = Jval.newObject()
-                        .put("x", assistant.x)
-                        .put("y", assistant.y);
+                        .put("x", tileOf(assistant.x))
+                        .put("y", tileOf(assistant.y));
                 controller.target = null;
                 assistant.moveAt(new Vec2());
                 assistant.vel.setZero();
@@ -1814,10 +1809,6 @@ public class ProbeMod extends Mod {
                 spawns.add(Jval.newObject()
                         .put("x", tile.x)
                         .put("y", tile.y)
-                        .put("tileX", tile.x)
-                        .put("tileY", tile.y)
-                        .put("worldX", tile.worldx())
-                        .put("worldY", tile.worldy())
                         .put("team", Vars.state.rules.waveTeam == null ? -1 : Vars.state.rules.waveTeam.id)
                         .put("teamName", Vars.state.rules.waveTeam == null ? "" : Vars.state.rules.waveTeam.name)
                         .put("overlay", tile.overlay() == null ? "" : tile.overlay().name)
@@ -1836,13 +1827,12 @@ public class ProbeMod extends Mod {
                     .put("fog", fogActive())
                     .put("waveTeam", Vars.state.rules.waveTeam == null ? -1 : Vars.state.rules.waveTeam.id)
                     .put("waveTeamName", Vars.state.rules.waveTeam == null ? "" : Vars.state.rules.waveTeam.name)
-                    .put("dropZoneRadius", Vars.state.rules.dropZoneRadius)
-                    .put("dropZoneRadiusTiles", Vars.state.rules.dropZoneRadius / Vars.tilesize)
-                    .put("enemyCoreBuildRadius", Vars.state.rules.enemyCoreBuildRadius)
+                    .put("dropZoneRadius", tileOf(Vars.state.rules.dropZoneRadius))
+                    .put("enemyCoreBuildRadius", tileOf(Vars.state.rules.enemyCoreBuildRadius))
                     .put("polygonCoreProtection", Vars.state.rules.polygonCoreProtection)
                     .put("unit", "tile")
                     .put("source", "WaveSpawner.getSpawns")
-                    .put("coordinateNote", "x/y are tile coordinates; worldX/worldY are pixels"));
+                    .put("coordinateNote", "all coordinates and radii are tile units"));
             return;
         }
 
@@ -1856,7 +1846,7 @@ public class ProbeMod extends Mod {
             for (var weapon : type.weapons) {
                 weapons.add(Jval.newObject()
                         .put("name", weapon.name)
-                        .put("range", weapon.range())
+                        .put("range", tileOf(weapon.range()))
                         .put("reloadTicks", weapon.reload)
                         .put("damage", weapon.bullet == null ? 0f : weapon.bullet.damage)
                         .put("dpsEstimate", safeWeaponDps(weapon)));
@@ -1881,10 +1871,10 @@ public class ProbeMod extends Mod {
                     .put("speed", type.speed)
                     .put("flying", type.flying)
                     .put("buildSpeed", type.buildSpeed)
-                    .put("buildRange", type.buildRange)
+                    .put("buildRange", tileOf(type.buildRange))
                     .put("mineSpeed", type.mineSpeed)
                     .put("mineTier", type.mineTier)
-                    .put("mineRange", type.mineRange)
+                    .put("mineRange", tileOf(type.mineRange))
                     .put("itemCapacity", type.itemCapacity)
                     .put("payloadCapacity", type.payloadCapacity)
                     .put("canBoost", type.canBoost)
@@ -1901,15 +1891,18 @@ public class ProbeMod extends Mod {
         if ("query_area".equals(op)) {
             if (request.get("x") == null || !request.get("x").isNumber()
                     || request.get("y") == null || !request.get("y").isNumber()) {
-                replyError(command, "bad_request", "query_area requires numeric top-level x/y (world pixels), not nested args");
+                replyError(command, "bad_request", "query_area requires numeric top-level x/y in tile units, not nested args");
                 return;
             }
             float x = request.getFloat("x", 0f);
             float y = request.getFloat("y", 0f);
             float requestedRadius = request.getFloat("radius", 20f);
-            // This is a read command on the game thread. Keep one oversized
-            // query from freezing the control plane; use get_area for tiles.
-            float radius = Math.max(0f, Math.min(256f, requestedRadius));
+            // Public coordinates are tile units. Keep one oversized query from
+            // freezing the game thread; 32 tiles is the same old 256 px cap.
+            float radius = Math.max(0f, Math.min(32f, requestedRadius));
+            float worldX = worldOf(x);
+            float worldY = worldOf(y);
+            float worldRadius = worldOf(radius);
             int maxUnits = Math.max(1, Math.min(64, request.getInt("maxUnits", 64)));
             int maxBuildings = Math.max(1, Math.min(64, request.getInt("maxBuildings", 64)));
             boolean includeUnits = request.getBool("includeUnits", true);
@@ -1923,7 +1916,7 @@ public class ProbeMod extends Mod {
                 for (Unit unit : mindustry.gen.Groups.unit) {
                     if (!includeEnemies && unit.team != team) continue;
                     if (!unitVisible(unit)) continue;
-                    if (Math.hypot(unit.x - x, unit.y - y) > radius) continue;
+                    if (Math.hypot(unit.x - worldX, unit.y - worldY) > worldRadius) continue;
                     if (units.asArray().size >= maxUnits) {
                         unitsTruncated = true;
                         break;
@@ -1932,8 +1925,8 @@ public class ProbeMod extends Mod {
                             .put("id", unit.id)
                             .put("type", unit.type.name)
                             .put("team", unit.team.id)
-                            .put("x", unit.x)
-                            .put("y", unit.y)
+                            .put("x", tileOf(unit.x))
+                            .put("y", tileOf(unit.y))
                             .put("health", unit.health)
                             .put("maxHealth", unit.maxHealth)
                             .put("dead", unit.dead)
@@ -1946,9 +1939,9 @@ public class ProbeMod extends Mod {
             Jval buildings = Jval.newArray();
             boolean buildingsTruncated = false;
             if (includeBuildings) {
-                int tileX = Vars.world.toTile(x);
-                int tileY = Vars.world.toTile(y);
-                int tileRadius = (int) Math.ceil(radius / 8f);
+                int tileX = Vars.world.toTile(worldX);
+                int tileY = Vars.world.toTile(worldY);
+                int tileRadius = (int) Math.ceil(radius);
                 outer:
                 for (int dx = -tileRadius; dx <= tileRadius; dx++) {
                     for (int dy = -tileRadius; dy <= tileRadius; dy++) {
@@ -1957,7 +1950,7 @@ public class ProbeMod extends Mod {
                         if (building == null || building.team != team) continue;
                         if (!buildingVisible(building)) continue;
                         if (tile.x != building.tile.x || tile.y != building.tile.y) continue;
-                        if (Math.hypot(building.x - x, building.y - y) > radius) continue;
+                        if (Math.hypot(building.x - worldX, building.y - worldY) > worldRadius) continue;
                         if (buildings.asArray().size >= maxBuildings) {
                             buildingsTruncated = true;
                             break outer;
@@ -1966,8 +1959,8 @@ public class ProbeMod extends Mod {
                                 .put("id", building.id)
                                 .put("block", building.block.name)
                                 .put("team", building.team.id)
-                                .put("x", building.x)
-                                .put("y", building.y)
+                                .put("x", tileOf(building.x))
+                                .put("y", tileOf(building.y))
                                 .put("tileX", building.tile.x)
                                 .put("tileY", building.tile.y)
                                 .put("health", building.health)
@@ -1997,9 +1990,7 @@ public class ProbeMod extends Mod {
                     .put("x", x)
                     .put("y", y)
                     .put("requestedRadius", requestedRadius)
-                    .put("requestedRadiusTiles", requestedRadius / Vars.tilesize)
                     .put("radius", radius)
-                    .put("radiusTiles", radius / Vars.tilesize)
                     .put("truncated", Jval.newObject()
                             .put("radius", requestedRadius > radius)
                             .put("units", unitsTruncated)
@@ -2012,12 +2003,14 @@ public class ProbeMod extends Mod {
         if ("get_area".equals(op)) {
             if (request.get("x") == null || !request.get("x").isNumber()
                     || request.get("y") == null || !request.get("y").isNumber()) {
-                replyError(command, "bad_request", "get_area requires numeric top-level x/y (world pixels), not nested args");
+                replyError(command, "bad_request", "get_area requires numeric top-level x/y in tile units, not nested args");
                 return;
             }
             float x = request.getFloat("x", 0f);
             float y = request.getFloat("y", 0f);
             int radius = Math.max(1, Math.min(24, request.getInt("radius", 6)));
+            int tileX = Vars.world.toTile(worldOf(x));
+            int tileY = Vars.world.toTile(worldOf(y));
             int maxTiles = Math.max(1, Math.min(512, request.getInt("maxTiles", 256)));
             int cursorX = Integer.MIN_VALUE, cursorY = Integer.MIN_VALUE;
             Jval cursor = request.get("cursor");
@@ -2028,8 +2021,6 @@ public class ProbeMod extends Mod {
                     cursorY = cy.asInt();
                 }
             }
-            int tileX = Vars.world.toTile(x);
-            int tileY = Vars.world.toTile(y);
             Jval tiles = Jval.newArray();
             boolean truncated = false;
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
@@ -2255,7 +2246,7 @@ public class ProbeMod extends Mod {
                 }
                 commandAI.command(unitCommand);
                 if (target != null && target.get("x") != null && target.get("y") != null) {
-                    Vec2 position = new Vec2(target.get("x").asFloat(), target.get("y").asFloat());
+                    Vec2 position = new Vec2(worldOf(target.get("x").asFloat()), worldOf(target.get("y").asFloat()));
                     if (queue) {
                         commandAI.commandQueue(position);
                     } else {
@@ -3267,9 +3258,11 @@ public class ProbeMod extends Mod {
                 entity = targetBuilding;
                 kind = "building";
             } else if (target.get("x") != null && target.get("y") != null) {
-                float tx = target.get("x").asFloat();
-                float ty = target.get("y").asFloat();
-                if (Float.isNaN(tx) || Float.isNaN(ty) || Float.isInfinite(tx) || Float.isInfinite(ty)
+                float txTile = target.get("x").asFloat();
+                float tyTile = target.get("y").asFloat();
+                float tx = worldOf(txTile);
+                float ty = worldOf(tyTile);
+                if (Float.isNaN(txTile) || Float.isNaN(tyTile) || Float.isInfinite(txTile) || Float.isInfinite(tyTile)
                         || !Vars.world.tiles.in(World.toTile(tx), World.toTile(ty))) {
                     replyError(command, "out_of_bounds", "Target is outside the map");
                     return;
@@ -3295,8 +3288,8 @@ public class ProbeMod extends Mod {
                     .put("kind", kind)
                     .put("unitId", targetUnit == null ? -1 : targetUnit.id)
                     .put("buildingId", targetBuilding == null ? -1 : targetBuilding.id)
-                    .put("x", position.getX())
-                    .put("y", position.getY());
+                    .put("x", tileOf(position.getX()))
+                    .put("y", tileOf(position.getY()));
             reply(command, result.toJson());
             return;
         }
@@ -3314,7 +3307,7 @@ public class ProbeMod extends Mod {
             controller.attackEntity = null;
             controller.attackPosition = null;
             controller.followTarget = targetUnit;
-            controller.followDistance = request.getFloat("distance", 48f);
+            controller.followDistance = worldOf(request.getFloat("distance", 6f));
             Op result = newOp("follow");
             result.status = "running";
             int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
@@ -3390,8 +3383,8 @@ public class ProbeMod extends Mod {
                     .put("id", unit.id)
                     .put("type", unit.type.name)
                     .put("team", unit.team.id)
-                    .put("x", unit.x)
-                    .put("y", unit.y)
+                    .put("x", tileOf(unit.x))
+                    .put("y", tileOf(unit.y))
                     .put("health", unit.health)
                     .put("maxHealth", unit.maxHealth)
                     .put("dead", unit.dead)
@@ -3440,14 +3433,16 @@ public class ProbeMod extends Mod {
         }
 
         if ("move_to".equals(op)) {
-            float x = request.getFloat("x", Float.NaN);
-            float y = request.getFloat("y", Float.NaN);
-            float arriveRadius = request.getFloat("arriveRadius", 8f);
-            if (Float.isNaN(x) || Float.isNaN(y)) {
+            float xTile = request.getFloat("x", Float.NaN);
+            float yTile = request.getFloat("y", Float.NaN);
+            float arriveRadius = worldOf(request.getFloat("arriveRadius", 1f));
+            if (Float.isNaN(xTile) || Float.isNaN(yTile)) {
                 replyError(command, "bad_request", "Missing x/y");
                 return;
             }
-            if (Float.isInfinite(x) || Float.isInfinite(y) ||
+            float x = worldOf(xTile);
+            float y = worldOf(yTile);
+            if (Float.isInfinite(xTile) || Float.isInfinite(yTile) ||
                     !Vars.world.tiles.in(World.toTile(x), World.toTile(y))) {
                 replyError(command, "out_of_bounds", "Target is outside the map");
                 return;
@@ -3841,7 +3836,7 @@ public class ProbeMod extends Mod {
                     .put("inaccuracy", weapon.inaccuracy)
                     .put("shootCone", weapon.shootCone);
             try {
-                entry.put("range", weapon.range());
+                entry.put("range", tileOf(weapon.range()));
             } catch (Throwable ignored) {
                 entry.put("range", 0f);
             }
@@ -3877,7 +3872,7 @@ public class ProbeMod extends Mod {
                 .put("buildSpeed", type.buildSpeed)
                 .put("mineSpeed", type.mineSpeed)
                 .put("mineTier", type.mineTier)
-                .put("mineRange", type.mineRange)
+                .put("mineRange", tileOf(type.mineRange))
                 .put("itemCapacity", type.itemCapacity)
                 .put("payloadCapacity", type.payloadCapacity)
                 .put("canBoost", type.canBoost);
@@ -4161,8 +4156,10 @@ public class ProbeMod extends Mod {
         Unit targetUnit = target.get("unitId") == null ? null : findUnit(target);
         Building targetBuilding = targetUnit == null && target.get("buildingId") != null ? findBuilding(target) : null;
         if (targetUnit == null && targetBuilding == null && target.get("x") != null && target.get("y") != null) {
-            float tx = target.get("x").asFloat();
-            float ty = target.get("y").asFloat();
+            float txTile = target.get("x").asFloat();
+            float tyTile = target.get("y").asFloat();
+            float tx = worldOf(txTile);
+            float ty = worldOf(tyTile);
             if (!Vars.world.tiles.in(World.toTile(tx), World.toTile(ty))) {
                 replyError(command, "out_of_bounds", "Target is outside the map");
                 return;
@@ -4177,8 +4174,8 @@ public class ProbeMod extends Mod {
             result.data = Jval.newObject()
                     .put("kind", "position")
                     .put("buildingId", controlledBuilding.id)
-                    .put("x", tx)
-                    .put("y", ty);
+                    .put("x", tileOf(tx))
+                    .put("y", tileOf(ty));
             reply(command, result.toJson());
             return;
         }
@@ -4198,8 +4195,8 @@ public class ProbeMod extends Mod {
                     .put("kind", "unit")
                     .put("buildingId", controlledBuilding.id)
                     .put("unitId", targetUnit.id)
-                    .put("x", targetUnit.x)
-                    .put("y", targetUnit.y);
+                    .put("x", tileOf(targetUnit.x))
+                    .put("y", tileOf(targetUnit.y));
             reply(command, result.toJson());
             return;
         }
@@ -4219,8 +4216,8 @@ public class ProbeMod extends Mod {
                     .put("kind", "building")
                     .put("buildingId", controlledBuilding.id)
                     .put("targetBuildingId", targetBuilding.id)
-                    .put("x", targetBuilding.x)
-                    .put("y", targetBuilding.y);
+                    .put("x", tileOf(targetBuilding.x))
+                    .put("y", tileOf(targetBuilding.y));
             reply(command, result.toJson());
             return;
         }
@@ -4571,6 +4568,15 @@ public class ProbeMod extends Mod {
         try { return supplier.get(); } catch (Throwable ignored) { return 0f; }
     }
 
+    /** Public API coordinates use tile units; fractional values are allowed. */
+    private static float tileOf(float world) {
+        return world / Vars.tilesize;
+    }
+
+    private static float worldOf(float tile) {
+        return tile * Vars.tilesize;
+    }
+
     private Jval rulesJson() {
         Rules rules = Vars.state.rules;
         Jval json = Jval.newObject()
@@ -4587,8 +4593,8 @@ public class ProbeMod extends Mod {
                 .put("buildCostMultiplier", rules.buildCostMultiplier)
                 .put("blockHealthMultiplier", rules.blockHealthMultiplier)
                 .put("unitBuildSpeedMultiplier", rules.unitBuildSpeedMultiplier)
-                .put("dropZoneRadius", rules.dropZoneRadius)
-                .put("enemyCoreBuildRadius", rules.enemyCoreBuildRadius)
+                .put("dropZoneRadius", tileOf(rules.dropZoneRadius))
+                .put("enemyCoreBuildRadius", tileOf(rules.enemyCoreBuildRadius))
                 .put("polygonCoreProtection", rules.polygonCoreProtection)
                 .put("objectives", objectivesJson())
                 .put("objectiveFlags", objectiveFlagsJson())
@@ -4678,8 +4684,8 @@ public class ProbeMod extends Mod {
             assistantJson.put("id", assistant.id)
                     .put("type", assistant.type.name)
                     .put("team", assistant.team.id)
-                    .put("x", assistant.x)
-                    .put("y", assistant.y)
+                    .put("x", tileOf(assistant.x))
+                    .put("y", tileOf(assistant.y))
                     .put("health", assistant.health)
                     .put("maxHealth", assistant.maxHealth)
                     .put("dead", assistant.dead)
@@ -4705,8 +4711,8 @@ public class ProbeMod extends Mod {
                     .put("id", candidate.id)
                     .put("type", candidate.type.name)
                     .put("team", candidate.team.id)
-                    .put("x", candidate.x)
-                    .put("y", candidate.y)
+                    .put("x", tileOf(candidate.x))
+                    .put("y", tileOf(candidate.y))
                     .put("health", candidate.health)
                     .put("dead", candidate.dead)
                     .put("isHome", !possessing && candidate == homeBody)
@@ -4737,8 +4743,8 @@ public class ProbeMod extends Mod {
             Jval coreData = Jval.newObject()
                     .put("id", core.id)
                     .put("block", core.block.name)
-                    .put("x", core.x)
-                    .put("y", core.y)
+                    .put("x", tileOf(core.x))
+                    .put("y", tileOf(core.y))
                     .put("health", core.health)
                     .put("maxHealth", core.block.health)
                     .put("itemCapacity", core.block.itemCapacity)
@@ -4770,8 +4776,8 @@ public class ProbeMod extends Mod {
                     .put("id", unit.id)
                     .put("type", unit.type.name)
                     .put("team", unit.team.id)
-                    .put("x", unit.x)
-                    .put("y", unit.y)
+                    .put("x", tileOf(unit.x))
+                    .put("y", tileOf(unit.y))
                     .put("health", unit.health)
                     .put("maxHealth", unit.maxHealth)
                     .put("dead", unit.dead)
@@ -4797,8 +4803,8 @@ public class ProbeMod extends Mod {
                         .put("id", unit.id)
                         .put("type", unit.type.name)
                         .put("team", unit.team.id)
-                        .put("x", unit.x)
-                        .put("y", unit.y)
+                        .put("x", tileOf(unit.x))
+                        .put("y", tileOf(unit.y))
                         .put("health", unit.health)
                         .put("maxHealth", unit.maxHealth)
                         .put("dead", unit.dead);
@@ -4816,7 +4822,7 @@ public class ProbeMod extends Mod {
         data.put("threats", threats).put("threatsTruncated", threatsTruncated)
                 .put("enemyCount", Vars.state.enemies);
         if (nearestThreat != null) {
-            data.put("nearestThreat", nearestThreat).put("nearestThreatDistance", nearestThreatDistance);
+            data.put("nearestThreat", nearestThreat).put("nearestThreatDistance", tileOf((float) nearestThreatDistance));
         }
         int bytes = data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length;
         if (maxBytes > 0) {
@@ -6146,30 +6152,30 @@ public class ProbeMod extends Mod {
                 .put("properties", Jval.newObject()
                         .put("unitId", property("integer"))
                         .put("buildingId", property("integer"))
-                        .put("x", property("number"))
-                        .put("y", property("number")));
+                        .put("x", property("number").put("description", "tile x"))
+                        .put("y", property("number").put("description", "tile y")));
         Jval transfer = Jval.newObject()
                 .put("type", "object")
                 .put("properties", Jval.newObject()
                         .put("buildingId", property("integer"))
-                        .put("x", property("number"))
-                        .put("y", property("number")));
+                        .put("x", property("number").put("description", "tile x"))
+                        .put("y", property("number").put("description", "tile y")));
         Jval tools = Jval.newArray();
         tools.add(tool("get_context",
-                "Read a compact game context.",
+                "Read a compact game context. All coordinates are tile units; radius is tiles.",
                 inputSchema(Jval.newObject()
                         .put("detail", property("string").put("enum", Jval.newArray().add("summary").add("full")))
-                        .put("radius", property("number"))
+                        .put("radius", property("number").put("description", "radius in tiles"))
                         .put("since", property("integer"))
                         .put("includeEnemies", property("boolean"))
                         .put("maxUnits", property("integer").put("maximum", 64))
                         .put("maxBytes", property("integer").put("maximum", 65536)),
                         Jval.newArray())));
         tools.add(tool("get_area",
-                "Read a bounded window around world coordinates in pixels (8 px per tile); returns tile coordinates. maxTiles truncates row-major and coverage.next gives the first unreturned tile. Pass cursor={x,y} in tile coordinates from coverage.next to resume without skipping earlier cells.",
+                "Read a bounded window around tile coordinates; radius, x/y, returned tiles and coverage.next are all tile units. maxTiles truncates row-major and coverage.next gives the first unreturned tile. Pass cursor={x,y} in tile coordinates from coverage.next to resume without skipping earlier cells.",
                 inputSchema(Jval.newObject()
-                        .put("x", property("number").put("description", "world x in pixels"))
-                        .put("y", property("number").put("description", "world y in pixels"))
+                        .put("x", property("number").put("description", "tile x"))
+                        .put("y", property("number").put("description", "tile y"))
                         .put("radius", property("number").put("maximum", 24))
                         .put("maxTiles", property("integer").put("maximum", 512))
                         .put("cursor", Jval.newObject()
@@ -6187,14 +6193,14 @@ public class ProbeMod extends Mod {
                         .put("rotation", property("integer")),
                         Jval.newArray().add("x").add("y"))));
         tools.add(tool("get_spawns",
-                "Read fixed wave spawn points from WaveSpawner. Returns tile x/y and worldX/worldY, wave team, dropZoneRadius, enemyCoreBuildRadius, polygonCoreProtection, showSpawns and per-point visibility. With fog enabled, hidden points are omitted unless rules.hideSpawns is false (minimap exposes them).",
+                "Read fixed wave spawn points from WaveSpawner. Returns tile x/y, wave team, dropZoneRadius/enemyCoreBuildRadius in tiles, polygonCoreProtection, showSpawns and per-point visibility. With fog enabled, hidden points are omitted unless rules.hideSpawns is false (minimap exposes them).",
                 inputSchema(Jval.newObject(), Jval.newArray())));
         tools.add(tool("query_area",
-                "Read units and buildings within a radius around world coordinates in pixels (8 px per tile). includeUnits/includeBuildings default true; includeEnemies defaults false, so pass includeEnemies=true when searching for enemies. Each row has entity; detail=full adds the unit/building sensor object.",
+                "Read units and buildings within a radius in tile units. includeUnits/includeBuildings default true; includeEnemies defaults false, so pass includeEnemies=true when searching for enemies. Each row has entity; detail=full adds the unit/building sensor object.",
                 inputSchema(Jval.newObject()
-                        .put("x", property("number").put("description", "world x in pixels"))
-                        .put("y", property("number").put("description", "world y in pixels"))
-                        .put("radius", property("number").put("description", "radius in pixels, capped at 256").put("maximum", 256))
+                        .put("x", property("number").put("description", "tile x"))
+                        .put("y", property("number").put("description", "tile y"))
+                        .put("radius", property("number").put("description", "radius in tiles, capped at 32").put("maximum", 32))
                         .put("maxUnits", property("integer").put("maximum", 64))
                         .put("maxBuildings", property("integer").put("maximum", 64))
                         .put("includeUnits", property("boolean"))
@@ -6224,11 +6230,11 @@ public class ProbeMod extends Mod {
                         .put("limit", property("integer").put("maximum", 500)),
                         Jval.newArray())));
         tools.add(tool("move_to",
-                "Move the assistant body to world coordinates in pixels (8 px per tile); returns an opId.",
+                "Move the assistant body to tile coordinates; returns an opId.",
                 inputSchema(Jval.newObject()
-                        .put("x", property("number").put("description", "world x in pixels"))
-                        .put("y", property("number").put("description", "world y in pixels"))
-                        .put("arriveRadius", property("number"))
+                        .put("x", property("number").put("description", "tile x"))
+                        .put("y", property("number").put("description", "tile y"))
+                        .put("arriveRadius", property("number").put("description", "arrival radius in tiles (default 1)"))
                         .put("timeoutTicks", property("integer").put("maximum", 1200)),
                         Jval.newArray().add("x").add("y"))));
         tools.add(tool("attack",
@@ -6240,8 +6246,8 @@ public class ProbeMod extends Mod {
         tools.add(tool("mine",
                 "Mine at a tile coordinate until at least untilAmount items (default 1) or untilFull; returns an opId.",
                 inputSchema(Jval.newObject()
-                        .put("x", property("number"))
-                        .put("y", property("number"))
+                        .put("x", property("number").put("description", "tile x"))
+                        .put("y", property("number").put("description", "tile y"))
                         .put("untilAmount", property("integer").put("minimum", 1))
                         .put("untilFull", property("boolean"))
                         .put("until", Jval.newObject()
@@ -6396,10 +6402,10 @@ public class ProbeMod extends Mod {
                 "Resume a paused game if the current rules allow it. This is the only write action allowed while paused.",
                 inputSchema(Jval.newObject(), Jval.newArray())));
         tools.add(tool("follow",
-                "Follow a unit by unitId at an optional distance in pixels.",
+                "Follow a unit by unitId at an optional distance in tiles.",
                 inputSchema(Jval.newObject()
                         .put("unitId", property("integer"))
-                        .put("distance", property("number"))
+                        .put("distance", property("number").put("description", "distance in tiles (default 6)"))
                         .put("timeoutTicks", property("integer").put("maximum", 1200)),
                         Jval.newArray().add("unitId"))));
         tools.add(tool("get_action_result",

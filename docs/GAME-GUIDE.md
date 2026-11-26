@@ -43,10 +43,9 @@ Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
 
 ## 2. 地图、坐标和时间
 
-- 世界由 tile 组成，默认 1 tile = 8 世界像素。
-- `get_area` / `move_to` 的 `x/y` 是世界像素；`get_area.radius` 是 **tile 数**（1–24），
-  `query_area.radius` 是 **像素**（上限 256）；`mine` / `build` / `configure`
-  的 `x/y` 是 tile 坐标。混用是常见错误。
+- 世界由 tile 组成；1 tile 在引擎内部等于 8 世界像素，但**公开 API 不暴露像素**。
+- 所有动作、查询、实体位置、区域和半径都用 **tile 单位**，缺省整数；单位/实体位置可以是
+  小数 tile（例如 `129.5`）。`mine` / `build` / `configure` / `get_tile` 用整数 tile。
 - 地图有宽度和高度；越界会被拒绝。用 `get_context` 的 `worldWidth/worldHeight`
   和 `get_area` 的 `coverage` 判断边界。
 - 游戏以 tick 推进；`get_context.tick` 是当前 tick，`time` 是游戏内毫秒
@@ -55,8 +54,8 @@ Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
 - `get_context.wavetime` 也是 tick；换算秒数要除以 60。`waveTimer=false` 时它不是
   倒计时承诺，只是规则/教学状态。
 - `POST /actions` 的动作字段是**顶层字段**，不是嵌套在 `args` 里；例如
-  `{"kind":"get_area","x":928,"y":584,"radius":6}`。`get_area` 的 `x/y` 是像素，
-  返回 tile 坐标。规划路线时不要为了读地图去解析 `/data` 二进制；先读
+  `{"kind":"get_area","x":116,"y":73,"radius":6}`。`get_area` 的 `x/y`、`radius`
+  和返回的 `tiles[]` 都是 tile。规划路线时不要为了读地图去解析 `/data` 二进制；先读
   `/context` + `get_area`/`get_tile` 就够。
 - `GET /health` 不经过命令队列；如果 `lastUpdateAgo` 持续增大或 `queueDepth` 积压，
   说明模拟线程卡住/繁忙，先停止动作并报告，不要反复重试。
@@ -228,10 +227,9 @@ Serpulo 常见物品：
   `/content.parameters.itemCapacity`，不要把“炮塔有弹药”当成默认事实。
 - 墙壁用于阻挡地面单位，但不能阻挡飞行单位；不要把墙当成万能防御。
 - 敌人从地图边缘/波次生成点进攻，目标是核心和建筑。
-- 固定波次出生点用 `get_spawns` 读取：`x/y` 是 tile，`worldX/worldY` 是世界像素，
-  带 `waveTeam`、`dropZoneRadius`、`enemyCoreBuildRadius`、`polygonCoreProtection`、
-  `showSpawns/hideSpawns` 和逐点可见性。它是地图固定出生点，不是当前敌人位置；
-  要判断附近有没有敌人，再用 `query_area`（可传像素 `worldX/worldY`）。
+- 固定波次出生点用 `get_spawns` 读取：`x/y`、`dropZoneRadius`、`enemyCoreBuildRadius`
+  都是 tile，带 `waveTeam`、`polygonCoreProtection`、`showSpawns/hideSpawns` 和逐点可见性。
+  它是地图固定出生点，不是当前敌人位置；要判断附近有没有敌人，直接把坐标传给 `query_area`。
   `dropZoneRadius` 是出生/空投区，`enemyCoreBuildRadius` 是敌方核心的禁止建造半径；
   放建筑前用 `get_tile(block,rotation)` 预检，失败时读 `placeReason`（可能为
   `enemy_core_build_radius`）。`get_tile.spawnZone.inside=true` 表示该格位于出生/空投区，
@@ -350,7 +348,7 @@ Serpulo 常见物品：
 
 ## 15. 常见误区
 
-- 把世界像素当 tile 坐标，或反过来。
+- 继续按旧客户端的像素坐标调 API；0.4.0 起所有公开坐标都是 tile。
 - 传送带 rotation 方向反了，导致整条产线反压。
 - 核心满仓后继续加钻机，产量不增长。
 - 没电却以为是没矿；没弹药却以为是炮塔坏了。
@@ -366,10 +364,11 @@ Serpulo 常见物品：
 
 ### 16.1 坐标和实体
 
-- tile 坐标：`get_tile`、`build_plan`、`deconstruct`、`configure`、`mine`
-- 世界像素：`get_area`、`query_area`、`move_to`、`attack`；1 tile 默认 8 px
-- `query_area` 的 `radius` 是像素，响应额外给 `radiusTiles`；不要把它当 tile 数
-- `get_area` 的 `x/y` 是像素，返回 tile 的行/列和 `coverage.next` 是 tile 坐标
+- 所有公开坐标：`get_tile`、`get_area`、`query_area`、`move_to`、`attack`、`build_plan`、
+  `deconstruct`、`configure`、`mine` 全部使用 **tile 单位**
+- `get_area` 的 `x/y`、`radius`、返回的 `tiles[]` 和 `coverage.next` 都是 tile
+- `query_area` 的 `x/y`、`radius` 和单位/建筑 `x/y` 都是 tile，上限 32 tile
+- 引擎内部仍是 8 px/tile，但只在服务端换算；客户端不要做 `/8`
 - `team` 是数字 id：`0 derelict`、`1 sharded`、`2 crux`、`3 malis`、`4 green`、
   `5 blue`、`6 neoplastic`，其他是 `team#N`；不要假设敌人永远是 2
 - `rotation`：`0 east`、`1 south`、`2 west`、`3 north`
@@ -395,8 +394,8 @@ Serpulo 常见物品：
 `unit`/`building`。`unit`/`building` 使用逻辑处理器的 `LAccess` 字段（如
 `velocityX/Y`、`shooting`、`mining`、`totalItems`、`totalLiquids`、`totalPower`、
 `powerNet*`、`ammoCapacity`、`heat`、`efficiency`、`timescale`），不支持该字段的对象
-会省略字段；`entity.x/y` 是世界像素，`unit.x/y`/`mineX/Y`/`buildX/Y`/`shootX/Y` 是
-tile 坐标。详见 `API-DATA-CONTRACT` 4.0。
+会省略字段；`entity.x/y`、`unit.x/y`、`mineX/Y`、`buildX/Y`、`shootX/Y` 都是 tile 坐标
+（`entity.x/y` 可能带小数）。详见 `API-DATA-CONTRACT` 4.0。
 
 `get_context.assistant` 另有 `isHome/possessing/boosting/payloads/payloadUsed`；
 `control.mode` 是 `unit` 或 `building`，建筑控制时才有 `buildingId/block/unitId`。

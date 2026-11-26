@@ -8,7 +8,7 @@
 
 > 状态：技术预览。API 和 mod 可以用于实验，但还不是完成的消费级 mod。暴露到网络前请先阅读[安全说明](#安全)。
 
-当前公开版本：`0.3.1`（[GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.3.1)）。
+当前公开版本：`0.4.0`（[GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.4.0)）。
 
 ## 项目内容
 

@@ -147,10 +147,10 @@ launcher 会把配置写到 `~/.mindustry-omp/.omp/mcp.json`（可用
 
 ```bash
 scripts/omp-mindustry -p --no-session --max-time 120 \
-  'Use the mindustry MCP server. get_context summary, move_to core.x+24, poll get_action_result, report final position.'
+  'Use the mindustry MCP server. get_context summary, move_to core.x+3 (tile units), poll get_action_result, report final position.'
 ```
 
-实际结果：`op-1 done`，助手从 `(928,584)` 移动到 `(942.2,584)`，在 arriveRadius 内。
+实际结果：`op-1 done`，助手从 `(116,73)` 移动到 `(118.2,73)`，在 arriveRadius 内。
 
 ### Hermes
 

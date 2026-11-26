@@ -2,8 +2,12 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
-## Unreleased
+## 0.4.0
 
+- **Breaking:** all public coordinates and radii now use tile units; `move_to`,
+  `get_area`, `query_area`, attack positions, entity positions, spawn points, and
+  rule radii no longer return world pixels. Fractional tile values are allowed for
+  continuous positions.
 - Allow `deconstruct` to target static props that the game permits breaking, and expose
   `blockType`/`blockBreakable`/`destructible`/`alwaysReplace` on `get_tile`.
 - Add `build_plan` conveyor warnings for blocked/air/back-facing outputs.

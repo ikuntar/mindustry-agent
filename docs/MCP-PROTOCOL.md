@@ -1,6 +1,6 @@
 # MCP 工具协议
 
-状态：Node MCP 实现说明，2026-11-26，`mindustry-agent` 0.3.1。
+状态：Node MCP 实现说明，2026-11-26，`mindustry-agent` 0.4.0。
 适用范围：`mcp-server/` 对外暴露的 MCP 工具。当前同时有 `MockGameAdapter`（协议测试）和
 `ProbeGameAdapter`（真实 v160.8 + probe mod）；Node MCP 当前 27 个工具，mod session API
 当前 35 个工具。本文描述 Node MCP 的协议和动作语义；session API 的完整工具面见
@@ -211,8 +211,8 @@ MCP server（Node/TypeScript）
 
 参数：`{ "x": 20, "y": 20, "radius": 6, "maxTiles": 256 }`。
 
-只读 bounded window，供没有代码执行能力的 host 使用。`x/y` 是**世界像素坐标**
-（8 px = 1 tile），返回的 tile 条目是 tile 坐标；不返回全图：
+只读 bounded window，供没有代码执行能力的 host 使用。`x/y`、`radius` 和返回 tile
+都是 **tile 坐标**；不返回全图：
 - `radius` 以 tile 为单位，最大 24
 - 默认最多 256 个 tile，最大 512
 - 返回 `{x,y,radius,tiles:[{x,y,block,team,drop?,solid,items?,ammoTotal?}],truncated,coverage:{x0,y0,x1,y1,next?}}`；`maxTiles` 按行优先截断，`coverage.next` 是第一个未返回的 tile
@@ -251,7 +251,7 @@ deconstruct 等到目标消失，mine 等到携带量增加，configure 等到 c
 
 ### 单位
 
-- `move_to { x, y, arriveRadius?, timeoutTicks? }`；`x/y` 是世界像素坐标（8 px = 1 tile），不是 tile；`timeoutTicks` 超时后 op `failed`，`data.code=timeout`。
+- `move_to { x, y, arriveRadius?, timeoutTicks? }`；`x/y` 和 `arriveRadius` 都是 tile；`timeoutTicks` 超时后 op `failed`，`data.code=timeout`。
 - `attack { target: { unitId? | buildingId? | x?, y? }, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `follow { unitId, distance?, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
 - `mine { x, y, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。

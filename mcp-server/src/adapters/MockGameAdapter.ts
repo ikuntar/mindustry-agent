@@ -497,8 +497,8 @@ export class MockGameAdapter implements GameAdapter {
 
   async getArea(query: AreaTileQuery): Promise<AreaTileSnapshot> {
     const tiles = [];
-    const centerX = Math.floor(query.x / 8);
-    const centerY = Math.floor(query.y / 8);
+    const centerX = Math.floor(query.x);
+    const centerY = Math.floor(query.y);
     for (let dx = -query.radius; dx <= query.radius; dx++) {
       for (let dy = -query.radius; dy <= query.radius; dy++) {
         tiles.push({

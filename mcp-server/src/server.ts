@@ -50,14 +50,14 @@ const configValueSchema = z.union([
 const targetSchema = z.object({
   unitId: z.number().int().optional(),
   buildingId: z.number().int().optional(),
-  x: z.number().optional(),
-  y: z.number().optional(),
+  x: z.number().describe("tile x").optional(),
+  y: z.number().describe("tile y").optional(),
 });
 
 const placementSchema = z.object({
   block: z.string(),
-  x: z.number().int(),
-  y: z.number().int(),
+  x: z.number().int().describe("tile x"),
+  y: z.number().int().describe("tile y"),
   rotation: z.number().int().optional(),
   config: configValueSchema.optional(),
 });
@@ -167,7 +167,7 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
       description: "Read a compact game context: assistant, player, team resources, cores, nearby entities, wave, current action.",
       inputSchema: {
         detail: detailSchema.optional(),
-        radius: z.number().positive().optional(),
+        radius: z.number().positive().describe("radius in tiles").optional(),
         since: z.number().int().nonnegative().optional(),
         includeEnemies: z.boolean().optional(),
         maxUnits: z.number().int().positive().max(64).optional(),
@@ -232,11 +232,11 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   server.registerTool(
     "query_area",
     {
-      description: "Read units and buildings in a circular area around a point. Set includeEnemies to include non-assistant-team units.",
+      description: "Read units and buildings in a circular area around a tile coordinate. Set includeEnemies to include non-assistant-team units.",
       inputSchema: {
-        x: z.number(),
-        y: z.number(),
-        radius: z.number().positive(),
+        x: z.number().describe("tile x"),
+        y: z.number().describe("tile y"),
+        radius: z.number().positive().max(32).describe("radius in tiles"),
         includeUnits: z.boolean().optional(),
         includeBuildings: z.boolean().optional(),
         includeEnemies: z.boolean().optional(),
@@ -250,11 +250,11 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
     "get_area",
     {
       description:
-        "Read a bounded window around world coordinates in pixels (8 px per tile); returns tile coordinates. Never returns the full map.",
+        "Read a bounded window around tile coordinates. Never returns the full map.",
       inputSchema: {
-        x: z.number().describe("world x in pixels"),
-        y: z.number().describe("world y in pixels"),
-        radius: z.number().int().positive().max(24),
+        x: z.number().describe("tile x"),
+        y: z.number().describe("tile y"),
+        radius: z.number().int().positive().max(24).describe("radius in tiles"),
         maxTiles: z.number().int().positive().max(512).optional(),
       },
       annotations: readOnly,
@@ -300,11 +300,11 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   server.registerTool(
     "move_to",
     {
-      description: "Move the assistant body to world coordinates in pixels (8 px per tile). Returns an operation to poll.",
+      description: "Move the assistant body to tile coordinates. Returns an operation to poll.",
       inputSchema: {
-        x: z.number().describe("world x in pixels"),
-        y: z.number().describe("world y in pixels"),
-        arriveRadius: z.number().positive().optional(),
+        x: z.number().describe("tile x"),
+        y: z.number().describe("tile y"),
+        arriveRadius: z.number().positive().describe("arrival radius in tiles").optional(),
         timeoutTicks: z.number().int().min(0).max(1200).optional(),
       },
     },
@@ -323,10 +323,10 @@ export function createMcpServer(adapter: GameAdapter): McpServer {
   server.registerTool(
     "follow",
     {
-      description: "Follow a unit at an optional distance.",
+      description: "Follow a unit at an optional distance in tiles.",
       inputSchema: {
         unitId: z.number().int(),
-        distance: z.number().positive().optional(),
+        distance: z.number().positive().describe("distance in tiles").optional(),
         timeoutTicks: z.number().int().min(0).max(1200).optional(),
       },
     },
