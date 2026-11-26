@@ -406,6 +406,20 @@ Number/Boolean/String -> 原类型  Object[] -> 递归数组
 `[{x,y}]`。`UnitFactory.plans[]` 是 `{index,unit,requirements,time,available}`；
 `Reconstructor` 的 plan 是 `{base,upgrade,available}`，不是可选择生产方案。
 
+`configure` 的写入形状与读回形状不同：
+
+```text
+item     -> {"item":"copper"}   （sorter 也接受裸字符串 "copper"）
+liquid   -> {"liquid":"water"}
+block    -> {"block":"conveyor"}
+unit     -> {"unit":"dagger"}
+point    -> {"x":12,"y":34}
+boolean/number/string -> 原类型
+```
+
+读回 `get_tile.config` 是名字字符串，不能不经包装直接回写。未知的
+item/liquid/block/unit 返回 `not_found`，不是 `internal_error`。
+
 ### 16.4 状态和事件
 
 动作状态：`queued | running | done | failed | cancelled`；常见失败 code：

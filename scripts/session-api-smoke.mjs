@@ -283,13 +283,18 @@ const sessionPause = await call("/actions", {
   body: JSON.stringify({ kind: "pause" }),
 });
 const sessionPausedContext = await call("/context?detail=summary", { headers: auth });
+const pausedArea = await call("/actions", {
+  method: "POST",
+  headers: auth,
+  body: JSON.stringify({ kind: "get_area", x: 1032, y: 440, radius: 4, maxTiles: 8 }),
+});
 const sessionResume = await call("/actions", {
   method: "POST",
   headers: auth,
   body: JSON.stringify({ kind: "resume" }),
 });
 const sessionResumedContext = await call("/context?detail=summary", { headers: auth });
-console.log("session pause", sessionPause.status, sessionPause.body.paused, sessionPausedContext.body.paused, sessionResume.status, sessionResume.body.paused, sessionResumedContext.body.paused);
+console.log("session pause", sessionPause.status, sessionPause.body.paused, sessionPausedContext.body.paused, pausedArea.status, pausedArea.body?.tiles?.length, sessionResume.status, sessionResume.body.paused, sessionResumedContext.body.paused);
 const sessionPauseEvents = await call(`/events/wait?since=${sessionEventStart}&timeoutMs=1000&types=game_pause,game_resume`, { headers: auth });
 console.log("session pause events", sessionPauseEvents.body.events?.map((event) => `${event.type}:${event.data?.source}`).join(","));
 if (!sessionPauseEvents.body.events?.some((event) => event.type === "game_pause" && event.data?.source === "api")
@@ -369,4 +374,4 @@ if (waited.status !== 200 || !waited.body.events?.length || waited.body.timedOut
 if (waitTimeout.status !== 200 || !waitTimeout.body.timedOut) process.exit(1);
 if (timeoutResult.body.status !== "failed" || timeoutResult.body.data?.code !== "timeout" || timeoutResult.body.paused !== false) process.exit(1);
 if (!paused.ok || !pauseEvent.body.events?.length || pausedContext.body.paused !== true || blocked.status !== 400 || blocked.body.code !== "game_paused" || !unpaused.ok) process.exit(1);
-if (sessionPause.status !== 200 || sessionPause.body.paused !== true || sessionPausedContext.body.paused !== true || sessionResume.status !== 200 || sessionResume.body.paused !== false || sessionResumedContext.body.paused !== false) process.exit(1);
+if (sessionPause.status !== 200 || sessionPause.body.paused !== true || sessionPausedContext.body.paused !== true || pausedArea.status !== 200 || !pausedArea.body?.tiles?.length || sessionResume.status !== 200 || sessionResume.body.paused !== false || sessionResumedContext.body.paused !== false) process.exit(1);

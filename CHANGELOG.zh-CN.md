@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## Unreleased
+
+- 把 `get_area` 加入暂停时的只读 op 白名单。
+- sorter 的 `configure` 接受物品名字字符串；未知内容引用返回 `not_found`；
+  文档补充 config 写入形状。
+
 ## 0.3.0
 
 - 项目名、mod id、显示名、discovery 目录和发布产物从 `mindustry-ai`/`ai-probe`

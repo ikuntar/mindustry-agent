@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## Unreleased
+
+- Include `get_area` in the paused read-only operation whitelist.
+- Accept item-name strings for sorter `configure` values, return `not_found` for unknown
+  content references, and document the config write shape.
+
 ## 0.3.0
 
 - Rename the project, mod id, display name, discovery directory, and release

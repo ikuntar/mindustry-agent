@@ -345,6 +345,21 @@ building: {
 `Reconstructor` 的 `plans[]` 是 `{base,upgrade,available}`；它不是可选择的生产方案。
 `UnitAssembler` 的 plans 包含 `unit/requirements/payloadRequirements/liquids/time`。
 
+`configure` 的写入形状与读回形状不同：
+
+```text
+item     -> {"item":"copper"}   （sorter 也接受裸字符串 "copper"）
+liquid   -> {"liquid":"water"}
+block    -> {"block":"conveyor"}
+unit     -> {"unit":"dagger"}
+point    -> {"x":12,"y":34}
+boolean/number/string -> 原类型
+```
+
+`get_tile.config` 读回的是名字字符串；不要不经包装直接把读回值回写到
+`configure.value`。未知的 item/liquid/block/unit 返回 `not_found`，不是
+`internal_error`。
+
 ## 4.1 `get_content`（核心数据库的只读镜像）
 
 `GET /content?type=blocks|units|items|liquids&query=&limit=` 返回内容列表。v0.3.0 起

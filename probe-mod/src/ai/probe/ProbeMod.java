@@ -2093,7 +2093,13 @@ public class ProbeMod extends Mod {
                 replyError(command, "not_configurable", "Target block is not configurable");
                 return;
             }
-            Object value = configValue(request.get("value"));
+            Object value;
+            try {
+                value = configValue(request.get("value"), building);
+            } catch (ConfigValueException error) {
+                replyError(command, error.code, error.getMessage());
+                return;
+            }
             try {
                 building.configured(assistant, value);
             } catch (RuntimeException e) {
@@ -3982,6 +3988,7 @@ public class ProbeMod extends Mod {
             case "get_map_manifest":
             case "get_events":
             case "get_tile":
+            case "get_area":
             case "get_unit":
             case "get_spawns":
             case "list_unit_types":
@@ -4161,25 +4168,60 @@ public class ProbeMod extends Mod {
         return null;
     }
 
-    private Object configValue(Jval value) {
+    private Object configValue(Jval value, Building building) {
         if (value == null || value.isNull()) return null;
-        if (value.isString()) return value.asString();
+        if (value.isString()) {
+            String name = value.asString();
+            // sorter (and any building currently holding an Item) expects an
+            // Item object. Accept the read-back item name as a convenience.
+            if (building != null && ("sorter".equals(building.block.name) || building.config() instanceof Item)) {
+                Item item = Vars.content.item(name);
+                if (item == null) throw new ConfigValueException("not_found", "Unknown item: " + name);
+                return item;
+            }
+            return name;
+        }
         if (value.isBoolean()) return value.asBool();
         if (value.isNumber()) return value.asInt();
         if (value.isObject()) {
             Jval item = value.get("item");
-            if (item != null) return Vars.content.item(item.asString());
+            if (item != null) {
+                Item parsed = Vars.content.item(item.asString());
+                if (parsed == null) throw new ConfigValueException("not_found", "Unknown item: " + item.asString());
+                return parsed;
+            }
             Jval liquid = value.get("liquid");
-            if (liquid != null) return Vars.content.liquid(liquid.asString());
+            if (liquid != null) {
+                Liquid parsed = Vars.content.liquid(liquid.asString());
+                if (parsed == null) throw new ConfigValueException("not_found", "Unknown liquid: " + liquid.asString());
+                return parsed;
+            }
             Jval block = value.get("block");
-            if (block != null) return Vars.content.block(block.asString());
+            if (block != null) {
+                Block parsed = Vars.content.block(block.asString());
+                if (parsed == null) throw new ConfigValueException("not_found", "Unknown block: " + block.asString());
+                return parsed;
+            }
             Jval unit = value.get("unit");
-            if (unit != null) return Vars.content.unit(unit.asString());
+            if (unit != null) {
+                UnitType parsed = Vars.content.unit(unit.asString());
+                if (parsed == null) throw new ConfigValueException("not_found", "Unknown unit: " + unit.asString());
+                return parsed;
+            }
             Jval x = value.get("x");
             Jval y = value.get("y");
             if (x != null && y != null) return new Point2(x.asInt(), y.asInt());
         }
-        return null;
+        throw new ConfigValueException("bad_request", "Unrecognized config value");
+    }
+
+    private static class ConfigValueException extends RuntimeException {
+        final String code;
+
+        ConfigValueException(String code, String message) {
+            super(message);
+            this.code = code;
+        }
     }
 
     private boolean configEquals(Object requested, Object applied) {
