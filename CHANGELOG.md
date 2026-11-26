@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
-## Unreleased
+## 0.3.1
 
 - Include `get_area` in the paused read-only operation whitelist.
 - Accept item-name strings for sorter `configure` values, return `not_found` for unknown
@@ -15,6 +15,10 @@
 - Bump the guide format version and expose `guideTopics`; reject unknown `/guide` topics.
 - Clarify `build_plan` initial `data.results[]` versus the last child `opId`, and add
   a guide table of contents plus a docs consistency CI check.
+- Add `error.placeReason` to failed builds and `untilAmount`/`untilFull`/`until` to `mine`.
+- Return `game_over` for write actions after core destruction and expose `sessionEnded`.
+- Add `query_area.radiusTiles`, `get_tile.breakable/replaceable/outputTile`, and compact
+  enemy fields (`enemyCount`, `nearestThreat`, `nearestThreatDistance`).
 
 ## 0.3.0
 

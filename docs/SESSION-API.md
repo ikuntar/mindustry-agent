@@ -1,6 +1,6 @@
 # 单 Mod + 会话 API 设计
 
-状态：0.3.0，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-25）。
+状态：0.3.1，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-26）。
 `probe-mod` 内已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、
 `/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
 `POST /mcp` 的最小 MCP Streamable HTTP 子集；HTTP server 已改成 `ai.probe.http`

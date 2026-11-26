@@ -150,7 +150,7 @@ public class ProbeMod extends Mod {
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.3.0";
+    private static final String VERSION = "0.3.1";
     private static final int GUIDE_VERSION = 3;
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;

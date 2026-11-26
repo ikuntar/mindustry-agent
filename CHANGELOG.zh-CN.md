@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
-## Unreleased
+## 0.3.1
 
 - 把 `get_area` 加入暂停时的只读 op 白名单。
 - sorter 的 `configure` 接受物品名字字符串；未知内容引用返回 `not_found`；
@@ -14,6 +14,10 @@
 - guide 版本号升级并暴露 `guideTopics`；未知 `/guide` topic 返回 400。
 - 明确 `build_plan` 初始 `data.results[]` 与最后一个子 `opId` 的区别；增加 guide
   目录和文档一致性 CI 检查。
+- 失败的 build 增加 `error.placeReason`；`mine` 支持 `untilAmount`/`untilFull`/`until`。
+- 核心被摧毁后的写动作返回 `game_over`，`/context` 暴露 `sessionEnded`。
+- 增加 `query_area.radiusTiles`、`get_tile.breakable/replaceable/outputTile`，
+  以及紧凑敌人字段 `enemyCount`/`nearestThreat`/`nearestThreatDistance`。
 
 ## 0.3.0
 
