@@ -55,6 +55,9 @@ probe 已实现：context、capabilities、content、map summary、events、有�
 `repair`, `withdraw`, `deposit`, `configure`, `command_units`, `set_stance`,
 `possess`, `release`, `respawn`, `cancel`
 
+`repair` 只对 `UnitType.canHeal` 的身体可用；Serpulo 的 Alpha/Beta/Gamma builder
+没有治疗能力，会返回 `cannot_repair`，不能给建筑回血。
+
 ## 目录结构
 
 ```text

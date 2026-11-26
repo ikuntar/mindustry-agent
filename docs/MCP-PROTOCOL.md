@@ -1,6 +1,6 @@
 # MCP 工具协议
 
-状态：Node MCP 实现说明，2026-11-26，`mindustry-agent` 0.4.0。
+状态：Node MCP 实现说明，2026-11-26，`mindustry-agent` 0.4.1。
 适用范围：`mcp-server/` 对外暴露的 MCP 工具。当前同时有 `MockGameAdapter`（协议测试）和
 `ProbeGameAdapter`（真实 v160.8 + probe mod）；Node MCP 当前 27 个工具，mod session API
 当前 35 个工具。本文描述 Node MCP 的协议和动作语义；session API 的完整工具面见
@@ -266,7 +266,7 @@ deconstruct 等到目标消失，mine 等到携带量增加，configure 等到 c
   - 返回 `status` 和 `data.results`；每项带 `x/y/block`。失败时可能省略 `opId`，不要轮询空字符串。
   - 单块 `build` 返回 `running`，直到目标 tile 出现该 block 才 `done`；计划被引擎丢弃时 `failed`、`data.code=build_dropped`；campaign 未解锁时 `block_locked`。
 - `deconstruct { targets[], allowPartial?, skipMissing?, timeoutTicks? }`；`allowPartial=true` 跳过已消失/不可拆目标并在 `data.skipped` 报告；超时后 op `failed`、`data.code=timeout`，`data.targets` 给出逐目标状态。
-- `repair { x, y, timeoutTicks? }`；超时后 op `failed`、`data.code=timeout`。
+- `repair { x, y, timeoutTicks? }`；仅对 `UnitType.canHeal` 的身体可用。Alpha/Beta/Gamma builder body 在 Serpulo 没有修复能力，返回 `cannot_repair`；不要用拆建或治疗单位冒充。
 
 ### 物流
 

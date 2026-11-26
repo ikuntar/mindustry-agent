@@ -32,7 +32,7 @@
 - [x] mine：probe op + adapter 已接；在挖矿可达的 sand tile 上实测 `get_action_result` done，助手获得 sand 1
 - [x] possess / release：同队 dagger 附身、原 home body despawn、release 后在核心生成新 alpha；`isHome/possessing` 读回正确
 - [x] respawn：kill 后 `assistant.dead=true`，`respawn` 在核心生成新 alpha（id 变化、health 150）
-- [x] Probe/真实 adapter 动作：deconstruct/repair/cancel/follow 均有入口和实测；follow 语义仍简化
+- [x] Probe/真实 adapter 动作：deconstruct/cancel/follow 均有入口和实测；repair 入口受 `UnitType.canHeal` 限制（Alpha/Beta/Gamma 返回 `cannot_repair`）；follow 语义仍简化
 - [x] 真实 adapter 事件日志：事件环已接，见 `get_events`
 - [x] 选定基线：官方 Mindustry v160.8 + mod；不用 BEK 作为主干（见 `docs/REALITY-CHECK.md`）
 - [x] 游戏 mod 暴露本地 socket + 发现文件 + token + 版本握手：`/tmp/mindustry-agent-probe/bridge-info.json`，`hello` 返回 protocol/version，`PROBE_REQUIRE_AUTH=1` 时校验 token
@@ -43,7 +43,7 @@
 - [x] token 轮换：数据面 `rotate_data_token`；旧 token 401、新 token 200
 - [x] `get_context` / `get_capabilities` / `get_content` / `query_area` 真实数据；`get_content` 从 probe 读取 70 units 及真实 blocks/items/liquids，并支持 `query` 名称过滤和 `limit`（最大 500）
 - [x] `build_plan`：单块和多块 placement 均已实测；Fortress 场景一次提交 2 个 conveyor，query_area 两个 tile 都出现
-- [x] `deconstruct` / `repair`：probe 已实现；deconstruct 在 MCP 侧实测建筑消失，repair 在 probe 侧实测 25→45
+- [x] `deconstruct`：probe 已实现并在 MCP 侧实测建筑消失；`repair` 仅在 `UnitType.canHeal` 身体上可用，Alpha/Beta/Gamma builder body 实测返回 `cannot_repair`，旧的 25→45 结果已判定为绕过能力的测试假象
 - [x] `withdraw` / `deposit`：核心取放 5 copper 已验证
 - [x] `configure`：sorter 配置已验证
 - [x] `command_units` / `set_stance`：dagger move 与 holdPosition 已验证
@@ -70,7 +70,7 @@
 - [x] 基础自动索敌/开火：已移除默认自动索敌；`attack` 是显式动作。旧的自动瞄准实测仅作历史记录。
 - [x] 低血撤退：已移除；助手默认无低血自动撤退/空闲自动索敌，显式动作才移动/攻击/跟随；死亡后从核心自动重生（与玩家一致）。
 - [x] `attack.unitId` 独立伤害：固定场景在核心附近生成 idle dagger 后按 `unitId` 攻击，health `150→141`（4 波后的低血助手路径不作为验收）
-- [x] 动作超时：`move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；固定场景分别实测
+- [x] 动作超时：`move_to`/`attack`/`follow`/`deconstruct`/`repair`/`mine` 支持 `timeoutTicks`（0–1200），超时后 op `failed`、`data.code=timeout`，控制器目标清空；`repair` 当前 builder body 在 timeout 前返回 `cannot_repair`
 - [x] `mine` 超时与正常完成：固定场景在助手附近放 `ore-copper`，`timeoutTicks=1` 返回 `failed/timeout`；无超时挖矿 `done` 并获得 1 copper
 - [x] 主流 harness 接入：`scripts/mindustry-mcp` 包装器（默认 probe）+ `harness/host-smoke.ts` + `scripts/start-game-server.sh`；真实 probe 下 host-smoke `{"ok":true,"tools":27,"adapter":"probe","moveStatus":"done"}`，`docs/HARNESS-INTEGRATION.md` 覆盖 Claude Code/Desktop、Codex、OpenCode、omp、Hermes
 - [x] omp 游戏会话与代码会话隔离：launcher `scripts/omp-mindustry` 把 `.omp/mcp.json` 放在 `~/.mindustry-omp`，仓库 `.omp/` 不提交；真实 probe 冒烟通过

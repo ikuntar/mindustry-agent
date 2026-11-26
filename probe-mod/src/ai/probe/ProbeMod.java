@@ -151,7 +151,7 @@ public class ProbeMod extends Mod {
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.4.0";
+    private static final String VERSION = "0.4.1";
     private static final int GUIDE_VERSION = 3;
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
@@ -1881,6 +1881,7 @@ public class ProbeMod extends Mod {
                     .put("weapons", weapons)
                     .put("commands", commands)
                     .put("canBuild", type.buildSpeed > 0)
+                    .put("canHeal", type.canHeal)
                     .put("canMine", type.mineTier >= 0)
                     .put("canAttack", type.weapons.size > 0)
                     .put("canPossess", !assistant.dead);
@@ -3087,8 +3088,11 @@ public class ProbeMod extends Mod {
                 replyError(command, "no_assistant", "Assistant is not spawned");
                 return;
             }
-            if (!assistant.canBuild()) {
-                replyError(command, "cannot_build", "Assistant body has buildSpeed <= 0");
+            // Mindustry exposes repair only to bodies with a healing weapon
+            // (UnitType.canHeal); Alpha/Beta/Gamma on Serpulo are builders,
+            // not medics. Do not grant a repair ability the body does not have.
+            if (!assistant.type.canHeal) {
+                replyError(command, "cannot_repair", "Assistant body has no healing weapon/repair ability");
                 return;
             }
             Building building = findBuilding(request);
@@ -6322,7 +6326,7 @@ public class ProbeMod extends Mod {
                         .put("timeoutTicks", property("integer").put("maximum", 1200)),
                         Jval.newArray().add("targets"))));
         tools.add(tool("repair",
-                "Repair a same-team damaged building by buildingId or tile coordinates.",
+                "Repair a same-team damaged building by buildingId or tile coordinates. Requires a body with a healing weapon (UnitType.canHeal); Alpha/Beta/Gamma builders on Serpulo cannot repair.",
                 inputSchema(Jval.newObject()
                         .put("buildingId", property("integer"))
                         .put("x", property("integer"))

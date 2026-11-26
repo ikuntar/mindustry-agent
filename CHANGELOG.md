@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.1
+
+- Fix `repair`: it no longer grants direct building healing to Alpha/Beta/Gamma
+  builder bodies. The action now requires `UnitType.canHeal` and returns
+  `cannot_repair` for ordinary Serpulo builders; `get_capabilities` exposes `canHeal`.
+
 ## 0.4.0
 
 - **Breaking:** all public coordinates and radii now use tile units; `move_to`,

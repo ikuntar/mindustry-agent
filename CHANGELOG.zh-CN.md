@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.1
+
+- 修复 `repair`：Alpha/Beta/Gamma builder body 不再直接给建筑回血；动作现在要求
+  `UnitType.canHeal`，普通 Serpulo builder 返回 `cannot_repair`；
+  `get_capabilities` 增加 `canHeal`。
+
 ## 0.4.0
 
 - **破坏性变更：** 所有公开坐标和半径统一为 tile 单位；`move_to`、`get_area`、

@@ -515,17 +515,16 @@ async function main(): Promise<void> {
       amount: 10,
     });
     if (damagedSwitch.health > 0 && damagedSwitch.health < damagedSwitch.maxHealth) {
-      const timeoutRepair = await tool("repair", {
-        x: sorter.tileX,
-        y: sorter.tileY,
-        timeoutTicks: 1,
-      });
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const timeoutRepairResult = await tool("get_action_result", { opId: timeoutRepair.opId });
+      const repairResult = parse(
+        await client.callTool({
+          name: "repair",
+          arguments: { x: sorter.tileX, y: sorter.tileY },
+        }),
+      );
       check(
-        "repair timeout fails action",
-        timeoutRepairResult.status === "failed" && timeoutRepairResult.data?.code === "timeout",
-        JSON.stringify(timeoutRepairResult),
+        "builder body has no repair ability",
+        !repairResult.ok && repairResult.error?.code === "cannot_repair",
+        JSON.stringify(repairResult),
       );
     }
   }

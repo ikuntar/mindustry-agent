@@ -1,6 +1,6 @@
 # Mindustry Agent 助手设计
 
-状态：设计稿，2026-11-18；实现状态更新 2026-11-26（0.4.0）。
+状态：设计稿，2026-11-18；实现状态更新 2026-11-26（0.4.1）。
 定位：单机/本地对局里的 AI co-op 助手，不是独立 AI 客户端。
 目标版本：官方 Mindustry v160.8（服务端 jar 已做 API 核对，见 `docs/REALITY-CHECK.md`）。
 交互：先做 MCP 工具接口；游戏内聊天框/对话框暂不做，后续用 harness 测试。
@@ -253,7 +253,7 @@ respawn(core = null):
 | `stop` | 停止当前动作 |
 | `build_plan` | 批量放置 + 拆除 + 配置；逐块扣费/计时 |
 | `deconstruct` | 拆除 |
-| `repair` | 修理 |
+| `repair` | 仅 `canHeal` 身体可用；当前 Alpha/Beta/Gamma 为 builder，不能回血 |
 | `withdraw` | 从建筑取物（220 范围） |
 | `deposit` | 向建筑存物 |
 | `configure` | 配置建筑/逻辑代码 |

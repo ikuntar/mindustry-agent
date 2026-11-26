@@ -61,6 +61,9 @@ Action:
 `repair`, `withdraw`, `deposit`, `configure`, `command_units`, `set_stance`,
 `possess`, `release`, `respawn`, `cancel`
 
+`repair` is only available to bodies with `UnitType.canHeal`; Alpha/Beta/Gamma
+builder bodies on Serpulo return `cannot_repair` and cannot heal buildings.
+
 ## Layout
 
 ```

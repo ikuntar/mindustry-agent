@@ -18,6 +18,8 @@ get_action_result, cancel, stop, possess, respawn, pause, resume, command_units,
 get_config_schema, get_tech_tree, control_building, release_building, boost, pickup_payload, drop_payload
 ```
 
+注意：`repair` 只是工具入口，当前 Alpha/Beta/Gamma builder body 没有 `canHeal`，在 Serpulo 不能直接修复建筑；它返回 `cannot_repair`，不是玩家能力缺口。
+
 另有 `/content`、`/capabilities`、`/guide`、`/events/wait`、`/data` 等读接口。
 
 旧 Node MCP 27 工具和 raw probe 调试面保留测试入口；本文列出的 35 个工具才是

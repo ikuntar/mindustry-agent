@@ -120,7 +120,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - LLM 重试：`LLM_MAX_RETRIES=1` + mock endpoint 首次 503，实测第二次成功，`llmRetries=1`；重试耗尽时退出码 1、错误 `LLM request failed: 503 mock transient failure`。
 - LLM harness：`harness/llm.ts` 支持 OpenAI-compatible 工具循环；`LLM_MOCK=1` 实测 27 tools、1 次 `get_context`、token/latency 记录。多步 mock 任务（withdraw/deposit）实测 toolCalls=3、`LLM_REQUIRE_TOOLS` 通过。真实本地 `qwen3.5:4b` + `LLM_TOOL_FILTER=get_context,withdraw,deposit` 在真实 probe 上完成 `get_context → withdraw → deposit`，toolCalls=3 并报告成功；未过滤工具的 lfm3/qwen3.5/ornith 容易选错动作。外部供应商 endpoint 未验收。固定移动任务仍由 lfm3 完成：`get_context → move_to(952,584)`，最终 `x=944.95`；自算 `core.x+24` 最终 `x=944.92`。
 - `deconstruct`：MCP deconstruct 后建筑从 `query_area` 消失。
-- `repair`：probe 侧 conveyor 从 25/45 恢复到 45/45。
+- `repair`（已纠正）：旧的 probe 测试通过直接 `Building.heal()` 把 conveyor 从 25/45 恢复到 45/45，这绕过了游戏能力。Alpha/Beta/Gamma 的 `UnitType.canHeal=false`；现在 `repair` 对这些身体返回 `cannot_repair`，不再回血。
 - `follow`：MCP follow 后助手位置变化；固定场景实测 ally 移动后助手追到 30.38px 内并 `cancel`；目标被 `remove_unit` 移除后 follow 动作 `done`、`data.reason=target_gone`，控制器 `followTarget` 清空。
 - `get_events`：probe 事件环已接，实测能读到 `unit_destroy`、`build_damage`、`block_build_end` 等；`get_context.eventsSince` 为真实序号。
 - `get_events` 摘要模式已接：`summary=true` 返回 `byType` 计数 + `ref`，可加 `types` 在游戏侧过滤；原始页仍保留。
@@ -206,3 +206,5 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
   修复：助手改为 mod 内的 `mindustry-agent-ai-alpha` 类型（从 alpha 复制外观/武器/采矿/建造参数，`playerControllable=false`、`useUnitCap=false`、hidden），因此不会被原版自动复活逻辑选中；同时保留 player/justSwitch 保护和 `playerTransitioning` 清理门控。
 
 - 坐标契约（2026-11-26，0.4.0）：所有公开动作、实体位置、区域查询和半径统一为 tile 单位；`move_to`/`attack`/`query_area` 不再接收世界像素，`get_spawns` 不再返回 `worldX/worldY`，引擎内部 8 px/tile 只在服务端换算。session smoke、MCP HTTP smoke 和真实 `move_to` 已按 tile 验收。
+
+- 修复能力纠正（2026-11-26，0.4.1）：Alpha/Beta/Gamma builder body 的 `UnitType.canHeal=false`；`repair` 现在返回 `cannot_repair`，旧的直接 `Building.heal()` 路径已移除。真实 probe 测试 conveyor 25/45 后调用 repair，返回 `cannot_repair`；`get_capabilities.canHeal=false`。

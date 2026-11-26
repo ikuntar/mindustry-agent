@@ -1,6 +1,6 @@
 # API 数据契约（实体结构、字段与枚举）
 
-状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.4.0。
+状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.4.1。
 
 用途：给 harness 和 LLM 一个**字段级**参考；实际字段随版本可能增加，客户端按字段名读取，
 不要把 JSON 顺序、数组长度或未列出的字段当成稳定契约。
@@ -610,7 +610,7 @@ HTTP 层：
 
 写动作在暂停时返回 `game_paused`；本局已结束时写动作返回 `game_over`，
 客户端应停止重试并等待玩家重新加载世界；`pause` 被规则禁止时返回 `pause_disabled`；
-能力不足返回 `cannot_build`/`not_configurable`/`block_locked`；距离错误为 `out_of_range`。
+能力不足返回 `cannot_build`/`cannot_repair`/`not_configurable`/`block_locked`；`repair` 只在 `UnitType.canHeal` 身体上可用，Alpha/Beta/Gamma builder body 返回 `cannot_repair`；距离错误为 `out_of_range`。
 错误 JSON 形状是 `{code,message}`，但 HTTP 层的 401/403/413 可能是纯文本。
 
 ## 9. 枚举速查

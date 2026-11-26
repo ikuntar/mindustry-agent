@@ -216,8 +216,10 @@ Serpulo 常见物品：
   但不要依赖返还比例做精确预算。
   批量拆除可加 `allowPartial:true` 跳过已消失/不可拆目标，`data.skipped` 会列出
   被跳过的目标和原因；超时结果的 `data.targets` 给出逐目标状态。
-- 建筑有血量；受损建筑可用 `repair` 修复，但修复受 buildRange 和资源/电力规则
-  限制。
+- 建筑有血量；受损建筑**不能由 Alpha/Beta/Gamma 这些 builder body 直接回血**。
+  Mindustry 只有带治疗武器（`UnitType.canHeal`）的身体才有 repair 能力；Serpulo 的
+  玩家 builder body 没有这个能力，`repair` 会返回 `cannot_repair`。
+  修复受损建筑应拆掉重建；需要治疗时用 `command_units` 指挥有治疗能力的同队单位。
 
 ## 9. 防御和波次
 
@@ -486,7 +488,8 @@ item/liquid/block/unit 返回 `not_found`，不是 `internal_error`。
 
 动作状态：`queued | running | done | failed | cancelled`；常见失败 code：
 `timeout`、`assistant_gone`、`target_gone`、`insufficient_resources`、
-`invalid_placement`、`out_of_range`、`game_paused`、`game_over`、`building_not_found`。
+`invalid_placement`、`out_of_range`、`game_paused`、`game_over`、`building_not_found`、
+`cannot_repair`。
 `build_plan` 的失败项在 `error.placeReason` 给出 `occupied`/`solid`/`liquid`/`out_of_range`/
 `enemy_core_build_radius` 等原因；传送带成功项还可能带 `warnings[]`。
 
