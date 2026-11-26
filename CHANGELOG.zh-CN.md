@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## Unreleased
+
+- `deconstruct` 接受游戏允许拆除的静态道具；`get_tile` 增加 `blockType`、
+  `blockBreakable`、`destructible`、`alwaysReplace`。
+- `build_plan` 为传送带增加输出受阻/对空气/反向的 `warnings[]`。
+- `gameOver` 时保留最后一帧 wave/resources/cores 的 `lastSnapshot`。
+
 ## 0.3.1
 
 - 把 `get_area` 加入暂停时的只读 op 白名单。

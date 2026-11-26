@@ -193,6 +193,9 @@ Serpulo 常见物品：
    paused, allowPartial, opId?}
   ```
 
+  传送带成功的子项可能带 `warnings[]`（`output_blocked`/`output_faces_air`/
+  `output_faces_back`/`output_out_of_bounds`），不要忽略；它代表朝向或落点可疑，
+  不代表 build 失败。
   `opId` 只是最后一个子 build 的 opId，plan 级结果只看 `data.results[]`；
   轮询子 op 只用于等待建造完成，不用于取逐块 `replaced`/`previousBlock`/失败项。
   `deconstruct` 的初始 `data` 另含 `targets[]`、`skipped[]` 和 `requested`；
@@ -208,7 +211,10 @@ Serpulo 常见物品：
   `freeCapacity=0` 表示电池已满；机器 tile 另外有 `efficiency`/`progress`/`warmup`/`enabled`。
 - `configure` 用于分拣器物品、卸载器方向、开关布尔值、消息文本、逻辑处理器
   代码等；配置是否真的生效应以 `get_tile.config` 或返回的 `configure` 结果为准。
-- `deconstruct` 拆除建筑；拆除会返还部分材料，但不要依赖返还比例做精确预算。
+- `deconstruct` 拆除建筑和可拆除的静态道具；是否允许由 `Build.validBreak` 和
+  `allowEnvironmentDeconstruct` 决定。纯地形/不可拆装饰会返回 `invalid_deconstruct`
+  或 `data.skipped[].reason=invalid_deconstruct`，不会静默挖地形。拆除会返还部分材料，
+  但不要依赖返还比例做精确预算。
   批量拆除可加 `allowPartial:true` 跳过已消失/不可拆目标，`data.skipped` 会列出
   被跳过的目标和原因；超时结果的 `data.targets` 给出逐目标状态。
 - 建筑有血量；受损建筑可用 `repair` 修复，但修复受 buildRange 和资源/电力规则
@@ -368,6 +374,8 @@ Serpulo 常见物品：
   `5 blue`、`6 neoplastic`，其他是 `team#N`；不要假设敌人永远是 2
 - `rotation`：`0 east`、`1 south`、`2 west`、`3 north`
 - 有建筑时 `get_tile.outputTile` 给出当前朝向的下一格；铺带后检查它是否对着空气/墙/自己
+- `get_tile.blockType` 区分 `building`/`breakable_prop`/`replaceable_terrain`/`terrain`；
+  `blockBreakable`、`destructible`、`alwaysReplace` 是原始 Block 标志
 
 单位摘要：
 
@@ -472,11 +480,16 @@ item/liquid/block/unit 返回 `not_found`，不是 `internal_error`。
 `/context` 的 `threats` 只在 `includeEnemies:true` 时填充；还提供 `nearestThreat`、
 `nearestThreatDistance` 和 `enemyCount`，不要只用 `enemies` 计数猜位置。
 
+核心被拆后 `/context` 的 `cores`/`resources` 可能为空，但 `gameOver:true` 且
+`finalSnapshot:true` 时会带 `lastSnapshot`（最后一帧的 wave/resources/cores/assistant）；
+这是历史快照，不是当前可操作状态。写动作返回 `game_over` 后必须由玩家重新加载世界，
+当前没有自动 `restart`。
+
 动作状态：`queued | running | done | failed | cancelled`；常见失败 code：
 `timeout`、`assistant_gone`、`target_gone`、`insufficient_resources`、
 `invalid_placement`、`out_of_range`、`game_paused`、`game_over`、`building_not_found`。
 `build_plan` 的失败项在 `error.placeReason` 给出 `occupied`/`solid`/`liquid`/`out_of_range`/
-`enemy_core_build_radius` 等原因。
+`enemy_core_build_radius` 等原因；传送带成功项还可能带 `warnings[]`。
 
 事件信封：`{id,type,tick,timeMs,data{}}`。常用类型：
 

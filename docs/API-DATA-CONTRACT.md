@@ -203,6 +203,8 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 隐藏态只保证 `x/y/discovered/hidden`，其余字段不可用于决策。
 
 - `block`：内容名，空气为 `air`，隐藏为 `hidden`；
+- `blockType`：`building`、`breakable_prop`、`replaceable_terrain` 或 `terrain`；
+  `blockBreakable`/`destructible`/`alwaysReplace` 是原始 Block 标志；
 - `team`：数字 id，`-1` 表示未知/隐藏；
 - `rotation`：`0=east, 1=south, 2=west, 3=north`；有建筑时 `outputTile` 是当前朝向的下一格，
   可用于检查传送带/管道是否对着空气、墙或自己；
@@ -554,9 +556,13 @@ insufficient_resources, invalid_placement, out_of_range, success
 ```
 
 `build_plan` 返回 `{status, data:{results[]}, paused, allowPartial, opId?}`；
-逐块结果可能是 `{ok, x, y, block, data}` 或 `{ok:false,error:{code,message}}`。
+逐块结果可能是 `{ok, x, y, block, data, warnings?}` 或
+`{ok:false,error:{code,message}}`。传送带成功项可能有 `warnings[]`，例如
+`output_blocked`、`output_faces_air`、`output_faces_back`、`output_out_of_bounds`；
+warnings 不是失败，但通常意味着带线不会按预期运输。
 `deconstruct` 的 `data` 是 `{targets[], skipped[], requested}`；`targets` 中的
 `{x,y,status}` 只有 `done|pending`，`skipped` 是 `{x,y,reason}`，不是目标状态。
+允许拆除的地形道具由 `Build.validBreak` 和 `allowEnvironmentDeconstruct` 决定。
 
 ## 7. 事件
 

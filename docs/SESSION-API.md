@@ -259,7 +259,8 @@ socket/token，且默认由 `PROBE_ENABLE_DEBUG_OPS` 关闭。`build_plan` 在 s
 ```
 
 `move_to` / `get_area` 的 `x/y` 是世界像素坐标（8 px = 1 tile），`mine`/`build`/
-`configure`/`deconstruct` 的 `x/y` 是 tile 坐标；`get_area.coverage.next` 是 tile 坐标，
+`configure`/`deconstruct` 的 `x/y` 是 tile 坐标；`deconstruct` 也接受游戏允许拆除的静态道具，
+是否允许以 `Build.validBreak` 为准；`get_area.coverage.next` 是 tile 坐标，
 可作为 `cursor:{x,y}` 传回继续分页；session prompt 和 `/tools` 都标了单位。
 
 `research` 使用 `{ "content": "duo" }`（也可用 `block`/`unit`），消耗队伍核心资源并解锁科技；`/content?type=blocks|units` 返回 `researched` 与 `researchCost`，`/context.rules.researched` 是当前研究集合。

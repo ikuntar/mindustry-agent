@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## Unreleased
+
+- Allow `deconstruct` to target static props that the game permits breaking, and expose
+  `blockType`/`blockBreakable`/`destructible`/`alwaysReplace` on `get_tile`.
+- Add `build_plan` conveyor warnings for blocked/air/back-facing outputs.
+- Retain a `lastSnapshot` of wave/resources/cores when `gameOver` is reached.
+
 ## 0.3.1
 
 - Include `get_area` in the paused read-only operation whitelist.

@@ -29,6 +29,7 @@ import mindustry.game.Gamemode;
 import mindustry.game.Team;
 import mindustry.game.Rules;
 import mindustry.ctype.UnlockableContent;
+import mindustry.content.Blocks;
 import mindustry.content.TechTree;
 import mindustry.gen.Building;
 import mindustry.gen.BlockUnitc;
@@ -194,6 +195,7 @@ public class ProbeMod extends Mod {
     private volatile boolean pausedState = false;
     private volatile boolean gameOverState = false;
     private volatile boolean wonState = false;
+    private Jval lastContextSnapshot;
     private final Seq<Jval> eventLog = new Seq<>();
     private volatile long eventSeq = 0;
     private Unit assistant;
@@ -450,6 +452,7 @@ public class ProbeMod extends Mod {
         }
         mapRevision = 0;
         lastMapCaptureTick = -1;
+        lastContextSnapshot = null;
         // A world load always rotates the one-time bootstrap. A live session
         // token intentionally survives; this prevents a stale prompt from
         // being reused after switching maps.
@@ -658,7 +661,7 @@ public class ProbeMod extends Mod {
                     for (Jval target : op.targetTiles.asArray()) {
                         int x = target.get("x").asInt();
                         int y = target.get("y").asInt();
-                        if (Vars.world.tiles.in(x, y) && Vars.world.tile(x, y).build != null) {
+                        if (Vars.world.tiles.in(x, y) && Vars.world.tile(x, y).block() != Blocks.air) {
                             remaining = true;
                             boolean planned = false;
                             for (BuildPlan plan : assistant.plans()) {
@@ -765,6 +768,36 @@ public class ProbeMod extends Mod {
             return "enemy_core_build_radius";
         }
         return "invalid_placement";
+    }
+
+    private Jval beltWarnings(int x, int y, String blockName, int requestedRotation) {
+        if (blockName == null || !blockName.contains("conveyor")) return null;
+        Tile tile = Vars.world.tiles.in(x, y) ? Vars.world.tile(x, y) : null;
+        if (tile == null) return null;
+        int rotation = tile.build != null ? Math.floorMod(tile.build.rotation, 4) : requestedRotation;
+        if (rotation < 0 || rotation > 3) return null;
+        int nextX = x + Geometry.d4x(rotation);
+        int nextY = y + Geometry.d4y(rotation);
+        Jval warnings = Jval.newArray();
+        if (!Vars.world.tiles.in(nextX, nextY)) {
+            warnings.add(Jval.newObject().put("code", "output_out_of_bounds")
+                    .put("message", "conveyor output is outside the map"));
+        } else {
+            Tile next = Vars.world.tile(nextX, nextY);
+            if (next.solid()) {
+                warnings.add(Jval.newObject().put("code", "output_blocked")
+                        .put("message", "conveyor output is blocked by a solid tile")
+                        .put("block", next.block().name));
+            } else if (next.block() == Blocks.air) {
+                warnings.add(Jval.newObject().put("code", "output_faces_air")
+                        .put("message", "conveyor output faces air; the item will stop here"));
+            } else if (next.build != null && next.build.block.name.contains("conveyor")
+                    && Math.floorMod(next.build.rotation, 4) == Math.floorMod(rotation + 2, 4)) {
+                warnings.add(Jval.newObject().put("code", "output_faces_back")
+                        .put("message", "conveyor output faces a belt pointing back at it"));
+            }
+        }
+        return warnings.asArray().isEmpty() ? null : warnings;
     }
 
     private Jval jsonConfig(Object config) {
@@ -967,7 +1000,7 @@ public class ProbeMod extends Mod {
         for (Jval target : op.targetTiles.asArray()) {
             int x = target.get("x").asInt();
             int y = target.get("y").asInt();
-            boolean gone = !Vars.world.tiles.in(x, y) || Vars.world.tile(x, y).build == null;
+            boolean gone = !Vars.world.tiles.in(x, y) || Vars.world.tile(x, y).block() == Blocks.air;
             list.add(Jval.newObject()
                     .put("x", x)
                     .put("y", y)
@@ -1698,11 +1731,19 @@ public class ProbeMod extends Mod {
                 return;
             }
             Team viewer = assistant != null ? assistant.team : tile.team();
-            data.put("block", tile.block().name)
+            Block block = tile.block();
+            data.put("block", block.name)
                     .put("team", tile.team().id)
                     .put("solid", tile.solid())
                     .put("breakable", Build.validBreak(viewer, tile.x, tile.y))
-                    .put("replaceable", tile.block().replaceable)
+                    .put("blockBreakable", block.breakable)
+                    .put("destructible", block.destructible)
+                    .put("alwaysReplace", block.alwaysReplace)
+                    .put("replaceable", block.replaceable)
+                    .put("synthetic", tile.synthetic())
+                    .put("blockType", tile.build != null ? "building"
+                            : block.breakable ? "breakable_prop"
+                            : block.alwaysReplace ? "replaceable_terrain" : "terrain")
                     .put("spawnZone", spawnZoneJson(tile.worldx(), tile.worldy()));
             String queriedBlock = request.getString("block", "");
             if (!queriedBlock.isEmpty()) {
@@ -3009,26 +3050,29 @@ public class ProbeMod extends Mod {
             for (Jval target : targets.asArray()) {
                 int x = target.get("x").asInt();
                 int y = target.get("y").asInt();
-                if (!Vars.world.tiles.in(x, y) || Vars.world.tile(x, y).build == null) {
+                Tile targetTile = Vars.world.tiles.in(x, y) ? Vars.world.tile(x, y) : null;
+                if (targetTile == null || targetTile.block() == Blocks.air) {
                     if (allowPartial) {
                         skipped.add(Jval.newObject().put("x", x).put("y", y)
                                 .put("reason", "building_not_found"));
                         continue;
                     }
-                    replyError(command, "building_not_found", "No building at " + x + "," + y);
+                    replyError(command, "building_not_found", "No building or breakable prop at " + x + "," + y);
                     return;
                 }
                 if (!Build.validBreak(assistant.team, x, y)) {
                     if (allowPartial) {
                         skipped.add(Jval.newObject().put("x", x).put("y", y)
-                                .put("reason", "invalid_deconstruct"));
+                                .put("reason", "invalid_deconstruct")
+                                .put("block", targetTile.block().name));
                         continue;
                     }
-                    replyError(command, "invalid_deconstruct", "Build.validBreak returned false at " + x + "," + y);
+                    replyError(command, "invalid_deconstruct", "Build.validBreak returned false at " + x + "," + y
+                            + " (" + targetTile.block().name + ")");
                     return;
                 }
                 assistant.addBuild(new BuildPlan(x, y));
-                planned.add(Jval.newObject().put("x", x).put("y", y));
+                planned.add(Jval.newObject().put("x", x).put("y", y).put("block", targetTile.block().name));
             }
             if (planned.asArray().isEmpty()) {
                 replyError(command, "building_not_found", "No valid deconstruct targets");
@@ -4793,6 +4837,20 @@ public class ProbeMod extends Mod {
         }
         data.put("bytes", bytes);
 
+        if (!Vars.state.gameOver) {
+            lastContextSnapshot = Jval.newObject()
+                    .put("tick", data.get("tick"))
+                    .put("wave", data.get("wave"))
+                    .put("wavetime", data.get("wavetime"))
+                    .put("resources", data.get("resources"))
+                    .put("resourceCapacity", data.get("resourceCapacity"))
+                    .put("cores", data.get("cores"))
+                    .put("assistant", data.get("assistant"));
+        } else {
+            data.put("finalSnapshot", lastContextSnapshot != null);
+            if (lastContextSnapshot != null) data.put("lastSnapshot", lastContextSnapshot);
+        }
+
         return data;
     }
 
@@ -5781,6 +5839,7 @@ public class ProbeMod extends Mod {
                 int requestedX = placement.getInt("x", Integer.MIN_VALUE);
                 int requestedY = placement.getInt("y", Integer.MIN_VALUE);
                 String requestedBlock = placement.getString("block", "");
+                int requestedRotation = placement.getInt("rotation", -1);
                 Jval buildTimeout = request.get("timeoutTicks");
                 if (buildTimeout != null) build.put("timeoutTicks", buildTimeout);
                 Jval response;
@@ -5797,6 +5856,10 @@ public class ProbeMod extends Mod {
                     response.put("x", requestedX)
                             .put("y", requestedY)
                             .put("block", requestedBlock);
+                    if (response.getBool("ok", false)) {
+                        Jval warnings = beltWarnings(requestedX, requestedY, requestedBlock, requestedRotation);
+                        if (warnings != null) response.put("warnings", warnings);
+                    }
                 }
                 results.add(response);
                 if (response != null && response.getBool("ok", false)) {
@@ -6116,7 +6179,7 @@ public class ProbeMod extends Mod {
                                         .put("y", property("integer").put("description", "tile y")))),
                         Jval.newArray().add("x").add("y").add("radius"))));
         tools.add(tool("get_tile",
-                "Read one tile in tile coordinates, including terrain/floor/liquid, block, team, drop, health, rotation, items, config, and nearby spawn/drop-zone status. Pass block/rotation to preflight placement (canPlace/placeReason).",
+                "Read one tile in tile coordinates, including terrain/floor/liquid, block, team, drop, health, rotation, items, config, and nearby spawn/drop-zone status. `blockType`, `breakable`, `blockBreakable`, `replaceable`, `alwaysReplace` and `destructible` distinguish immutable terrain from removable props/buildings. Pass block/rotation to preflight placement (canPlace/placeReason).",
                 inputSchema(Jval.newObject()
                         .put("x", property("integer").put("description", "tile x"))
                         .put("y", property("integer").put("description", "tile y"))
@@ -6239,7 +6302,7 @@ public class ProbeMod extends Mod {
                         .put("unit", property("string")),
                         Jval.newArray().add("content"))));
         tools.add(tool("deconstruct",
-                "Deconstruct buildings at tile coordinates; returns an opId. With allowPartial=true, missing/unbreakable targets are skipped and reported in data.skipped.",
+                "Deconstruct buildings or game-allowed breakable static props at tile coordinates; returns an opId. With allowPartial=true, missing/unbreakable targets are skipped and reported in data.skipped.",
                 inputSchema(Jval.newObject()
                         .put("targets", Jval.newObject()
                                 .put("type", "array")
