@@ -57,7 +57,7 @@ const first = await call("/session", {
 });
 console.log("session", first.status, Boolean(first.body?.sessionToken), first.body?.guideBytes, first.body?.guideHash?.slice(0, 8), first.body?.guideFallback);
 if (first.status !== 200) process.exit(1);
-if (!first.body?.guideBytes || String(first.body.guideHash ?? "").length !== 64 || first.body.guideFallback !== false) process.exit(1);
+if (!first.body?.guideBytes || String(first.body.guideHash ?? "").length !== 64 || first.body.guideFallback !== false || first.body.guideVersion !== 3 || !first.body.guideTopics?.includes("build")) process.exit(1);
 
 const second = await call("/session", {
   method: "POST",
@@ -347,6 +347,20 @@ console.log(
   guide.headers["x-guide-fallback"],
 );
 if (guide.status !== 200 || guide.headers["x-guide-fallback"] !== "false") process.exit(1);
+const guideEtag = guide.headers["etag"];
+const guideHead = await fetch(`${base}/guide`, { method: "HEAD", headers: auth });
+const guide304 = await fetch(`${base}/guide`, { headers: { ...auth, "if-none-match": guideEtag } });
+const guideRange = await fetch(`${base}/guide`, { headers: { ...auth, range: "bytes=0-9" } });
+const toolsHead = await fetch(`${base}/tools`, { method: "HEAD", headers: auth });
+const badTopic = await fetch(`${base}/guide?topic=nope`, { headers: auth });
+const badContent = await call("/content?type=status", { headers: auth });
+const unitPage = await call("/content?type=units&limit=5", { headers: auth });
+console.log("guide cache", guideEtag, guideHead.status, guide304.status, guideRange.status, guideRange.headers.get("accept-ranges"), toolsHead.status, badTopic.status);
+console.log("content gate", badContent.status, badContent.body?.code, unitPage.body?.counts?.units, unitPage.body?.returned?.units, unitPage.body?.truncated?.units);
+if (!guideEtag || guideHead.status !== 200 || guide304.status !== 304 || guideRange.status !== 200 || guideRange.headers.get("accept-ranges") || toolsHead.status !== 200 || badTopic.status !== 400 || guide.headers["x-guide-version"] !== "3") process.exit(1);
+if (badContent.status !== 400 || badContent.body?.code !== "bad_request" || !unitPage.body?.counts || typeof unitPage.body?.truncated?.units !== "boolean") process.exit(1);
+if (!manifest.body?.schema?.blocks || manifest.body.schema.blocks["core-shard"] === undefined) process.exit(1);
+if (manifest.body.schema.blocks["core-shard"] !== (await call("/content?type=blocks&query=core-shard&limit=1", { headers: auth })).body?.blocks?.[0]?.id) process.exit(1);
 
 const refreshed = await call("/session/data-token", {
   method: "POST",

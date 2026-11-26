@@ -117,6 +117,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -149,6 +150,7 @@ public class ProbeMod extends Mod {
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
     private static final String VERSION = "0.3.0";
+    private static final int GUIDE_VERSION = 3;
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
     private static final int MAX_OPS = 256;
@@ -1470,12 +1472,23 @@ public class ProbeMod extends Mod {
             String type = request.getString("type", "all");
             String query = request.getString("query", "").toLowerCase();
             int limit = Math.max(0, Math.min(500, request.getInt("limit", 0)));
+            if (!"all".equals(type) && !"blocks".equals(type) && !"units".equals(type)
+                    && !"items".equals(type) && !"liquids".equals(type)) {
+                replyError(command, "bad_request",
+                        "Unknown content type '" + type + "'; expected all|blocks|units|items|liquids");
+                return;
+            }
             Jval data = Jval.newObject();
+            Jval counts = Jval.newObject();
+            Jval returned = Jval.newObject();
+            Jval truncated = Jval.newObject();
             if ("all".equals(type) || "blocks".equals(type)) {
                 Jval blocks = Jval.newArray();
+                int total = 0;
                 for (Block block : Vars.content.blocks()) {
                     if (!matches(block.name, query)) continue;
-                    if (limit > 0 && blocks.asArray().size >= limit) break;
+                    total++;
+                    if (limit > 0 && blocks.asArray().size >= limit) continue;
                     Jval requirements = Jval.newArray();
                     for (ItemStack stack : block.requirements) {
                         requirements.add(Jval.newObject()
@@ -1485,6 +1498,7 @@ public class ProbeMod extends Mod {
                     Jval blockResearch = researchJson(block);
                     blocks.add(Jval.newObject()
                             .put("name", block.name)
+                            .put("id", block.id)
                             .put("size", block.size)
                             .put("health", block.health)
                             .put("requirements", requirements)
@@ -1494,14 +1508,24 @@ public class ProbeMod extends Mod {
                             .put("parameters", blockParameters(block)));
                 }
                 data.put("blocks", blocks);
+                counts.put("blocks", total);
+                returned.put("blocks", blocks.asArray().size);
+                truncated.put("blocks", limit > 0 && total > blocks.asArray().size);
             }
             if ("all".equals(type) || "units".equals(type)) {
                 Jval units = Jval.newArray();
+                HashSet<Integer> seenUnits = new HashSet<>();
+                int total = 0;
                 for (UnitType unit : Vars.content.units()) {
                     if (!matches(unit.name, query)) continue;
-                    if (limit > 0 && units.asArray().size >= limit) break;
+                    // Vars.content.units() can expose duplicate references while
+                    // registering the mod's AI variants; id is the stable key.
+                    if (!seenUnits.add((int) unit.id)) continue;
+                    total++;
+                    if (limit > 0 && units.asArray().size >= limit) continue;
                     units.add(Jval.newObject()
                             .put("name", unit.name)
+                            .put("id", unit.id)
                             .put("health", unit.health)
                             .put("flying", unit.flying)
                             .put("playerControllable", unit.playerControllable)
@@ -1511,29 +1535,43 @@ public class ProbeMod extends Mod {
                             .put("parameters", unitParameters(unit)));
                 }
                 data.put("units", units);
+                counts.put("units", total);
+                returned.put("units", units.asArray().size);
+                truncated.put("units", limit > 0 && total > units.asArray().size);
             }
             if ("all".equals(type) || "items".equals(type)) {
                 Jval items = Jval.newArray();
+                int total = 0;
                 for (Item item : Vars.content.items()) {
                     if (!matches(item.name, query)) continue;
-                    if (limit > 0 && items.asArray().size >= limit) break;
+                    total++;
+                    if (limit > 0 && items.asArray().size >= limit) continue;
                     items.add(Jval.newObject().put("name", item.name).put("id", item.id)
                             .put("meta", contentMeta(item))
                             .put("parameters", itemParameters(item)));
                 }
                 data.put("items", items);
+                counts.put("items", total);
+                returned.put("items", items.asArray().size);
+                truncated.put("items", limit > 0 && total > items.asArray().size);
             }
             if ("all".equals(type) || "liquids".equals(type)) {
                 Jval liquids = Jval.newArray();
+                int total = 0;
                 for (Liquid liquid : Vars.content.liquids()) {
                     if (!matches(liquid.name, query)) continue;
-                    if (limit > 0 && liquids.asArray().size >= limit) break;
+                    total++;
+                    if (limit > 0 && liquids.asArray().size >= limit) continue;
                     liquids.add(Jval.newObject().put("name", liquid.name).put("id", liquid.id)
                             .put("meta", contentMeta(liquid))
                             .put("parameters", liquidParameters(liquid)));
                 }
                 data.put("liquids", liquids);
+                counts.put("liquids", total);
+                returned.put("liquids", liquids.asArray().size);
+                truncated.put("liquids", limit > 0 && total > liquids.asArray().size);
             }
+            data.put("counts", counts).put("returned", returned).put("truncated", truncated);
             reply(command, data);
             return;
         }
@@ -4900,7 +4938,7 @@ public class ProbeMod extends Mod {
         try {
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
-            if ("HEAD".equals(method)) {
+            if ("HEAD".equals(method) && !"/guide".equals(path) && !"/tools".equals(path)) {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
@@ -4942,7 +4980,8 @@ public class ProbeMod extends Mod {
                 Jval index = Jval.newObject()
                         .put("apiVersion", 1)
                         .put("modVersion", VERSION)
-                        .put("guideVersion", 2)
+                        .put("guideVersion", GUIDE_VERSION)
+                        .put("guideTopics", Jval.newArray().add("build").add("economy"))
                         .put("control", Jval.newArray()
                                 .add("/session")
                                 .add("/health")
@@ -4970,7 +5009,7 @@ public class ProbeMod extends Mod {
                 return;
             }
             if ("/guide".equals(path)) {
-                if (!"GET".equals(method)) {
+                if (!"GET".equals(method) && !"HEAD".equals(method)) {
                     sendText(exchange, 405, "method not allowed", "text/plain", false);
                     return;
                 }
@@ -4979,10 +5018,18 @@ public class ProbeMod extends Mod {
                     return;
                 }
                 String guide = guideFor(exchange);
+                if (guide == null) {
+                    sendText(exchange, 400, "unknown guide topic; expected build|economy", "text/plain", false);
+                    return;
+                }
+                String hash = guideHash(guide);
+                String etag = "\"sha256:" + hash + "\"";
                 exchange.getResponseHeaders().set("X-Guide-Bytes", String.valueOf(guide.getBytes(StandardCharsets.UTF_8).length));
-                exchange.getResponseHeaders().set("X-Guide-Hash", guideHash(guide));
-                exchange.getResponseHeaders().set("X-Guide-Fallback", String.valueOf(!guideResourceAvailable()));
-                sendText(exchange, 200, guide, "text/markdown; charset=utf-8", false);
+                exchange.getResponseHeaders().set("X-Guide-Hash", hash);
+                exchange.getResponseHeaders().set("X-Guide-Version", String.valueOf(GUIDE_VERSION));
+                exchange.getResponseHeaders().set("X-Guide-Topic", exchange.getRequestURI().getQuery() == null ? "" : exchange.getRequestURI().getQuery());
+                exchange.getResponseHeaders().set("X-Guide-Fallback", String.valueOf(guideFallbackUsed));
+                sendBytes(exchange, 200, guide.getBytes(StandardCharsets.UTF_8), "text/markdown; charset=utf-8", etag, "HEAD".equals(method), false);
                 return;
             }
             if (path.startsWith("/docs/")) {
@@ -5087,7 +5134,7 @@ public class ProbeMod extends Mod {
                 return;
             }
             if ("/tools".equals(path)) {
-                if (!"GET".equals(method)) {
+                if (!"GET".equals(method) && !"HEAD".equals(method)) {
                     sendText(exchange, 405, "method not allowed", "text/plain", false);
                     return;
                 }
@@ -5095,7 +5142,9 @@ public class ProbeMod extends Mod {
                     sendText(exchange, 401, "unauthorized", "text/plain", false);
                     return;
                 }
-                sendText(exchange, 200, toolsJson().toString(Jval.Jformat.plain), "application/json", false);
+                String json = toolsJson().toString(Jval.Jformat.plain);
+                String etag = "\"sha256:" + guideHash(json) + "\"";
+                sendBytes(exchange, 200, json.getBytes(StandardCharsets.UTF_8), "application/json", etag, "HEAD".equals(method), false);
                 return;
             }
             if ("/session".equals(path)) {
@@ -5123,10 +5172,11 @@ public class ProbeMod extends Mod {
                             .put("apiVersion", 1)
                             .put("promptVersion", 1)
                             .put("modVersion", VERSION)
-                            .put("guideVersion", 2)
+                            .put("guideVersion", GUIDE_VERSION)
+                            .put("guideTopics", Jval.newArray().add("build").add("economy"))
                             .put("guideBytes", baseGuide.getBytes(StandardCharsets.UTF_8).length)
                             .put("guideHash", guideHash(baseGuide))
-                            .put("guideFallback", !guideResourceAvailable())
+                            .put("guideFallback", guideFallbackUsed)
                             .put("endpoint", requestDataBaseUrl(exchange).replace("/data", ""))
                             .put("expires", "game-process");
                     sendText(exchange, 200, payload.toString(Jval.Jformat.plain), "application/json", false);
@@ -5834,6 +5884,7 @@ public class ProbeMod extends Mod {
                 if (pair.startsWith("topic=")) topic = pair.substring(6);
             }
         }
+        if (!topic.isEmpty() && !"build".equals(topic) && !"economy".equals(topic)) return null;
         StringBuilder guide = new StringBuilder(gameGuide());
         if ("build".equals(topic)) {
             guide.append(System.lineSeparator())
@@ -5876,9 +5927,15 @@ public class ProbeMod extends Mod {
         }
     }
 
+    private volatile boolean guideFallbackUsed = false;
+
     private String gameGuide() {
         String text = readResourceText("/ai/probe/game-guide.md");
-        if (text != null) return text;
+        if (text != null) {
+            guideFallbackUsed = false;
+            return text;
+        }
+        guideFallbackUsed = true;
         return "# Mindustry Agent session\n\n"
                 + "You control the assistant unit, not the human player.\n"
                 + "Start with GET /context?detail=summary.\n"
@@ -6554,11 +6611,22 @@ public class ProbeMod extends Mod {
     }
 
     private void sendBytes(HttpExchange exchange, int status, byte[] bytes, String contentType, String etag, boolean head) {
+        sendBytes(exchange, status, bytes, contentType, etag, head, true);
+    }
+
+    private void sendBytes(HttpExchange exchange, int status, byte[] bytes, String contentType, String etag, boolean head, boolean acceptRanges) {
         try {
             exchange.getResponseHeaders().set("Content-Type", contentType);
             exchange.getResponseHeaders().set("Cache-Control", "no-store");
-            exchange.getResponseHeaders().set("Accept-Ranges", "bytes");
-            if (etag != null) exchange.getResponseHeaders().set("ETag", etag);
+            if (etag != null) {
+                if (acceptRanges) exchange.getResponseHeaders().set("Accept-Ranges", "bytes");
+                exchange.getResponseHeaders().set("ETag", etag);
+                String ifNoneMatch = exchange.getRequestHeaders().getFirst("If-None-Match");
+                if (ifNoneMatch != null && (ifNoneMatch.equals(etag) || "*".equals(ifNoneMatch))) {
+                    exchange.sendResponseHeaders(304, -1);
+                    return;
+                }
+            }
             if (head) {
                 exchange.sendResponseHeaders(status, -1);
                 return;
@@ -6816,9 +6884,13 @@ public class ProbeMod extends Mod {
         Jval manifest(String baseUrl) {
             Jval items = Jval.newObject();
             Jval dropIds = Jval.newObject();
+            Jval blocks = Jval.newObject();
             for (Item item : Vars.content.items()) {
                 items.put(item.name, item.id);
                 dropIds.put(item.name, item.id + 1);
+            }
+            for (Block block : Vars.content.blocks()) {
+                blocks.put(block.name, block.id);
             }
             return Jval.newObject()
                     .put("ref", "obs://map/rev/" + revision)
@@ -6836,6 +6908,7 @@ public class ProbeMod extends Mod {
                             .put("drop_id", "0=none, item.id+1 otherwise; see dropIds")
                             .put("items", items)
                             .put("dropIds", dropIds)
+                            .put("blocks", blocks)
                             .put("chunkSize", MAP_CHUNK_SIZE))
                     .put("bytes", 16 + width * height * 8)
                     .put("access", Jval.newObject()

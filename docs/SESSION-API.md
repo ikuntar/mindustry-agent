@@ -300,7 +300,9 @@ GET /data/events/{revision}/page/{cursor}
 - 支持 `Content-Length`、`Content-Range`、`ETag`/revision；`If-None-Match` 命中返回 `304`。
 - raw 地图层 `drop_id` 的编码是 `0=无矿，item.id+1=该物品`；例如 copper 的 `drop_id=1`。客户端必须用 manifest 的 `schema.items` / `schema.dropIds` 解码，不能把 `drop_id == item.id` 当作矿。
 - token 用 header，不放 URL。
-- `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`、`modVersion`、`guideBytes`、`guideHash`、`guideFallback`）；`/data` 只接受 data token，控制面只接受 session token。`/guide` 同时返回 `X-Guide-Bytes`、`X-Guide-Hash`、`X-Guide-Fallback` 响应头，agent 可据此判断是否拿到 fallback。
+- `POST /session` 返回 `sessionToken` 和独立的 `dataToken`（以及 `dataBaseUrl`、`modVersion`、`guideVersion`、`guideTopics`、`guideBytes`、`guideHash`、`guideFallback`）；`/data` 只接受 data token，控制面只接受 session token。`/guide` 同时返回 `X-Guide-Bytes`、`X-Guide-Hash`、`X-Guide-Version`、`X-Guide-Topic`、`X-Guide-Fallback` 响应头；`guideHash` 是**基础 guide** 的内容身份，`?topic=` 变体的 hash 以该次响应头为准。
+- `GET/HEAD /guide`：`HEAD` 只取元数据；支持 `ETag: "sha256:..."`，`If-None-Match` 匹配返回 304。`?topic=build|economy` 追加主题，未知 topic 返回 400；不再静默回退基础指南。
+- `GET/HEAD /tools`：支持 HEAD 和同样的 ETag/304；控制面普通 JSON 响应不再声明 `Accept-Ranges`（只有 `/data` 的 Range 响应声明）。
 - `POST /session/data-token` 用 session token 轮换 data token；旧 data token 立即 401。
 - 旧的 `dataToken` 仍可访问本地 `46501`；session server `/data` 使用同一个 data token，不做控制面越权。
 - manifest 的 `access.baseUrl` 按请求 Host 返回，LAN 客户端拿到的是 `http://<host>:47600/data`。

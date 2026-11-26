@@ -4,6 +4,29 @@
 助手需要理解的概念；精确的方块造价、血量、单位参数以 `GET /content` 和
 `GET /capabilities` 的实时结果为准。
 
+## 目录
+
+1. [游戏是什么](#1-游戏是什么)
+2. [地图、坐标和时间](#2-地图坐标和时间)
+3. [队伍、核心和失败条件](#3-队伍核心和失败条件)
+4. [资源与物品](#4-资源与物品)
+5. [采集、输送和物流](#5-采集输送和物流)
+6. [生产链](#6-生产链)
+7. [电力](#7-电力)
+8. [建筑方向、配置和拆除](#8-建筑方向配置和拆除)
+9. [防御和波次](#9-防御和波次)
+10. [单位和单位生产](#10-单位和单位生产)
+11. [战役和区域](#11-战役和区域)
+12. [AI 助手的操作边界](#12-ai-助手的操作边界)
+13. [推荐的开局检查清单](#13-推荐的开局检查清单ground-zero--早期区域)
+14. [需要查实时数据而不是猜的事项](#14-需要查实时数据而不是猜的事项)
+15. [常见误区](#15-常见误区)
+16. [API 返回结构速查](#16-api-返回结构速查)
+17. [从 API 推导物品层级和阶段路线](#17-从-api-推导物品层级和阶段路线)
+
+本指南是游戏知识 primer；字段级 API 契约以 `/docs/API-DATA-CONTRACT.md` 为准，
+不要把本指南的摘要当成独立契约。
+
 ## 1. 游戏是什么
 
 Mindustry 是“工厂自动化 + 塔防 + RTS”的组合。核心循环：
@@ -159,6 +182,17 @@ Serpulo 常见物品：
 - `build_plan` 支持一次提交多个 placement；`rotation` 对传送带、管道、炮塔、
   工厂等有方向意义的方块很重要。它是逐块执行，不是原子事务；失败前已成功的块
   会保留，`allowPartial` 只控制遇到失败是否继续。
+  初始响应是同步结果：
+
+  ```text
+  {status:"queued"|"failed", data:{results:[{ok,x,y,block,data?|error?}]},
+   paused, allowPartial, opId?}
+  ```
+
+  `opId` 只是最后一个子 build 的 opId，plan 级结果只看 `data.results[]`；
+  轮询子 op 只用于等待建造完成，不用于取逐块 `replaced`/`previousBlock`/失败项。
+  `deconstruct` 的初始 `data` 另含 `targets[]`、`skipped[]` 和 `requested`；
+  轮询子 op 同样看不到 plan 级 skipped。
 - 提交前用 `get_tile {x,y,block,rotation}` 检查 `floor`/`liquid`/`solid` 和
   `canPlace`/`placeReason`；会话 build 会检查 buildRange，超出范围返回
   `out_of_range`。同队传送带等可被游戏允许覆盖时，响应会带 `replaced` 和
@@ -419,6 +453,10 @@ boolean/number/string -> 原类型
 
 读回 `get_tile.config` 是名字字符串，不能不经包装直接回写。未知的
 item/liquid/block/unit 返回 `not_found`，不是 `internal_error`。
+
+`/content` 的 blocks/units/items/liquids 每项都有 `id`；units 按 id 去重，name 不保证唯一。
+响应带 `counts`/`returned`/`truncated`；未知 `type` 返回 400 `bad_request`。
+`/data/manifest` 的 `schema.blocks` 与 `/content` 的 block id 互相校验。
 
 ### 16.4 状态和事件
 

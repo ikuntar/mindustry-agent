@@ -24,6 +24,8 @@ jobs:
           cache-dependency-path: mcp-server/package-lock.json
       - run: npm ci
       - run: npm test
+      - name: Check documentation consistency
+        run: node ../scripts/check-docs.mjs
 
   probe-compile:
     name: Probe mod compile

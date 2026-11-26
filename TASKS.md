@@ -178,6 +178,8 @@
 - [ ] 彻底去反射：UnitType 构造期 public 字段克隆是否改为显式复制
 - [x] 正式构建默认关闭 raw debug op（give/spawn_enemy/set_floor 等）；`PROBE_ENABLE_DEBUG_OPS=1` 仅用于测试
 - [x] issue #34 余项：get_area cursor、wave_start enemies、withdraw/deposit 文档、query_area 默认说明已完成
+- [x] Gitea #39/#40：pause get_area、configure item 形状与未知内容 not_found 已修复并回归
+- [x] Gitea #41-#47：content id/计数/未知 type、manifest block 映射、guide HEAD/ETag/topic、build_plan 文档、文档一致性 CI 已处理
 - [x] session prompt 先给出 `GET /tools`，再给动作示例
 - [x] `get_action_result` 带 `paused`；超时失败 `data.code=timeout` 在当前 HEAD 复验通过
 - [x] `/data` `If-None-Match` 返回 304；dataToken TTL/轮换写入 prompt

@@ -7,6 +7,13 @@
 - 把 `get_area` 加入暂停时的只读 op 白名单。
 - sorter 的 `configure` 接受物品名字字符串；未知内容引用返回 `not_found`；
   文档补充 config 写入形状。
+- `/content` 的 blocks/units 增加 `id`，按 id 去重 units；未知 type 返回 400；
+  增加 `counts`/`returned`/`truncated`。
+- `/data` manifest 增加 `schema.blocks`，离线可还原 `block_id`。
+- `/guide` 和 `/tools` 支持 HEAD/ETag/304；控制面不再错误声明 `Accept-Ranges`。
+- guide 版本号升级并暴露 `guideTopics`；未知 `/guide` topic 返回 400。
+- 明确 `build_plan` 初始 `data.results[]` 与最后一个子 `opId` 的区别；增加 guide
+  目录和文档一致性 CI 检查。
 
 ## 0.3.0
 

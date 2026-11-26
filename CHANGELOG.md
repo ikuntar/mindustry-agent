@@ -7,6 +7,14 @@
 - Include `get_area` in the paused read-only operation whitelist.
 - Accept item-name strings for sorter `configure` values, return `not_found` for unknown
   content references, and document the config write shape.
+- Add `id` to `/content` blocks/units, deduplicate unit ids, reject unknown content
+  types, and expose `counts`/`returned`/`truncated`.
+- Add `manifest.schema.blocks` so `/data` `block_id` can be decoded offline.
+- Add `/guide` and `/tools` HEAD/ETag/304 support; remove the false
+  `Accept-Ranges` claim from the control plane.
+- Bump the guide format version and expose `guideTopics`; reject unknown `/guide` topics.
+- Clarify `build_plan` initial `data.results[]` versus the last child `opId`, and add
+  a guide table of contents plus a docs consistency CI check.
 
 ## 0.3.0
 

@@ -363,17 +363,32 @@ boolean/number/string -> 原类型
 ## 4.1 `get_content`（核心数据库的只读镜像）
 
 `GET /content?type=blocks|units|items|liquids&query=&limit=` 返回内容列表。v0.3.0 起
-`blocks[]`/`units[]`/`items[]`/`liquids[]` 的每一项都带 `meta`，来自游戏
+`blocks[]`/`units[]`/`items[]`/`liquids[]` 的每一项都带 `id` 和 `meta`，来自游戏
 `UnlockableContent` / 核心数据库使用的同一套字段：
 
 ```text
-meta: {
+id, name, meta: {
   localizedName, description, details, detailsLocked,
   databaseCategory, databaseTag,
   unlocked, unlockedNowHost, alwaysUnlocked,
   banned, hidden, hideDatabase, credit
 }
 ```
+
+`id` 是内容注册表的稳定数字键；`name` 不保证唯一，尤其是 mod 单位
+`mindustry-agent-ai-alpha/beta/gamma` 可能以同一 name 出现多个注册项。
+`/content` 会按 id 去重 units；需要跨接口引用时优先使用 `(type,id)`。
+`type` 必须是 `all|blocks|units|items|liquids`，未知 type 返回 400 `bad_request`。
+
+响应还带：
+
+```text
+counts:    {blocks,units,items,liquids}   // 过滤后、截断前的总数
+returned:  {blocks,units,items,liquids}
+truncated: {blocks,units,items,liquids}   // limit>0 且 counts>returned
+```
+
+省略 `limit` 返回全量；`limit` 只是采样上限（最大 500），不是分页 cursor。
 
 - `unlocked`：本地/客户端已解锁；`unlockedNowHost`：当前对局实际可用（战役按
   `unlockedHost`，非战役通常为 true）；
@@ -610,6 +625,8 @@ HTTP 层：
 - `query_area`、`get_context.threats`、`get_unit` 过滤当前不可见的敌方单位/建筑。
 - `get_map_manifest` 的地图快照在迷雾下只写入已发现的地形，未发现/不可见的 block/team/solid 为 0；
   manifest 带 `fog` 和 `visibility:"assistant-team"`。
+- `manifest.schema.blocks` 是 `{blockName: blockId}` 映射，和 `items`/`dropIds` 一样用于解码
+  `block_id`；`/content?type=blocks` 的每项也有同一个 `id`。不要用数组下标推断 block id。
 - `power` 只汇总助手队伍；事件按可见性入队。
 - `get_context.rules.fog/staticFog` 可读；不要假设所有模式都有迷雾。
 

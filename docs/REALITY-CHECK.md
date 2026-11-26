@@ -177,6 +177,7 @@ MINDUSTRY_AI_ADAPTER=probe PROBE_PORT=46500 npm run harness
 - 固定出生点（2026-11-24）：新增 `get_spawns`，数据来自 `WaveSpawner.getSpawns()` 的 `Blocks.spawn` 覆盖层；Ground Zero smoke 返回 `count=1`、`showSpawns=false`、`hideSpawns=true`，`spawns` 为数组。Ground Zero 的 minimap 默认隐藏出生点，但 API 在无雾时仍返回固定地图点；有雾时只返回可见点（除非 `hideSpawns=false`）。
 - 出生点建造保护（2026-11-25）：`get_spawns` 增加 `dropZoneRadiusTiles`、`enemyCoreBuildRadius`、`polygonCoreProtection`；`get_tile` 增加 `spawnZone{known,radius,inside,...}`；`placeReason` 在敌方核心保护范围内返回 `enemy_core_build_radius`。session smoke 验证 `enemyCoreBuildRadius=400`、`spawnZone.known=true`。
 - 暂停只读与配置形状（2026-11-26）：`get_area` 加入 `isReadOnlyOp()`，暂停时 session smoke 返回 200；sorter `configure` 接受 `"copper"` 和 `{"item":"copper"}`，未知 `{"item":"nope"}` 返回 404 `not_found`，`get_tile.config` 读回 `copper`/`lead`。
+- Content/guide 缓存（2026-11-26）：`/content` blocks/units 增加 `id` 并按 id 去重 units；未知 type 返回 400；`counts/returned/truncated` 可读。`/data/manifest.schema.blocks` 与 `/content` block id 一致。`/guide` 和 `/tools` 支持 HEAD/ETag/304，控制面不再声明虚假的 `Accept-Ranges`；guideVersion=3、topic 未知返回 400；session smoke 全绿。
 - 默认动作与 bootstrap（2026-11-25）：初始 session prompt 和三个 MCP task prompt 增加显式动作策略；world load 无条件轮换 bootstrap，保留 sessionToken；旧 bootstrap 返回 401，新 bootstrap 在 discovery/游戏内 prompt 中更新。
 - Release prep（2026-11-25）：mod 升到 `0.3.0`；默认 session bind 改为 `127.0.0.1`；测试辅助 op 默认关闭（`PROBE_ENABLE_DEBUG_OPS=1` 才开启）；新增 GPL-3.0、CI、`fetch-mindustry.sh`、`release.sh`。`session-api-smoke` 在 Ground Zero 全绿；关闭 debug 后 raw `give` 返回 `debug_disabled`，`hello` 正常。
 
