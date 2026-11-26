@@ -1,0 +1,35 @@
+# 变更记录
+
+[English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
+
+## 0.3.0
+
+- 项目名、mod id、显示名、discovery 目录和发布产物从 `mindustry-ai`/`ai-probe`
+  改为 `mindustry-agent`/`Mindustry Agent`。
+- 使用旧 mod id 的存档不迁移；这是一次有意的 pre-1.0 破坏性改名。
+- 增加游戏内设置面板：session 端口/LAN 绑定、bootstrap token 刷新、可编辑/可复制的
+  session prompt。
+- 精简生成的 session prompt：只声明 API 是什么和最小握手/使用步骤，详细规则保留在
+  `/guide`。
+- session 端口/bind 解析完成后重写 discovery；此前第一次写入会在世界加载前使用默认端口。
+- world load 时无条件轮换 bootstrap：地图重载后旧 bootstrap 一定失效，存活的
+  sessionToken 继续有效。
+- 在 rules/spawn 数据中暴露 `dropZoneRadius`、`enemyCoreBuildRadius` 和
+  `polygonCoreProtection`；`get_tile` 预检增加 `enemy_core_build_radius`。
+- 在初始和 MCP task prompt 中加入显式动作策略，避免 harness 推断默认移动、索敌或自动开火。
+- 暂时保留 Java 包 `ai.probe` 和仓库目录 `probe-mod`；它们不是面向用户的 mod 身份。
+
+## 0.2.0
+
+- 增加 `get_spawns` 读取固定波次出生点（`WaveSpawner.getSpawns()`），包含 tile/像素坐标、
+  可见性、wave team、drop-zone radius 和迷雾过滤。
+- 增加共享的 `entity`/`unit`/`building` 传感器对象，底层使用
+  `Senseable.sense(LAccess)`；`query_area detail:"full"` 返回相同字段。
+- 增加 `context.logic` 别名和 `get_context.time/second/minute/waveSeconds/server/client/contentCounts`。
+- 增加 `LOGIC-PROCESSOR-GUIDE.md`，并打包进 mod jar 的 `/docs/LOGIC-PROCESSOR-GUIDE.md`。
+- 默认 session bind 改为 loopback（`127.0.0.1`）；局域网访问需要设置
+  `PROBE_SESSION_BIND=0.0.0.0`。
+- 默认关闭测试/调试操作，只有 `PROBE_ENABLE_DEBUG_OPS=1` 才开启；fixture 脚本显式 opt-in。
+- 增加游戏内设置面板：session 端口/LAN 绑定、bootstrap token 刷新、可编辑/可复制
+  session prompt。
+- 增加 GPL-3.0、安全策略、CI、可复现的 Mindustry 下载和本地发布/校验脚本。
