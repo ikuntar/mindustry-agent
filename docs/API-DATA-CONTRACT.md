@@ -1,6 +1,6 @@
 # API 数据契约（实体结构、字段与枚举）
 
-状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.4.1。
+状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.4.2。
 
 用途：给 harness 和 LLM 一个**字段级**参考；实际字段随版本可能增加，客户端按字段名读取，
 不要把 JSON 顺序、数组长度或未列出的字段当成稳定契约。

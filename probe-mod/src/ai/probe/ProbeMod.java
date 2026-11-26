@@ -51,6 +51,7 @@ import mindustry.type.UnitType;
 import mindustry.type.Weapon;
 import mindustry.entities.bullet.BulletType;
 import mindustry.ui.dialogs.BaseDialog;
+import mindustry.ui.dialogs.SettingsMenuDialog.SettingsTable;
 import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.consumers.ConsumePower;
@@ -151,7 +152,7 @@ public class ProbeMod extends Mod {
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.4.1";
+    private static final String VERSION = "0.4.2";
     private static final int GUIDE_VERSION = 3;
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
@@ -6451,12 +6452,12 @@ public class ProbeMod extends Mod {
         if (Vars.headless) return;
         Core.app.post(() -> {
             BaseDialog dialog = new BaseDialog("Mindustry Agent");
-            dialog.cont.add("Copy this prompt into a new harness session:").left().row();
+            float contentWidth = Math.min(Core.graphics.getWidth() - 48f, 560f);
+            dialog.cont.add("Copy this prompt into a new harness session:").left().width(contentWidth).wrap().row();
             Label endpoint = new Label(preferredSessionUrl());
-            dialog.cont.add(endpoint).left().row();
-            dialog.cont.add(sessionPrompt()).wrap().width(560f).left().padTop(8f).row();
-            dialog.buttons.defaults().size(180f, 54f).pad(4f);
-            dialog.buttons.button("Settings", this::showSettingsDialog);
+            dialog.cont.add(endpoint).left().width(contentWidth).wrap().row();
+            dialog.cont.add(sessionPrompt()).wrap().width(contentWidth).left().padTop(8f).row();
+            dialog.buttons.defaults().growX().height(54f).pad(4f);
             dialog.buttons.button("Copy prompt", () -> {
                 Core.app.setClipboardText(sessionPrompt());
                 dialog.hide();
@@ -6469,64 +6470,64 @@ public class ProbeMod extends Mod {
     private void registerSettings() {
         if (Vars.headless || settingsRegistered || Vars.ui == null || Vars.ui.settings == null) return;
         settingsRegistered = true;
-        Vars.ui.settings.addCategory("Mindustry Agent", table -> {
-            table.add("Mindustry Agent session API").left().row();
-            table.add("Change the port, LAN binding, and session prompt in game.").left().wrap().row();
-            table.button("Open Mindustry Agent settings", this::showSettingsDialog).size(280f, 50f).left().row();
-        });
+        Vars.ui.settings.addCategory("Mindustry Agent", table -> buildSettingsTable(table));
     }
 
-    private void showSettingsDialog() {
-        if (Vars.headless) return;
-        Core.app.post(() -> {
-            BaseDialog dialog = new BaseDialog("Mindustry Agent settings");
-            TextField port = new TextField(String.valueOf(sessionPort));
-            CheckBox lan = new CheckBox("Bind to LAN (0.0.0.0)");
-            lan.setChecked("0.0.0.0".equals(sessionBind));
-            Label applyStatus = new Label("");
-            TextArea prompt = new TextArea(sessionPrompt());
-            prompt.setPrefRows(10);
+    /** Build the category contents directly; the settings dialog already provides the scroll pane and menu. */
+    private void buildSettingsTable(SettingsTable table) {
+        TextField port = new TextField(String.valueOf(sessionPort));
+        CheckBox lan = new CheckBox("Bind to LAN (0.0.0.0)");
+        lan.setChecked("0.0.0.0".equals(sessionBind));
+        Label applyStatus = new Label("");
+        TextArea prompt = new TextArea(sessionPrompt());
+        prompt.setPrefRows(8);
+        float contentWidth = Math.max(120f, Math.min(Core.graphics.getWidth() / 1.2f, 680f));
 
-            dialog.cont.add("Session API").left().row();
-            dialog.cont.table(t -> {
-                t.add("Port").left();
-                t.add(port).width(140f).row();
-                t.add(lan).left().colspan(2).row();
-                t.add(applyStatus).colspan(2).left().row();
-                t.button("Apply and rebind", () -> {
-                    int value;
-                    try {
-                        value = Integer.parseInt(port.getText().trim());
-                    } catch (NumberFormatException error) {
-                        applyStatus.setText("Port must be 1024..65535");
-                        return;
-                    }
-                    boolean ok = applySessionSettings(value, lan.isChecked());
-                    applyStatus.setText(ok
-                            ? "Listening on " + sessionBind + ":" + sessionPort
-                            : "Rebind failed; check the game log");
-                    prompt.setText(sessionPrompt());
-                }).size(240f, 50f);
-                t.button("Refresh token", () -> {
-                    sessionBootstrapToken = UUID.randomUUID().toString();
-                    sessionBootstrapUsed = false;
-                    if (EXPOSE_SESSION) writeDiscovery();
-                    applyStatus.setText("Bootstrap token refreshed");
-                    prompt.setText(sessionPrompt());
-                }).size(220f, 50f);
-            }).left().row();
+        table.add("Mindustry Agent session API").left().row();
+        table.add("Change the port, LAN binding, and session prompt here; no nested dialog is needed.")
+                .left().wrap().width(contentWidth).row();
+        table.table(t -> {
+            t.add("Port").left().padRight(8f);
+            t.add(port).width(Math.min(160f, contentWidth * 0.35f)).row();
+            t.add(lan).left().colspan(2).row();
+            t.add(applyStatus).colspan(2).left().row();
+            t.button("Apply and rebind", () -> {
+                int value;
+                try {
+                    value = Integer.parseInt(port.getText().trim());
+                } catch (NumberFormatException error) {
+                    applyStatus.setText("Port must be 1024..65535");
+                    return;
+                }
+                boolean ok = applySessionSettings(value, lan.isChecked());
+                applyStatus.setText(ok
+                        ? "Listening on " + sessionBind + ":" + sessionPort
+                        : "Rebind failed; check the game log");
+                prompt.setText(sessionPrompt());
+            }).growX().height(48f).padTop(6f).row();
+            t.button("Refresh token", () -> {
+                sessionBootstrapToken = UUID.randomUUID().toString();
+                sessionBootstrapUsed = false;
+                if (EXPOSE_SESSION) writeDiscovery();
+                applyStatus.setText("Bootstrap token refreshed");
+                prompt.setText(sessionPrompt());
+            }).growX().height(48f).padTop(6f).row();
+        }).width(contentWidth).left().row();
 
-            dialog.cont.add("Session prompt").left().padTop(8f).row();
-            dialog.cont.add(prompt).width(680f).height(220f).left().row();
-            dialog.buttons.defaults().size(200f, 54f).pad(4f);
-            dialog.buttons.button("Reset prompt", () -> prompt.setText(sessionPrompt()));
-            dialog.buttons.button("Copy prompt", () -> {
+        table.add("Session prompt").left().padTop(8f).row();
+        table.add(prompt).growX().height(Math.min(220f, Math.max(140f, Core.graphics.getHeight() / 3f))).left().row();
+        prompt.update(() -> {
+            float available = table.getWidth() - 24f;
+            if (available > 0f) prompt.setWidth(Math.min(available, 680f));
+        });
+
+        table.table(t -> {
+            t.button("Reset prompt", () -> prompt.setText(sessionPrompt())).growX().height(48f).pad(4f);
+            t.button("Copy prompt", () -> {
                 Core.app.setClipboardText(prompt.getText());
                 applyStatus.setText("Prompt copied");
-            });
-            dialog.buttons.button("Close", dialog::hide);
-            dialog.show();
-        });
+            }).growX().height(48f).pad(4f);
+        }).growX().row();
     }
 
     private synchronized boolean allowDataRequest() {

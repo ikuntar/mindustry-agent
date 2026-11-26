@@ -1,6 +1,6 @@
 # MCP 工具协议
 
-状态：Node MCP 实现说明，2026-11-26，`mindustry-agent` 0.4.1。
+状态：Node MCP 实现说明，2026-11-26，`mindustry-agent` 0.4.2。
 适用范围：`mcp-server/` 对外暴露的 MCP 工具。当前同时有 `MockGameAdapter`（协议测试）和
 `ProbeGameAdapter`（真实 v160.8 + probe mod）；Node MCP 当前 27 个工具，mod session API
 当前 35 个工具。本文描述 Node MCP 的协议和动作语义；session API 的完整工具面见

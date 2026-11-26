@@ -8,7 +8,7 @@
 
 > 状态：技术预览。API 和 mod 可以用于实验，但还不是完成的消费级 mod。暴露到网络前请先阅读[安全说明](#安全)。
 
-当前公开版本：`0.4.1`（[GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.4.1)）。
+当前公开版本：`0.4.2`（[GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.4.2)）。
 
 ## 项目内容
 
@@ -127,7 +127,7 @@ session token 与 raw probe token、只读 data token 是分开的。不要把�
 
 ### 游戏内设置
 
-打开 `Settings -> Mindustry Agent`，或在 session 弹窗中点击 `Settings`：
+直接打开 `Settings -> Mindustry Agent`；控件就在这一级分类里，不再套二级按钮：
 
 - 修改 session 端口（1024–65535），并立即重启 HTTP server
 - 使用 `0.0.0.0` 复选框开启局域网绑定

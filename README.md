@@ -8,7 +8,7 @@ The assistant is a normal in-game body: it can be possessed, respawn from cores,
 
 > Status: technical preview. The API and mod are usable for experiments, but this is not a finished consumer mod. Read [Security](#security) before exposing it to a network.
 
-Current public release: `0.4.1` ([GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.4.1)).
+Current public release: `0.4.2` ([GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.4.2)).
 
 ## What is included
 
@@ -117,7 +117,7 @@ Read [docs/SESSION-API.md](docs/SESSION-API.md) for endpoints and [docs/API-DATA
 
 ### In-game settings
 
-Open `Settings -> Mindustry Agent`, or use the `Settings` button in the session dialog:
+Open `Settings -> Mindustry Agent` directly; the controls are in that first-level category (there is no nested settings button):
 
 - change the session port (1024–65535) and rebind the HTTP server immediately
 - opt into LAN binding with the `0.0.0.0` checkbox

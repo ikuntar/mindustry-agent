@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.2
+
+- Put the mod's port, LAN and session-prompt controls directly in the
+  `Settings -> Mindustry Agent` category instead of an extra "Open settings" button/dialog.
+- Size settings and session-dialog content from `Core.graphics` with `growX` and
+  scroll-safe widths so narrow/mobile windows do not overflow.
+
 ## 0.4.1
 
 - Fix `repair`: it no longer grants direct building healing to Alpha/Beta/Gamma

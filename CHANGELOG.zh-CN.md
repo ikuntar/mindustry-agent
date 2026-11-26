@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.2
+
+- `Settings -> Mindustry Agent` 一级设置页直接显示端口、LAN 和 session prompt，
+  去掉多余的“Open settings”二级按钮/弹窗。
+- 设置页和 session 弹窗按 `Core.graphics`、`growX` 和可滚动宽度自适应，避免窄屏/手机横向溢出。
+
 ## 0.4.1
 
 - 修复 `repair`：Alpha/Beta/Gamma builder body 不再直接给建筑回血；动作现在要求

@@ -1,6 +1,6 @@
 # 单 Mod + 会话 API 设计
 
-状态：0.4.1，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-26）。
+状态：0.4.2，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-26）。
 `probe-mod` 内已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、
 `/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
 `POST /mcp` 的最小 MCP Streamable HTTP 子集；HTTP server 已改成 `ai.probe.http`
@@ -84,8 +84,9 @@ EndpointInfo:
 
 ### 3.1 游戏内设置
 
-客户端非 headless 模式会在 `Settings -> Mindustry Agent` 注册设置入口；世界加载弹窗也有
-`Settings` 按钮。设置面板可以：
+客户端非 headless 模式会在 `Settings -> Mindustry Agent` 注册**一级设置页**，端口、LAN
+和 prompt 控件直接放在该页，不再套一个“Open settings”按钮或二级弹窗。世界加载弹窗只保留
+Copy/Close。设置页的宽度使用 `Core.graphics` 和 `growX` 自适应，避免手机窗口横向溢出。设置页可以：
 
 - 修改 session 端口（1024–65535）并立即停止/重启 HTTP server
 - 勾选 LAN bind（`0.0.0.0`）；默认仍是 loopback
