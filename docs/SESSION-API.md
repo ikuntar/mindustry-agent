@@ -214,6 +214,7 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
 - 玩家可以暂停/恢复；暂停时模拟 tick 不推进
 - AI 也可以显式 `pause`/`resume`，但受 `Rules.pauseDisabled` 约束
 - 除 `resume` 外，`paused=true` 时写动作返回 `game_paused`
+- `gameOver=true` 时写动作返回 `game_over`；本局生命周期结束，需玩家重新加载世界；session 进程和 token 仍在，但不会自动 restart
 - `pause`/`resume` 都必须绕过暂停写门控；否则无法恢复
 - 暂停期间不自动重生，running op 不会补帧
 

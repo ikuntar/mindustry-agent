@@ -187,7 +187,8 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 
 ```text
 { x, y, discovered, hidden,
-  floor, overlay, liquid, drop, dropHardness, block, team, solid,
+  floor, overlay, liquid, drop, dropHardness, block, team,
+  solid, breakable, replaceable,
   canPlace?, placeReason?,
   spawnZone?: { known, radius, radiusTiles, inside, distance, nearestSpawn?, note? },
   health?, maxHealth?, rotation?, efficiency?, progress?, warmup?, enabled?,
@@ -203,10 +204,12 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 
 - `block`：内容名，空气为 `air`，隐藏为 `hidden`；
 - `team`：数字 id，`-1` 表示未知/隐藏；
-- `rotation`：`0=east, 1=south, 2=west, 3=north`；
+- `rotation`：`0=east, 1=south, 2=west, 3=north`；有建筑时 `outputTile` 是当前朝向的下一格，
+  可用于检查传送带/管道是否对着空气、墙或自己；
 - `drop`：该 tile 的矿物名，`""` 表示无矿；`dropHardness` 是该矿硬度（无矿为 -1），
   和钻机 `drillTier` 比较可判断能否开采；
-- `solid`：块是否阻挡地面单位；
+- `solid`：tile 是否阻挡通行（含 floor solid / building checkSolid）；装饰物可能为 true；
+- `breakable`：当前队伍能否用 `Build.validBreak` 拆除；`replaceable`：原地覆盖是否允许；
 - `efficiency`：0..1；`progress/warmup` 是 0..1；`enabled` 是逻辑/开关状态；
 - `items`：`[{item,amount}]`，不是对象；
 - `ammoTotal`：炮塔当前弹药总量。
@@ -519,7 +522,7 @@ POST /actions {"op":"get_tech_tree","flat":true,"offset":0,"limit":500}
 ## 5. `query_area`
 
 ```text
-{ x, y, requestedRadius, radius,
+{ x, y, requestedRadius, requestedRadiusTiles, radius, radiusTiles,
   truncated:{radius,units,buildings},
   units[], buildings[] }
 ```
@@ -600,7 +603,8 @@ HTTP 层：
 504 execution_unknown
 ```
 
-写动作在暂停时返回 `game_paused`；`pause` 被规则禁止时返回 `pause_disabled`；
+写动作在暂停时返回 `game_paused`；本局已结束时写动作返回 `game_over`，
+客户端应停止重试并等待玩家重新加载世界；`pause` 被规则禁止时返回 `pause_disabled`；
 能力不足返回 `cannot_build`/`not_configurable`/`block_locked`；距离错误为 `out_of_range`。
 错误 JSON 形状是 `{code,message}`，但 HTTP 层的 401/403/413 可能是纯文本。
 

@@ -10,6 +10,7 @@ import arc.scene.ui.Label;
 import arc.scene.ui.TextArea;
 import arc.scene.ui.TextField;
 import arc.math.Mathf;
+import arc.math.geom.Geometry;
 import arc.math.geom.Point2;
 import arc.math.geom.Position;
 import arc.math.geom.Vec2;
@@ -576,15 +577,18 @@ public class ProbeMod extends Mod {
                     }
                 }
             } else if ("mine".equals(op.kind)) {
-                boolean gained = assistant.stack != null
-                        && assistant.stack.item == op.mineItem
-                        && assistant.stack.amount > op.mineStartAmount;
-                if (gained) {
+                int mined = assistant.stack != null && assistant.stack.item == op.mineItem
+                        ? assistant.stack.amount - op.mineStartAmount : 0;
+                boolean full = assistant.stack != null
+                        && assistant.stack.amount >= assistant.type.itemCapacity;
+                if (mined > 0 && (op.mineUntilFull ? full : mined >= op.mineTargetAmount)) {
                     op.status = "done";
                     op.progress = 1f;
                     op.data = Jval.newObject()
                             .put("item", assistant.stack.item.name)
-                            .put("amount", assistant.stack.amount - op.mineStartAmount);
+                            .put("amount", mined);
+                    if (op.mineUntilFull) op.data.put("until", "full");
+                    else op.data.put("until", op.mineTargetAmount);
                     assistant.mineTile = null;
                 } else if (op.mineTile != null && assistant.mineTile != op.mineTile) {
                     op.status = "failed";
@@ -1335,6 +1339,11 @@ public class ProbeMod extends Mod {
             return;
         }
 
+        if (Vars.state.isGame() && Vars.state.gameOver && !isReadOnlyOp(op) && !"resume".equals(op)) {
+            replyError(command, "game_over", "The current game is over; reload the map to start a new session");
+            return;
+        }
+
         if (pausedState && !isReadOnlyOp(op) && !"resume".equals(op)) {
             replyError(command, "game_paused", "Game is paused");
             return;
@@ -1688,9 +1697,12 @@ public class ProbeMod extends Mod {
                 reply(command, data);
                 return;
             }
+            Team viewer = assistant != null ? assistant.team : tile.team();
             data.put("block", tile.block().name)
                     .put("team", tile.team().id)
-                    .put("solid", tile.block().solid)
+                    .put("solid", tile.solid())
+                    .put("breakable", Build.validBreak(viewer, tile.x, tile.y))
+                    .put("replaceable", tile.block().replaceable)
                     .put("spawnZone", spawnZoneJson(tile.worldx(), tile.worldy()));
             String queriedBlock = request.getString("block", "");
             if (!queriedBlock.isEmpty()) {
@@ -1708,6 +1720,11 @@ public class ProbeMod extends Mod {
                 data.put("health", tile.build.health);
                 data.put("maxHealth", tile.build.block.health);
                 data.put("rotation", tile.build.rotation);
+                int outputRotation = Math.floorMod(tile.build.rotation, 4);
+                Point2 output = Geometry.d4(outputRotation);
+                data.put("outputTile", Jval.newObject()
+                        .put("x", tile.x + output.x)
+                        .put("y", tile.y + output.y));
                 data.put("efficiency", tile.build.efficiency);
                 data.put("progress", tile.build.progress());
                 data.put("warmup", tile.build.warmup());
@@ -1939,7 +1956,9 @@ public class ProbeMod extends Mod {
                     .put("x", x)
                     .put("y", y)
                     .put("requestedRadius", requestedRadius)
+                    .put("requestedRadiusTiles", requestedRadius / Vars.tilesize)
                     .put("radius", radius)
+                    .put("radiusTiles", radius / Vars.tilesize)
                     .put("truncated", Jval.newObject()
                             .put("radius", requestedRadius > radius)
                             .put("units", unitsTruncated)
@@ -3294,12 +3313,25 @@ public class ProbeMod extends Mod {
             result.mineStartAmount = assistant.stack == null ? 0 : assistant.stack.amount;
             result.mineItem = drop;
             result.mineTile = tile;
+            result.mineTargetAmount = Math.max(1, request.getInt("untilAmount", 1));
+            result.mineUntilFull = request.getBool("untilFull", false);
+            Jval until = request.get("until");
+            if (until != null && until.isObject()) {
+                String untilItem = until.getString("item", "");
+                if (!untilItem.isEmpty() && !untilItem.equals(drop.name)) {
+                    replyError(command, "bad_request", "mine.until.item does not match the tile's drop");
+                    return;
+                }
+                result.mineTargetAmount = Math.max(1, until.getInt("amount", 1));
+            }
             int timeoutTicks = Math.max(0, Math.min(1200, request.getInt("timeoutTicks", 0)));
             if (timeoutTicks > 0) result.timeoutTick = Vars.state.tick + timeoutTicks;
             result.data = Jval.newObject()
                     .put("x", x)
                     .put("y", y)
                     .put("item", drop.name);
+            if (result.mineUntilFull) result.data.put("until", "full");
+            else result.data.put("until", result.mineTargetAmount);
             reply(command, result.toJson());
             return;
         }
@@ -3419,11 +3451,12 @@ public class ProbeMod extends Mod {
                 replyError(command, "out_of_bounds", "Tile is outside the map");
                 return;
             }
+            Tile targetTile = Vars.world.tile(x, y);
             if (!Build.validPlace(block, team, x, y, rotation)) {
-                replyError(command, "invalid_placement", "Build.validPlace returned false");
+                String placeReason = targetTile == null ? "out_of_bounds" : placementReason(targetTile, block, team);
+                replyError(command, "invalid_placement", "Build.validPlace returned false", placeReason);
                 return;
             }
-            Tile targetTile = Vars.world.tile(x, y);
             if (Math.hypot(x * 8f + 4f - assistant.x, y * 8f + 4f - assistant.y) > assistant.type.buildRange) {
                 replyError(command, "out_of_range", "Target tile is outside buildRange");
                 return;
@@ -4566,6 +4599,7 @@ public class ProbeMod extends Mod {
                 .put("teamName", team.name)
                 .put("paused", Vars.state.isPaused())
                 .put("gameOver", Vars.state.gameOver)
+                .put("sessionEnded", Vars.state.gameOver)
                 .put("won", Vars.state.won)
                 .put("captured", sectorCaptured())
                 .put("campaign", Vars.state.isCampaign())
@@ -4705,13 +4739,17 @@ public class ProbeMod extends Mod {
         data.put("unitsTruncated", unitsTruncated);
         data.put("unitCount", team.data().unitCount);
         Jval threats = Jval.newArray();
+        boolean threatsTruncated = false;
+        Jval nearestThreat = null;
+        double nearestThreatDistance = Double.MAX_VALUE;
+        int threatCount = 0;
         if (includeEnemies && assistant != null) {
-            int count = 0;
             for (Unit unit : Groups.unit) {
                 if (unit.team == team || unit.dead) continue;
                 if (!unitVisible(unit)) continue;
-                if (radius > 0 && Math.hypot(unit.x - assistant.x, unit.y - assistant.y) > radius * 8f) continue;
-                threats.add(Jval.newObject()
+                double distance = Math.hypot(unit.x - assistant.x, unit.y - assistant.y);
+                if (radius > 0 && distance > radius * 8f) continue;
+                Jval entry = Jval.newObject()
                         .put("id", unit.id)
                         .put("type", unit.type.name)
                         .put("team", unit.team.id)
@@ -4719,13 +4757,24 @@ public class ProbeMod extends Mod {
                         .put("y", unit.y)
                         .put("health", unit.health)
                         .put("maxHealth", unit.maxHealth)
-                        .put("dead", unit.dead));
-                if (++count >= 16) break;
+                        .put("dead", unit.dead);
+                threats.add(entry);
+                if (distance < nearestThreatDistance) {
+                    nearestThreatDistance = distance;
+                    nearestThreat = entry;
+                }
+                if (++threatCount >= 16) {
+                    threatsTruncated = true;
+                    break;
+                }
             }
         }
-        data.put("threats", threats);
+        data.put("threats", threats).put("threatsTruncated", threatsTruncated)
+                .put("enemyCount", Vars.state.enemies);
+        if (nearestThreat != null) {
+            data.put("nearestThreat", nearestThreat).put("nearestThreatDistance", nearestThreatDistance);
+        }
         int bytes = data.toString(Jval.Jformat.plain).getBytes(StandardCharsets.UTF_8).length;
-        boolean threatsTruncated = false;
         if (maxBytes > 0) {
             while (bytes > maxBytes && units.asArray().size > 0) {
                 units.asArray().remove(units.asArray().size - 1);
@@ -4762,10 +4811,16 @@ public class ProbeMod extends Mod {
     }
 
     private void replyError(Command command, String code, String message) {
+        replyError(command, code, message, null);
+    }
+
+    private void replyError(Command command, String code, String message, String placeReason) {
+        Jval error = Jval.newObject().put("code", code).put("message", message);
+        if (placeReason != null) error.put("placeReason", placeReason);
         command.send(Jval.newObject()
                 .put("id", command.request.getInt("id", 0))
                 .put("ok", false)
-                .put("error", Jval.newObject().put("code", code).put("message", message)));
+                .put("error", error));
     }
 
     private boolean mapSnapshotNeeded(long tick) {
@@ -6120,10 +6175,17 @@ public class ProbeMod extends Mod {
                         .put("timeoutTicks", property("integer").put("maximum", 1200)),
                         Jval.newArray().add("target"))));
         tools.add(tool("mine",
-                "Mine at a tile coordinate; the assistant must be in range.",
+                "Mine at a tile coordinate until at least untilAmount items (default 1) or untilFull; returns an opId.",
                 inputSchema(Jval.newObject()
                         .put("x", property("number"))
                         .put("y", property("number"))
+                        .put("untilAmount", property("integer").put("minimum", 1))
+                        .put("untilFull", property("boolean"))
+                        .put("until", Jval.newObject()
+                                .put("type", "object")
+                                .put("properties", Jval.newObject()
+                                        .put("item", property("string"))
+                                        .put("amount", property("integer").put("minimum", 1))))
                         .put("timeoutTicks", property("integer").put("maximum", 1200)),
                         Jval.newArray().add("x").add("y"))));
         tools.add(tool("build_plan",
@@ -6937,6 +6999,8 @@ public class ProbeMod extends Mod {
         int buildY;
         Block buildBlock;
         int mineStartAmount;
+        int mineTargetAmount;
+        boolean mineUntilFull;
         Item mineItem;
         Tile mineTile;
         int startUnitId;

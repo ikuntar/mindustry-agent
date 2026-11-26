@@ -114,6 +114,10 @@ Serpulo 常见物品：
 - 是否在 `mineRange` 内；
 - 单位是否有采矿能力（`get_capabilities`）。
 
+`mine` 默认只等 1 个物品完成；要连续采集用 `untilAmount:N`、`untilFull:true` 或
+`until:{item,amount}`，仍要轮询 opId；`until.item` 与 tile 的 `drop` 不一致返回
+`bad_request`。
+
 ## 5. 采集、输送和物流
 
 基础物流链：
@@ -196,7 +200,9 @@ Serpulo 常见物品：
 - 提交前用 `get_tile {x,y,block,rotation}` 检查 `floor`/`liquid`/`solid` 和
   `canPlace`/`placeReason`；会话 build 会检查 buildRange，超出范围返回
   `out_of_range`。同队传送带等可被游戏允许覆盖时，响应会带 `replaced` 和
-  `previousBlock`，不要静默覆盖现有产线。
+  `previousBlock`，不要静默覆盖现有产线。失败项会带 `error.placeReason`（如
+  `occupied`/`solid`/`liquid`/`enemy_core_build_radius`/`out_of_range`），不要只
+  根据 `invalid_placement` 猜原因。
 - `get_context.power` 按电力网络返回 `produced`/`needed`/`balance`/`stored`/
   `freeCapacity`/`capacity`/`satisfaction`；`capacity=stored+freeCapacity` 是总容量，
   `freeCapacity=0` 表示电池已满；机器 tile 另外有 `efficiency`/`progress`/`warmup`/`enabled`。
@@ -356,9 +362,12 @@ Serpulo 常见物品：
 
 - tile 坐标：`get_tile`、`build_plan`、`deconstruct`、`configure`、`mine`
 - 世界像素：`get_area`、`query_area`、`move_to`、`attack`；1 tile 默认 8 px
+- `query_area` 的 `radius` 是像素，响应额外给 `radiusTiles`；不要把它当 tile 数
+- `get_area` 的 `x/y` 是像素，返回 tile 的行/列和 `coverage.next` 是 tile 坐标
 - `team` 是数字 id：`0 derelict`、`1 sharded`、`2 crux`、`3 malis`、`4 green`、
   `5 blue`、`6 neoplastic`，其他是 `team#N`；不要假设敌人永远是 2
 - `rotation`：`0 east`、`1 south`、`2 west`、`3 north`
+- 有建筑时 `get_tile.outputTile` 给出当前朝向的下一格；铺带后检查它是否对着空气/墙/自己
 
 单位摘要：
 
@@ -460,9 +469,14 @@ item/liquid/block/unit 返回 `not_found`，不是 `internal_error`。
 
 ### 16.4 状态和事件
 
+`/context` 的 `threats` 只在 `includeEnemies:true` 时填充；还提供 `nearestThreat`、
+`nearestThreatDistance` 和 `enemyCount`，不要只用 `enemies` 计数猜位置。
+
 动作状态：`queued | running | done | failed | cancelled`；常见失败 code：
 `timeout`、`assistant_gone`、`target_gone`、`insufficient_resources`、
-`invalid_placement`、`out_of_range`、`game_paused`、`building_not_found`。
+`invalid_placement`、`out_of_range`、`game_paused`、`game_over`、`building_not_found`。
+`build_plan` 的失败项在 `error.placeReason` 给出 `occupied`/`solid`/`liquid`/`out_of_range`/
+`enemy_core_build_radius` 等原因。
 
 事件信封：`{id,type,tick,timeMs,data{}}`。常用类型：
 
