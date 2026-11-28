@@ -153,7 +153,7 @@ public class ProbeMod extends Mod {
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.4.3";
+    private static final String VERSION = "0.4.4";
     private static final int GUIDE_VERSION = 3;
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
@@ -951,7 +951,24 @@ public class ProbeMod extends Mod {
     }
 
     private Jval buildingJson(Building building) {
-        Jval result = Jval.newObject();
+        Jval result = Jval.newObject()
+                .put("id", building.id)
+                .put("block", building.block.name)
+                .put("name", building.block.localizedName == null ? building.block.name : building.block.localizedName)
+                .put("team", building.team.id)
+                .put("x", tileOf(building.x))
+                .put("y", tileOf(building.y))
+                .put("tileX", building.tile.x)
+                .put("tileY", building.tile.y)
+                .put("size", building.block.size)
+                .put("health", building.health)
+                .put("maxHealth", building.block.health)
+                .put("rotation", building.rotation)
+                .put("solid", building.block.solid || building.checkSolid())
+                .put("dead", !building.isValid());
+        putSensor(result, "rangeTiles", building, LAccess.range);
+        putSensor(result, "flag", building, LAccess.flag);
+        putSensor(result, "breaking", building, LAccess.breaking);
         putSensor(result, "totalItems", building, LAccess.totalItems);
         putSensorObject(result, "firstItem", building, LAccess.firstItem);
         putSensor(result, "totalLiquids", building, LAccess.totalLiquids);
@@ -983,6 +1000,25 @@ public class ProbeMod extends Mod {
         putSensor(result, "buildY", building, LAccess.buildY);
         putSensorObject(result, "config", building, LAccess.config);
         putSensorObject(result, "payloadType", building, LAccess.payloadType);
+        if (building.items != null) {
+            Jval items = Jval.newArray();
+            for (Item item : Vars.content.items()) {
+                int amount = building.items.get(item);
+                if (amount > 0) items.add(Jval.newObject().put("item", item.name).put("amount", amount));
+            }
+            result.put("items", items);
+        }
+        if (building.liquids != null) {
+            Jval liquids = Jval.newArray();
+            for (Liquid liquid : Vars.content.liquids()) {
+                float amount = building.liquids.get(liquid);
+                if (amount > 0f) liquids.add(Jval.newObject()
+                        .put("liquid", liquid.name)
+                        .put("amount", amount)
+                        .put("capacity", building.block.liquidCapacity));
+            }
+            result.put("liquidItems", liquids);
+        }
         return result;
     }
 
@@ -3772,6 +3808,7 @@ public class ProbeMod extends Mod {
                     .put("itemsPerSecond", 60f / Math.max(0.0001f, ticks) * drill.size * drill.size)
                     .put("coverageTiles", drill.size * drill.size)
                     .put("boostMultiplier", drill.liquidBoostIntensity)
+                    .put("liquidBoostIntensity", drill.liquidBoostIntensity)
                     .put("presentInWorld", present));
         }
         return result;
@@ -3834,6 +3871,7 @@ public class ProbeMod extends Mod {
                     .put("hardnessDrillMultiplier", drill.hardnessDrillMultiplier)
                     .put("coverageTiles", drill.size * drill.size)
                     .put("boostMultiplier", drill.liquidBoostIntensity)
+                    .put("liquidBoostIntensity", drill.liquidBoostIntensity)
                     .put("blockedItems", itemNamesJson(drill.blockedItems))
                     .put("drillSpeeds", drillSpeedsJson(drill));
         }
@@ -3893,6 +3931,56 @@ public class ProbeMod extends Mod {
         if (block instanceof Pump pump) {
             result.put("pumpAmountPerTick", pump.pumpAmount)
                     .put("liquidPerSecond", pump.pumpAmount * 60f * pump.size * pump.size);
+        }
+        if (block instanceof UnitFactory factory) {
+            Jval plans = Jval.newArray();
+            for (UnitFactory.UnitPlan plan : factory.plans) {
+                if (plan == null || plan.unit == null) continue;
+                plans.add(Jval.newObject()
+                        .put("unit", plan.unit.name)
+                        .put("timeTicks", plan.time)
+                        .put("timeSeconds", plan.time / 60f)
+                        .put("requirements", stacksJson(plan.requirements)));
+            }
+            if (plans.asArray().size > 0) result.put("plans", plans);
+        }
+        if (block instanceof Reconstructor reconstructor) {
+            result.put("constructTimeTicks", reconstructor.constructTime)
+                    .put("constructTimeSeconds", reconstructor.constructTime / 60f);
+            Jval upgrades = Jval.newArray();
+            for (UnitType[] pair : reconstructor.upgrades) {
+                if (pair == null || pair.length < 2 || pair[0] == null || pair[1] == null) continue;
+                upgrades.add(Jval.newObject().put("from", pair[0].name).put("to", pair[1].name));
+            }
+            if (upgrades.asArray().size > 0) result.put("upgrades", upgrades);
+        }
+        if (block instanceof UnitAssembler assembler) {
+            Jval plans = Jval.newArray();
+            for (UnitAssembler.AssemblerUnitPlan plan : assembler.plans) {
+                if (plan == null || plan.unit == null) continue;
+                Jval requirements = Jval.newArray();
+                if (plan.requirements != null) {
+                    for (PayloadStack stack : plan.requirements) {
+                        if (stack == null || stack.item == null) continue;
+                        requirements.add(Jval.newObject()
+                                .put("item", stack.item.name)
+                                .put("type", stack.item instanceof Liquid ? "liquid" : "item")
+                                .put("amount", stack.amount));
+                    }
+                }
+                plans.add(Jval.newObject()
+                        .put("unit", plan.unit.name)
+                        .put("timeTicks", plan.time)
+                        .put("timeSeconds", plan.time / 60f)
+                        .put("requirements", requirements));
+            }
+            if (plans.asArray().size > 0) result.put("plans", plans);
+        }
+        if (block instanceof CoreBlock core && core.unitType != null) {
+            result.put("unitType", core.unitType.name);
+        }
+        if (block instanceof Wall wall) {
+            result.put("armor", wall.armor);
         }
         return result;
     }

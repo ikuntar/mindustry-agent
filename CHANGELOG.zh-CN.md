@@ -2,6 +2,14 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.4
+
+- `get_tile.building` / `query_area detail:full` 补齐建筑运行时字段：位置、尺寸、
+  血量、旋转、阵营、range、flag、库存逐项列表。
+- `/content` 补齐核心数据库参数：单元工厂 `plans`、`Reconstructor` 升级对、
+  `UnitAssembler` 计划、核心 `unitType`、墙体 `armor`。
+- 钻头增加 `liquidBoostIntensity` 别名；`mechanical-drill` / `laser-drill` 当前为 `1.6`。
+
 ## 0.4.3
 
 - `build` 对已存在的同种方块幂等，返回 `alreadyPresent`；多格动作目标接受任意覆盖格。

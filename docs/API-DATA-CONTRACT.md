@@ -255,7 +255,9 @@ unit: {
 }
 
 building: {
-  totalItems, firstItem?, totalLiquids, totalPower,
+  id, block, team, x, y, tileX, tileY, size,
+  health, maxHealth, rotation, solid, dead, rangeTiles,
+  totalItems, firstItem?, items?, totalLiquids, liquidItems?, totalPower,
   itemCapacity, liquidCapacity, powerCapacity,
   powerNetIn, powerNetOut, powerNetStored, powerNetCapacity,
   ammo, ammoCapacity, currentAmmoType, memoryCapacity,
@@ -265,7 +267,9 @@ building: {
 }
 ```
 
-这些值直接来自 `Senseable.sense(LAccess)` / `senseObject(LAccess)`；不支持该字段的对象会省略字段，而不是返回 0。`unit.x/y`、`mineX/Y`、`buildX/Y`、`shootX/Y` 和 `entity.x/y` 在本 API 中统一为 tile 坐标。`get_tile` 的 legacy `rotation` 是度数，`unit.shooting/boosting/mining/solid/dead` 等是逻辑风格 0/1 数值。
+这些值来自 `Senseable.sense(LAccess)` / `senseObject(LAccess)` 加建筑实例字段；
+`items`/`liquidItems` 给出逐物品/液体库存，`health`/`maxHealth`/`rotation`/`x/y` 等也包含在
+`building` 里。未支持的字段省略；`get_tile` 顶层仍保留常用字段。`unit.x/y`、`mineX/Y`、`buildX/Y`、`shootX/Y` 和 `entity.x/y` 在本 API 中统一为 tile 坐标。`get_tile` 的 legacy `rotation` 是度数，`unit.shooting/boosting/mining/solid/dead` 等是逻辑风格 0/1 数值。
 不暴露 `@client*`、`@links`、`@ipt` 或任意 settable 字段；所有读取仍受 team/fog 过滤。
 
 ### 4.0.1 `get_spawns`（固定波次出生点）
@@ -453,7 +457,8 @@ parameters: {
   drillTier?: number, drillTimeTicks?: number, hardnessDrillMultiplier?: number,
   blockedItems?: string[],
   drillSpeeds?: [{floor,item,hardness,drillTier,drillTimeTicks,speedMultiplier,
-                  secondsPerItem,itemsPerSecond,coverageTiles,boostMultiplier,presentInWorld}],
+                  secondsPerItem,itemsPerSecond,coverageTiles,boostMultiplier,
+                  liquidBoostIntensity,presentInWorld}],
   pumpAmountPerTick?: number, liquidPerSecond?: number, liquidSource?: string,
   turret?: { maxAmmo, ammoPerShot, reloadTicks, range, minRange, targetAir, targetGround,
              ammoTypes?: [{item?,liquid?,ammoMultiplier,ammoPerItem,reloadMultiplier,rangeChange,
@@ -465,7 +470,10 @@ parameters: {
   drillTimeTicks?, hardnessDrillMultiplier?,
   beamRangeTiles?,
   laserRangeTiles?,
-  pumpAmountPerTick?, liquidPerSecond?
+  pumpAmountPerTick?, liquidPerSecond?,
+  plans?: [{unit,timeTicks,timeSeconds,requirements[]}],
+  upgrades?: [{from,to}], constructTimeTicks?, constructTimeSeconds?,
+  unitType?, armor?
 }
 ```
 
@@ -475,6 +483,11 @@ parameters: {
 - `outputs` 是 `[{item,amount}]`；`drillTimeTicks` 不等于实际秒数，实际钻孔速度还受
   `hardnessDrillMultiplier`、矿物硬度、覆盖格数、液体/加速影响。
 - `pumpAmountPerTick` / `liquidPerSecond` 只对泵类方块出现。
+- `boostMultiplier` / `liquidBoostIntensity` 是钻头的液体增益上限；实际每秒产量
+  还要乘当前覆盖矿格数和 `optionalEfficiency`，所以不能把 `boostMultiplier` 直接
+  当作最终产量倍率。
+- `plans` 对 `UnitFactory`/`UnitAssembler` 是生产方案；`upgrades` 对
+  `Reconstructor` 是升级对。
 
 单位：
 

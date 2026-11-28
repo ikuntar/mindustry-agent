@@ -8,7 +8,7 @@ The assistant is a normal in-game body: it can be possessed, respawn from cores,
 
 > Status: technical preview. The API and mod are usable for experiments, but this is not a finished consumer mod. Read [Security](#security) before exposing it to a network.
 
-Current public release: `0.4.3` ([GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.4.3)).
+Current public release: `0.4.4` ([GitHub Release](https://github.com/ikuntar/mindustry-agent/releases/tag/v0.4.4)).
 
 ## What is included
 

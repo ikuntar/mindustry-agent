@@ -2,6 +2,15 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.4
+
+- `get_tile.building` / `query_area detail:full` 补齐建筑运行时字段：位置、尺寸、
+  血量、旋转、阵营、range、flag、库存逐项列表；`get_tile.items` 仍保留汇总。
+- `/content` 补齐核心数据库参数：单元工厂 `plans`（单位、时间、需求）、
+  `Reconstructor` 升级对、`UnitAssembler` 计划、核心 `unitType`、墙体 `armor`。
+- 钻头增加 `liquidBoostIntensity` 别名；`mechanical-drill` / `laser-drill` 当前均为
+  `1.6`，不再只有笼统的 `boostMultiplier`。
+
 ## 0.4.3
 
 - Make `build` idempotent for an already-present same block and add
