@@ -2,6 +2,16 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.3
+
+- `build` 对已存在的同种方块幂等，返回 `alreadyPresent`；多格动作目标接受任意覆盖格。
+- 支持顶层 `withdraw`/`deposit` 目标，并拆分 `target_not_found`、`item_not_found`、
+  `hand_busy`、`hand_full`、`item_not_carried`、`receiver_rejects`、`out_of_range`。
+- 增加 `liquidItems`、`powerNetId`、`drillable`、钻机覆盖/液体加成、炮塔射程、
+  单位 armor、武器 damage 和传送带带速。
+- 支持 `bridge-conveyor.length`；增加 `ore_too_hard`；未阻塞科技不再返回
+  `blockedReason`；修正 guide 的维修/撤退和事件分页说明。
+
 ## 0.4.2
 
 - `Settings -> Mindustry Agent` 一级设置页直接显示端口、LAN 和 session prompt，

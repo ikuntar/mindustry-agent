@@ -2,6 +2,18 @@
 
 [English](CHANGELOG.md) | [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.3
+
+- Make `build` idempotent for an already-present same block and add
+  `alreadyPresent`; accept action targets on any tile covered by a multi-tile building.
+- Support top-level `withdraw`/`deposit` targets and split error codes:
+  `target_not_found`, `item_not_found`, `hand_busy`, `hand_full`, `item_not_carried`,
+  `receiver_rejects`, `out_of_range`.
+- Add `liquidItems`, `powerNetId`, `drillable`, `drillSpeeds.coverageTiles/boostMultiplier`,
+  turret `range/minRange`, unit `armor`, weapon `damage` and conveyor `beltSpeed`.
+- Support `bridge-conveyor.length`; expose `ore_too_hard`; omit `blockedReason` for
+  unblocked tech nodes; fix guide's repair/withdraw conflict and event pagination limits.
+
 ## 0.4.2
 
 - Put the mod's port, LAN and session-prompt controls directly in the

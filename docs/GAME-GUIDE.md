@@ -220,6 +220,8 @@ Serpulo 常见物品：
   Mindustry 只有带治疗武器（`UnitType.canHeal`）的身体才有 repair 能力；Serpulo 的
   玩家 builder body 没有这个能力，`repair` 会返回 `cannot_repair`。
   修复受损建筑应拆掉重建；需要治疗时用 `command_units` 指挥有治疗能力的同队单位。
+- 液体库存看 `get_tile.liquidItems`（不是地形 `liquid`）；泵和用液建筑相邻即可直连，
+  不需要额外导管，布局前读双方液体容量/消耗。
 
 ## 9. 防御和波次
 
@@ -335,7 +337,9 @@ Serpulo 常见物品：
 5. 建传送带 -> 核心，先保证资源回流。
 6. 建石墨/硅等基础设施，再考虑炮塔和电力。
 7. 每完成一小步读一次 `get_context`，不要盲目连续建造几十个方块。
-8. 有敌人时先确认炮塔弹药和核心血量；必要时撤退/维修。
+8. 有敌人时先确认炮塔弹药和核心血量；本版助手没有免费维修能力（Alpha/Beta/Gamma
+   `canHeal=false`），塔血量低于 35% 时可用 `deconstruct`+`build` 半价重建；助手不会
+   自动撤退，低血时必须显式 `move_to`。
 9. 生产扩张前检查 `resourcesFull`：核心满了再加钻机没有意义。
 
 ## 14. 需要查实时数据而不是猜的事项
@@ -490,8 +494,10 @@ item/liquid/block/unit 返回 `not_found`，不是 `internal_error`。
 `timeout`、`assistant_gone`、`target_gone`、`insufficient_resources`、
 `invalid_placement`、`out_of_range`、`game_paused`、`game_over`、`building_not_found`、
 `cannot_repair`。
-`build_plan` 的失败项在 `error.placeReason` 给出 `occupied`/`solid`/`liquid`/`out_of_range`/
-`enemy_core_build_radius` 等原因；传送带成功项还可能带 `warnings[]`。
+`build_plan` 的失败项在 `error.placeReason` 给出 `occupied`/`solid`/`liquid`/`ore_too_hard`/
+`out_of_range`/`enemy_core_build_radius` 等原因；传送带成功项还可能带 `warnings[]`。
+目标格已有同种方块会返回 `alreadyPresent:true` 的成功，不要重复拆建。
+`bridge-conveyor` 的 placement 可带 `length`（tile）；普通 `rotation` 对桥的跨接由 length 决定。
 
 事件信封：`{id,type,tick,timeMs,data{}}`。常用类型：
 

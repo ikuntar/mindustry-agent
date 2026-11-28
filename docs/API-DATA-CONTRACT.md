@@ -1,6 +1,6 @@
 # API 数据契约（实体结构、字段与枚举）
 
-状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.4.2。
+状态：2026-11-26，Mindustry v160.8 / Mindustry Agent 0.4.3。
 
 用途：给 harness 和 LLM 一个**字段级**参考；实际字段随版本可能增加，客户端按字段名读取，
 不要把 JSON 顺序、数组长度或未列出的字段当成稳定契约。
@@ -188,12 +188,12 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
 
 ```text
 { x, y, discovered, hidden,
-  floor, overlay, liquid, drop, dropHardness, block, team,
+  floor, overlay, liquid, drop, dropHardness, drillable, block, team,
   solid, breakable, replaceable,
   canPlace?, placeReason?,
   spawnZone?: { known, radius, inside, distance, nearestSpawn?, note? },
   health?, maxHealth?, rotation?, efficiency?, progress?, warmup?, enabled?,
-  items?, ammoTotal?, config?
+  items?, liquidItems?: [{liquid,amount,capacity}], ammoTotal?, powerNetId?, config?
 }
 ```
 
@@ -208,14 +208,19 @@ campaign 占领不一定置 `won=true`，优先看 `captured` / `sector.wasCaptu
   `blockBreakable`/`destructible`/`alwaysReplace` 是原始 Block 标志；
 - `team`：数字 id，`-1` 表示未知/隐藏；
 - `rotation`：`0=east, 1=south, 2=west, 3=north`；有建筑时 `outputTile` 是当前朝向的下一格，
+  多格建筑 `entity.x/y` 是中心，`tileX/tileY` 是原点；动作目标接受任意覆盖格，`build_plan` 的 placement 用原点；
   可用于检查传送带/管道是否对着空气、墙或自己；
-- `drop`：该 tile 的矿物名，`""` 表示无矿；`dropHardness` 是该矿硬度（无矿为 -1），
-  和钻机 `drillTier` 比较可判断能否开采；
+- `drop`：该 tile 的**地板矿 overlay**，与 `block` 占用无关；`""` 表示无矿；
+  `dropHardness` 是该矿硬度（无矿为 -1）。可钻位置需要同时满足 `drillable=true`
+  （`block==air && drop!=""`）和钻机 tier ≥ hardness；`get_area` 也有该字段；
 - `solid`：tile 是否阻挡通行（含 floor solid / building checkSolid）；装饰物可能为 true；
+- `drillable`：`block==air && drop!=""` 的地板矿 overlay；还要满足钻机 tier ≥ `dropHardness`；
 - `breakable`：当前队伍能否用 `Build.validBreak` 拆除；`replaceable`：原地覆盖是否允许；
 - `efficiency`：0..1；`progress/warmup` 是 0..1；`enabled` 是逻辑/开关状态；
-- `items`：`[{item,amount}]`，不是对象；
-- `ammoTotal`：炮塔当前弹药总量。
+- `items`：`[{item,amount}]`，不是对象；`liquidItems` 是建筑液体库存，`capacity` 是该建筑液体总容量；
+- `powerNetId`：有电力网络的建筑返回网络 id，可与 `/context.power[].id` 对照；
+- `ammoTotal`：炮塔当前弹药总量，单位是折算后的**发数**，不是 item 数量；
+  `ammoPerItem` 见 `/content` 的炮塔参数。`itemCapacity` 是物品格数，两者不能直接互换。
 
 ### 4.0 `entity` / `unit` / `building` 传感器
 
@@ -331,13 +336,18 @@ building: {
 | `Object[]` | 递归数组 |
 | 未知类型 | `{type:"完整类名", value:"摘要"}` |
 
+`drillSpeeds[].itemsPerSecond` 是**满覆盖**速率：`60 / (drillTime + hardnessDrillMultiplier * hardness) * coverageTiles`；
+实际矿格数为 `covered` 时约为 `itemsPerSecond * covered / coverageTiles`，液体 booster 再乘
+`boostMultiplier`。`coverageTiles` 默认 `size*size`。
+
 `get_config_schema` 返回：
 
 ```text
 { block, configurable, configReadable, fields[], plans[], note }
 ```
 
-字段类型：`item`、`string`、`boolean`、`integer`、`array`。`power-node` 的 `links`
+字段类型：`item`、`string`、`boolean`、`integer`、`array`。`unloader` 的 `value`
+是 `item`，写入用 `{"item":"coal"}` 或裸名字；`sorter` 也用 item。`power-node` 的 `links`
 是只读 `[{x,y}]`；`UnitFactory` 的 `plans[]` 是:
 
 ```text
@@ -436,18 +446,19 @@ parameters: {
   role: "drill|pump|turret|core|unit-factory|factory|power|conveyor|wall|logic|block",
   functional: { hasItems, hasLiquids, hasPower, consumesPower, outputsPower,
                 requiresOre, requiresLiquidFloor, configurable },
-  buildTimeTicks, itemCapacity,
+  buildTimeTicks, itemCapacity, coverageTiles?, boostMultiplier?,
   inputs?: [{item?,liquid?,amount,amountPerSecond?,optional,booster}], // item amount=配方用量, liquid amount=每 tick 用量
   outputs?: [{item,amount,chance?,weight?}], // chance/weight 目前用于 Separator 类随机产出
   liquidOutputs?: [{liquid,amount,perSecond}],
   drillTier?: number, drillTimeTicks?: number, hardnessDrillMultiplier?: number,
   blockedItems?: string[],
   drillSpeeds?: [{floor,item,hardness,drillTier,drillTimeTicks,speedMultiplier,
-                  secondsPerItem,itemsPerSecond,presentInWorld}],
+                  secondsPerItem,itemsPerSecond,coverageTiles,boostMultiplier,presentInWorld}],
   pumpAmountPerTick?: number, liquidPerSecond?: number, liquidSource?: string,
-  turret?: { maxAmmo, ammoPerShot, reloadTicks, targetAir, targetGround,
-             ammoTypes?: [{item?,liquid?,ammoMultiplier,reloadMultiplier,rangeChange,
+  turret?: { maxAmmo, ammoPerShot, reloadTicks, range, minRange, targetAir, targetGround,
+             ammoTypes?: [{item?,liquid?,ammoMultiplier,ammoPerItem,reloadMultiplier,rangeChange,
                            damage,splashDamage,lifetime,speed,collidesAir,collidesGround,bullet}] },
+  beltSpeed?, itemsPerSecond?; // conveyor 带速
   power?: { usagePerTick, usePerSecond, capacity, buffered },
   powerProductionPerSecond?,
   craftTimeTicks?, craftsPerSecond?,
@@ -470,7 +481,7 @@ parameters: {
 ```text
 parameters: {
   speed, buildSpeed, mineSpeed, mineTier, mineRange,
-  itemCapacity, payloadCapacity, canBoost,
+  itemCapacity, payloadCapacity, canBoost, armor, health, weapons[].damage,
   weapons: [{
     name, reloadTicks, display, controllable, rotate, inaccuracy, shootCone,
     range, shotsPerSecond, dpsEstimate,
@@ -556,12 +567,16 @@ insufficient_resources, invalid_placement, out_of_range, success
 
 `build_plan` 返回 `{status, data:{results[]}, paused, allowPartial, opId?}`；
 逐块结果可能是 `{ok, x, y, block, data, warnings?}` 或
-`{ok:false,error:{code,message}}`。传送带成功项可能有 `warnings[]`，例如
+`{ok:false,error:{code,message}}`。目标格已有同种方块会返回
+`{ok:true,built:true,alreadyPresent:true}`，这是幂等成功，不是重复建造失败。
+`ItemBridge`（bridge-conveyor）可用 `length`（tile）生成跨格配置；回读 `get_tile.config`。传送带成功项可能有 `warnings[]`，例如
 `output_blocked`、`output_faces_air`、`output_faces_back`、`output_out_of_bounds`；
 warnings 不是失败，但通常意味着带线不会按预期运输。
 `deconstruct` 的 `data` 是 `{targets[], skipped[], requested}`；`targets` 中的
 `{x,y,status}` 只有 `done|pending`，`skipped` 是 `{x,y,reason}`，不是目标状态。
 允许拆除的地形道具由 `Build.validBreak` 和 `allowEnvironmentDeconstruct` 决定。
+多格建筑的动作目标接受 origin、中心或任意覆盖格；`query_area`/`entity` 的 `x/y`
+是中心（可能是小数 tile），`tileX/tileY` 是原点；`build_plan` placement 用原点。
 
 ## 7. 事件
 
@@ -611,6 +626,8 @@ HTTP 层：
 写动作在暂停时返回 `game_paused`；本局已结束时写动作返回 `game_over`，
 客户端应停止重试并等待玩家重新加载世界；`pause` 被规则禁止时返回 `pause_disabled`；
 能力不足返回 `cannot_build`/`cannot_repair`/`not_configurable`/`block_locked`；`repair` 只在 `UnitType.canHeal` 身体上可用，Alpha/Beta/Gamma builder body 返回 `cannot_repair`；距离错误为 `out_of_range`。
+`withdraw` 细分为 `target_not_found`/`item_not_found`/`hand_busy`/`hand_full`/`out_of_range`；
+`deposit` 细分为 `target_not_found`/`item_not_carried`/`receiver_rejects`/`out_of_range`。
 错误 JSON 形状是 `{code,message}`，但 HTTP 层的 401/403/413 可能是纯文本。
 
 ## 9. 枚举速查

@@ -1,6 +1,6 @@
 # 单 Mod + 会话 API 设计
 
-状态：0.4.2，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-26）。
+状态：0.4.3，Phase 2 MVP + Phase 3 弹窗验收 + Phase 4 数据面 + Phase 5 MCP + Phase 6 前置（2026-11-26）。
 `probe-mod` 内已加入 `/session`、`/context`、`/actions`、`/actions/{opId}`、`/guide`、
 `/tools`、LAN 绑定、客户端 session prompt 弹窗、session server `/data`，以及
 `POST /mcp` 的最小 MCP Streamable HTTP 子集；HTTP server 已改成 `ai.probe.http`
@@ -204,6 +204,7 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
 - `timeoutMs` 上限 30000ms；客户端 socket 超时应大于它
 - 命令队列超时：游戏线程未取到命令时返回 `503 not_executed`（可安全重试）；已开始执行但 5s 未完成返回 `504 execution_unknown`（不可假定未执行，重试必须带同一 `idempotencyKey`）；未开始的命令标记 cancelled，不会再执行。
 - `types` 用逗号分隔；省略表示不过滤
+- `limit` 上限 **100**；超过按 100 返回。必须用响应 `next` 继续翻页，不能只看一次响应就认为事件已读完
 - 活跃 op 硬上限 256；已结束 op 自动淘汰，全部活跃时新写动作返回 `503 {code:"op_capacity"}`，不会无上限增长。
 - `/actions` 接受可选 `idempotencyKey`（1..128 字符，按 session token 隔离，LRU 256）：重复 key 返回第一次结果/opId，不再执行动作。
 - `get_action_result.waitMs` 会轮询 op 状态，最多 5s；`build`/`deconstruct`/`repair` 默认 1200 tick 超时，显式 `timeoutTicks=0` 可关闭。
@@ -235,7 +236,8 @@ GET  /content?type=blocks|items|units|liquids&query=&limit=
 - `get_tech_tree {content?,flat?,offset?,limit?}`：只读 parent/children、depth、planet/sector、
   成本、objectives、researched、blockedReason；研究仍是逐节点 `research`，无队列。
   `flat=true` 返回 `TechTree.all` 的全量切片，按 `offset/nextOffset` 分页，`limit` 上限
-  500；根分支查询仍可传 `content`。`content` 只接受有 TechNode 的方块/单位；物品没有
+  500；根分支查询仍可传 `content`。`blockedReason` 只在真的被阻塞时出现；
+  已解锁/可研究节点省略该字段，`researched` 与 `unlocked` 不是同一状态。`content` 只接受有 TechNode 的方块/单位；物品没有
   独立 tech node，物品层级要用 `parameters.inputs/outputs` 和产出方块的 tech depth 推导。
 
 会话 `/actions` 只允许 `/tools` 暴露的 35 个名字；内部调试 op 只走本地 probe

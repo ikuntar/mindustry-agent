@@ -61,6 +61,7 @@ import mindustry.world.consumers.ConsumeLiquid;
 import mindustry.world.blocks.power.PowerGenerator;
 import mindustry.world.blocks.power.PowerNode;
 import mindustry.world.blocks.distribution.Conveyor;
+import mindustry.world.blocks.distribution.ItemBridge;
 import mindustry.world.blocks.defense.Wall;
 import mindustry.world.blocks.defense.turrets.ItemTurret;
 import mindustry.world.blocks.defense.turrets.LiquidTurret;
@@ -152,7 +153,7 @@ public class ProbeMod extends Mod {
     private static final boolean DEBUG_OPS = "1".equals(System.getenv("PROBE_ENABLE_DEBUG_OPS"));
     private static final int MAP_CHUNK_SIZE = 32;
     private static final int PROTOCOL_VERSION = 1;
-    private static final String VERSION = "0.4.2";
+    private static final String VERSION = "0.4.3";
     private static final int GUIDE_VERSION = 3;
     // Unit.flag is persisted in saves; identify assistant home bodies across save/load.
     private static final double ASSISTANT_FLAG = 0x5A1D0C0FFEEL;
@@ -762,6 +763,10 @@ public class ProbeMod extends Mod {
         if (tile.floor() != null && tile.floor().liquidDrop != null) return "liquid";
         if (tile.build != null) return tile.block() == block ? "replaceable" : "occupied";
         if (tile.block() != null && !tile.block().name.equals("air")) return tile.block().solid ? "solid" : "occupied";
+        if (block instanceof Drill drill) {
+            Item drop = tile.drop();
+            if (drop != null && drop.hardness > drill.tier) return "ore_too_hard";
+        }
         if (team != null && Vars.state.teams.anyEnemyCoresWithinBuildRadius(team, tile.worldx(), tile.worldy())) {
             return "enemy_core_build_radius";
         }
@@ -1627,8 +1632,10 @@ public class ProbeMod extends Mod {
                 for (Item item : Vars.content.items()) values.add(item.name);
                 fields.add(Jval.newObject().put("key", "value").put("type", "item").put("values", values));
             } else if ("unloader".equals(block.name)) {
-                fields.add(Jval.newObject().put("key", "value").put("type", "string")
-                        .put("values", Jval.newArray().add("north").add("east").add("south").add("west")));
+                Jval values = Jval.newArray();
+                for (Item item : Vars.content.items()) values.add(item.name);
+                fields.add(Jval.newObject().put("key", "value").put("type", "item").put("values", values)
+                        .put("writeShape", "{\"item\":\"<name>\"} or a plain item name"));
             } else if ("switch".equals(block.name)) {
                 fields.add(Jval.newObject().put("key", "enabled").put("type", "boolean"));
             } else if ("message".equals(block.name)) {
@@ -1716,11 +1723,13 @@ public class ProbeMod extends Mod {
                 reply(command, data);
                 return;
             }
+            Item tileDrop = tile.drop();
             data.put("floor", tile.floor().name)
                     .put("overlay", tile.overlay().name)
                     .put("liquid", tile.floor().liquidDrop == null ? "" : tile.floor().liquidDrop.name)
-                    .put("drop", tile.drop() == null ? "" : tile.drop().name)
-                    .put("dropHardness", tile.drop() == null ? -1 : tile.drop().hardness);
+                    .put("drop", tileDrop == null ? "" : tileDrop.name)
+                    .put("dropHardness", tileDrop == null ? -1 : tileDrop.hardness)
+                    .put("drillable", tile.block() == Blocks.air && tileDrop != null);
             if (!visible) {
                 data.put("block", "hidden").put("team", -1).put("solid", false);
                 reply(command, data);
@@ -1757,6 +1766,9 @@ public class ProbeMod extends Mod {
                 data.put("health", tile.build.health);
                 data.put("maxHealth", tile.build.block.health);
                 data.put("rotation", tile.build.rotation);
+                if (tile.build.power != null && tile.build.power.graph != null) {
+                    data.put("powerNetId", tile.build.power.graph.getID());
+                }
                 int outputRotation = Math.floorMod(tile.build.rotation, 4);
                 Point2 output = Geometry.d4(outputRotation);
                 data.put("outputTile", Jval.newObject()
@@ -1775,6 +1787,19 @@ public class ProbeMod extends Mod {
                         }
                     }
                     data.put("items", items);
+                }
+                if (tile.build.liquids != null) {
+                    Jval liquidItems = Jval.newArray();
+                    for (Liquid liquid : Vars.content.liquids()) {
+                        float amount = tile.build.liquids.get(liquid);
+                        if (amount > 0f) {
+                            liquidItems.add(Jval.newObject()
+                                    .put("liquid", liquid.name)
+                                    .put("amount", amount)
+                                    .put("capacity", tile.build.block.liquidCapacity));
+                        }
+                    }
+                    data.put("liquidItems", liquidItems);
                 }
                 if (tile.build instanceof Turret.TurretBuild turret) {
                     data.put("ammoTotal", turret.totalAmmo);
@@ -2061,7 +2086,8 @@ public class ProbeMod extends Mod {
                             .put("overlay", tile.overlay().name)
                             .put("liquid", tile.floor().liquidDrop == null ? "" : tile.floor().liquidDrop.name)
                             .put("drop", drop == null ? "" : drop.name)
-                            .put("dropHardness", drop == null ? -1 : drop.hardness);
+                            .put("dropHardness", drop == null ? -1 : drop.hardness)
+                            .put("drillable", tile.block() == Blocks.air && drop != null);
                     if (!visible) {
                         entry.put("block", "hidden").put("team", -1).put("solid", false);
                         tiles.add(entry);
@@ -2117,17 +2143,21 @@ public class ProbeMod extends Mod {
                 replyError(command, "no_assistant", "Assistant is not spawned");
                 return;
             }
-            Building building = findBuilding(request.get("target"));
+            Jval target = request.get("target");
+            if (target == null) target = request;
+            Building building = findBuilding(target);
             if (building == null) {
-                replyError(command, "building_not_found", "No target building");
+                replyError(command, "target_not_found", "No target building");
                 return;
             }
             if (building.team != assistant.team) {
                 replyError(command, "wrong_team", "Target building is not on the assistant's team");
                 return;
             }
-            if (Math.hypot(building.x - assistant.x, building.y - assistant.y) > Vars.itemTransferRange) {
-                replyError(command, "out_of_range", "Target building is outside itemTransferRange");
+            double transferDistance = Math.hypot(building.x - assistant.x, building.y - assistant.y);
+            if (transferDistance > Vars.itemTransferRange) {
+                replyError(command, "out_of_range", "Target building is outside itemTransferRange (distance "
+                        + Math.round(transferDistance) + ", max " + Math.round(Vars.itemTransferRange) + ")");
                 return;
             }
             Item item = Vars.content.item(request.getString("item", ""));
@@ -2137,11 +2167,20 @@ public class ProbeMod extends Mod {
             }
             int amount = request.getInt("amount", 0);
             if ("withdraw".equals(op)) {
+                if (assistant.stack != null && assistant.stack.amount > 0 && assistant.stack.item != item) {
+                    replyError(command, "hand_busy", "Assistant is carrying " + assistant.stack.item.name
+                            + "; deposit it before withdrawing " + item.name);
+                    return;
+                }
                 int available = building.items == null ? 0 : building.items.get(item);
+                if (available <= 0) {
+                    replyError(command, "item_not_found", "Target building has no " + item.name);
+                    return;
+                }
                 int capacity = assistant.maxAccepted(item) - (assistant.stack == null ? 0 : assistant.stack.amount);
                 int taken = Math.min(Math.min(amount, available), Math.max(0, capacity));
                 if (taken <= 0) {
-                    replyError(command, "not_found", "No item or no capacity");
+                    replyError(command, "hand_full", "Assistant has no capacity for " + item.name);
                     return;
                 }
                 building.removeStack(item, taken);
@@ -2149,13 +2188,13 @@ public class ProbeMod extends Mod {
                 reply(command, Jval.newObject().put("item", item.name).put("amount", taken));
             } else {
                 if (assistant.stack == null || assistant.stack.amount <= 0 || assistant.stack.item != item) {
-                    replyError(command, "not_found", "Assistant is not carrying that item");
+                    replyError(command, "item_not_carried", "Assistant is not carrying " + item.name);
                     return;
                 }
                 int accepted = building.acceptStack(item, Math.min(amount, assistant.stack.amount), assistant);
                 int moved = Math.min(accepted, assistant.stack.amount);
                 if (moved <= 0) {
-                    replyError(command, "not_found", "Building does not accept the item");
+                    replyError(command, "receiver_rejects", "Building does not accept " + item.name);
                     return;
                 }
                 building.handleStack(item, moved, assistant);
@@ -3497,6 +3536,20 @@ public class ProbeMod extends Mod {
             }
             Tile targetTile = Vars.world.tile(x, y);
             if (!Build.validPlace(block, team, x, y, rotation)) {
+                // A retry can arrive after the first request already queued/placed
+                // the same block. Treat that idempotent case as success instead of
+                // reporting invalid_placement and triggering another rebuild.
+                if (targetTile != null && targetTile.build != null && targetTile.team() == team
+                        && targetTile.build.block == block) {
+                    reply(command, Jval.newObject()
+                            .put("block", blockName)
+                            .put("x", x)
+                            .put("y", y)
+                            .put("queued", false)
+                            .put("built", true)
+                            .put("alreadyPresent", true));
+                    return;
+                }
                 String placeReason = targetTile == null ? "out_of_bounds" : placementReason(targetTile, block, team);
                 replyError(command, "invalid_placement", "Build.validPlace returned false", placeReason);
                 return;
@@ -3530,8 +3583,21 @@ public class ProbeMod extends Mod {
             // Queue a real BuildPlan; BuilderComp will call Build.beginPlace and
             // ConstructBuild.construct on the game thread when in range.
             Block previousBlock = targetTile.build == null ? null : targetTile.build.block;
+            Object buildConfig = null;
+            if (block instanceof ItemBridge && request.get("length") != null) {
+                int length = Math.max(1, Math.min(64, request.getInt("length", 1)));
+                int dx = rotation == 0 ? length : rotation == 2 ? -length : 0;
+                int dy = rotation == 1 ? length : rotation == 3 ? -length : 0;
+                buildConfig = new Point2(dx, dy);
+            } else if (request.get("config") != null) {
+                buildConfig = configValue(request.get("config"), null);
+            }
             assistant.updateBuilding(true);
-            assistant.addBuild(new BuildPlan(x, y, rotation, block));
+            if (buildConfig == null) {
+                assistant.addBuild(new BuildPlan(x, y, rotation, block));
+            } else {
+                assistant.addBuild(new BuildPlan(x, y, rotation, block, buildConfig));
+            }
             Op result = newOp("build");
             result.status = "running";
             result.progress = 0f;
@@ -3611,6 +3677,7 @@ public class ProbeMod extends Mod {
         return Jval.newObject()
                 .put(kind, name)
                 .put("ammoMultiplier", bullet.ammoMultiplier)
+                .put("ammoPerItem", bullet.ammoMultiplier)
                 .put("reloadMultiplier", bullet.reloadMultiplier)
                 .put("rangeChange", bullet.rangeChange)
                 .put("damage", bullet.damage)
@@ -3627,6 +3694,8 @@ public class ProbeMod extends Mod {
                 .put("maxAmmo", turret.maxAmmo)
                 .put("ammoPerShot", turret.ammoPerShot)
                 .put("reloadTicks", turret.reload)
+                .put("range", tileOf(turret.range))
+                .put("minRange", tileOf(turret.minRange))
                 .put("targetAir", turret.targetAir)
                 .put("targetGround", turret.targetGround);
         Jval ammoTypes = Jval.newArray();
@@ -3701,6 +3770,8 @@ public class ProbeMod extends Mod {
                     .put("speedMultiplier", multiplier)
                     .put("secondsPerItem", ticks / 60f)
                     .put("itemsPerSecond", 60f / Math.max(0.0001f, ticks) * drill.size * drill.size)
+                    .put("coverageTiles", drill.size * drill.size)
+                    .put("boostMultiplier", drill.liquidBoostIntensity)
                     .put("presentInWorld", present));
         }
         return result;
@@ -3761,6 +3832,8 @@ public class ProbeMod extends Mod {
             result.put("drillTier", drill.tier)
                     .put("drillTimeTicks", drill.drillTime)
                     .put("hardnessDrillMultiplier", drill.hardnessDrillMultiplier)
+                    .put("coverageTiles", drill.size * drill.size)
+                    .put("boostMultiplier", drill.liquidBoostIntensity)
                     .put("blockedItems", itemNamesJson(drill.blockedItems))
                     .put("drillSpeeds", drillSpeedsJson(drill));
         }
@@ -3782,6 +3855,10 @@ public class ProbeMod extends Mod {
         }
         if (block instanceof PowerNode node) {
             result.put("laserRangeTiles", node.laserRange);
+        }
+        if (block instanceof Conveyor conveyor) {
+            result.put("beltSpeed", conveyor.displayedSpeed)
+                    .put("itemsPerSecond", conveyor.displayedSpeed);
         }
         if (block instanceof GenericCrafter crafter) {
             result.put("craftTimeTicks", crafter.craftTime)
@@ -3857,6 +3934,7 @@ public class ProbeMod extends Mod {
             }
             BulletType bullet = weapon.bullet;
             if (bullet != null) {
+                entry.put("damage", bullet.damage);
                 entry.put("bullet", Jval.newObject()
                         .put("type", bullet.getClass().getSimpleName())
                         .put("damage", bullet.damage)
@@ -3873,6 +3951,8 @@ public class ProbeMod extends Mod {
         }
         return Jval.newObject()
                 .put("weapons", weapons)
+                .put("health", type.health)
+                .put("armor", type.armor)
                 .put("speed", type.speed)
                 .put("buildSpeed", type.buildSpeed)
                 .put("mineSpeed", type.mineSpeed)
@@ -3919,7 +3999,7 @@ public class ProbeMod extends Mod {
 
     private String techBlockedReason(TechTree.TechNode node, Team team) {
         if (node == null || node.content == null) return "missing";
-        if (node.content.unlockedNowHost()) return "unlocked";
+        if (node.content.unlockedNowHost()) return null;
         if (node.parent != null && node.parent.content != null
                 && !node.parent.content.unlockedNowHost()) {
             return "parent_locked:" + node.parent.content.name;
@@ -3938,7 +4018,7 @@ public class ProbeMod extends Mod {
             }
         }
         if (node.requiresUnlock && !Vars.state.isCampaign()) return "requires_unlock";
-        return "available";
+        return null;
     }
 
     private Jval techNodeJson(TechTree.TechNode node, Team team) {
@@ -3956,7 +4036,7 @@ public class ProbeMod extends Mod {
         if (planet.isEmpty() && node != null && node.parent == null && node.name != null) planet = node.name;
         String sector = node != null && node.content instanceof SectorPreset preset ? preset.name : "";
         if (planet.isEmpty() && node != null && node.content instanceof SectorPreset preset && preset.planet != null) planet = preset.planet.name;
-        return Jval.newObject()
+        Jval result = Jval.newObject()
                 .put("content", node == null || node.content == null ? "" : node.content.name)
                 .put("name", node == null ? "" : node.localizedName())
                 .put("depth", depth)
@@ -3969,8 +4049,10 @@ public class ProbeMod extends Mod {
                 .put("objectives", techObjectiveJson(node))
                 .put("requiresUnlock", node != null && node.requiresUnlock)
                 .put("researched", researched)
-                .put("unlocked", node != null && node.content != null && node.content.unlockedNowHost())
-                .put("blockedReason", techBlockedReason(node, team));
+                .put("unlocked", node != null && node.content != null && node.content.unlockedNowHost());
+        String blockedReason = techBlockedReason(node, team);
+        if (blockedReason != null) result.put("blockedReason", blockedReason);
+        return result;
     }
 
     private void collectTechList(TechTree.TechNode node, java.util.List<TechTree.TechNode> nodes, java.util.Set<TechTree.TechNode> seen, int limit) {
@@ -4279,7 +4361,19 @@ public class ProbeMod extends Mod {
         Jval x = target.get("x");
         Jval y = target.get("y");
         if (x != null && y != null) {
-            Tile tile = Vars.world.tile(x.asInt(), y.asInt());
+            int tx = (int) Math.floor(x.asFloat());
+            int ty = (int) Math.floor(y.asFloat());
+            if (!Vars.world.tiles.in(tx, ty)) return null;
+            // Accept the origin, the center, or any covered tile of a multi-tile
+            // building. The public entity x/y is the center while placements use
+            // the origin, so callers should not need to guess which one to pass.
+            for (Building building : Groups.build) {
+                if (building == null || !buildingVisible(building)) continue;
+                int bx = building.tile.x, by = building.tile.y;
+                int size = building.block.size;
+                if (tx >= bx && tx < bx + size && ty >= by && ty < by + size) return building;
+            }
+            Tile tile = Vars.world.tile(tx, ty);
             return tile == null || !buildingVisible(tile.build) ? null : tile.build;
         }
         return null;
@@ -4301,6 +4395,10 @@ public class ProbeMod extends Mod {
         if (value.isBoolean()) return value.asBool();
         if (value.isNumber()) return value.asInt();
         if (value.isObject()) {
+            Jval inner = value.get("value");
+            if (inner != null && (inner.isObject() || inner.isString())) {
+                return configValue(inner, building);
+            }
             Jval item = value.get("item");
             if (item != null) {
                 Item parsed = Vars.content.item(item.asString());
@@ -4563,6 +4661,17 @@ public class ProbeMod extends Mod {
             } catch (Throwable ignored) {
                 entry.put("satisfaction", -1f);
             }
+            Jval graphBuildings = Jval.newArray();
+            for (Building member : graph.all) {
+                if (member == null || member.team != team) continue;
+                graphBuildings.add(Jval.newObject()
+                        .put("id", member.id)
+                        .put("block", member.block.name)
+                        .put("x", tileOf(member.x))
+                        .put("y", tileOf(member.y)));
+                if (graphBuildings.asArray().size >= 64) break;
+            }
+            entry.put("buildings", graphBuildings).put("buildingCount", graphBuildings.asArray().size);
             result.add(entry);
             if (result.asArray().size >= 32) break;
         }
@@ -6273,7 +6382,8 @@ public class ProbeMod extends Mod {
                                                 .put("block", property("string"))
                                                 .put("x", property("integer"))
                                                 .put("y", property("integer"))
-                                                .put("rotation", property("integer")))))
+                                                .put("rotation", property("integer"))
+                                                .put("length", property("integer").put("description", "bridge length in tiles")))))
                         .put("deconstruct", Jval.newObject()
                                 .put("type", "array")
                                 .put("items", Jval.newObject()
